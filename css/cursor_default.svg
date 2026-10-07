@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <defs>
+    <filter id="c-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="1.5" dy="2" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.85"/>
+    </filter>
+    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#b45309"/>
+    </linearGradient>
+    <linearGradient id="gem-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#38bdf8"/>
+      <stop offset="80%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+  </defs>
+  <path d="M 3 3 L 3 24 L 8.5 18.5 L 13.5 28.5 L 18 26.5 L 13 16.5 L 20.5 16.5 Z" 
+        fill="url(#gold-grad)" stroke="#451a03" stroke-width="2" stroke-linejoin="round" filter="url(#c-shadow)"/>
+  <path d="M 5 6 L 5 20.5 L 8.5 17 L 13.5 27 L 16 25.8 L 11 15.5 L 17 15.5 Z" 
+        fill="url(#gem-grad)"/>
+  <path d="M 5 6 L 11 15.5" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round"/>
+  <circle cx="4.5" cy="4.5" r="1.5" fill="#ffffff"/>
+</svg>

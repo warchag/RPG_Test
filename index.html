@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>มหาศึกยักษ์ไทย: ตำนานป่าหิมพานต์ (Yaksha RPG)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👹</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <script>
+    window.addEventListener('error', function(e) {
+      console.error('FATAL RUNTIME ERROR:', e);
+      var text = document.getElementById('loadingText');
+      if (text) {
+        text.style.color = '#ef4444';
+        text.style.fontWeight = 'bold';
+        text.innerHTML = '⚠️ เกิดข้อผิดพลาด: ' + (e.message || 'ตรวจพบข้อผิดพลาด') + '<br><small style="color:#fca5a5;">' + (e.filename ? e.filename.split('/').pop() : '') + (e.lineno ? ':' + e.lineno : '') + '</small>';
+      }
+    });
+  </script>
+</head>
+<body>
+  <div id="gameContainer">
+    <!-- Main 2D World Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- UI & HUD Layer -->
+    <div id="hudOverlay">
+      <!-- Top Left: Hero Card (Click to open Character Status & Level Up Window) -->
+      <div class="player-status-card interactive" id="playerStatusCard" title="คลิกเพื่อเปิดหน้าต่างอัปสเตตัสตัวละคร (กด C)">
+        <div class="avatar-frame" id="btnAvatarFrame" style="cursor: pointer;">
+          <img src="Assets/yak/Idle/rotations/south.png" alt="ยักษ์ไทย" class="avatar-char-img">
+          <img src="Assets/ui/avatar_frame_gold.png" alt="กรอบซุ้มกนก" class="avatar-flame-overlay">
+          <span id="statPointsBadge" class="stat-badge" style="display: none;">+5</span>
+        </div>
+        <div class="status-bars">
+          <div class="player-info-row">
+            <span>ยักษ์ไทย</span>
+            <span id="txtLevel">Lv. 1</span>
+          </div>
+
+          <!-- HP Bar -->
+          <div class="bar-wrapper bar-wrapper-hp">
+            <div id="barHp" class="bar-fill bar-hp" style="width: 100%;"></div>
+            <div id="txtHp" class="bar-text">260 / 260</div>
+          </div>
+
+          <!-- MP Bar -->
+          <div class="bar-wrapper bar-wrapper-mp">
+            <div id="barMp" class="bar-fill bar-mp" style="width: 100%;"></div>
+            <div id="txtMp" class="bar-text">120 / 120</div>
+          </div>
+
+          <!-- EXP Bar -->
+          <div class="bar-wrapper bar-wrapper-exp">
+            <div id="barExp" class="bar-fill bar-exp" style="width: 0%;"></div>
+            <div id="txtExp" class="bar-text" style="display: none;">0 / 100 EXP</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Center: Boss Health Display -->
+      <div id="bossHealthContainer">
+        <div class="boss-title-row">
+          <span id="bossHealthText">ท้าวอสูรทมิฬ (จอมมาร)</span>
+          <span>👑 BOSS</span>
+        </div>
+        <div class="boss-bar-wrapper">
+          <div id="bossHealthBar" class="boss-bar-fill" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- Top Right: Minimap & Utilities -->
+      <div class="top-right-group interactive">
+        <div class="minimap-card interactive" id="btnOpenWorldMap" style="cursor: pointer;" title="คลิกเพื่อเปิดแผนที่หิมพานต์ขนาดใหญ่ (กด M)">
+          <div class="minimap-header">
+            <span class="minimap-title-text">🗺️ แผนที่หิมพานต์</span>
+            <span class="minimap-compass-tag">🔍 ขยาย [M]</span>
+          </div>
+          <div class="minimap-viewport-wrapper">
+            <canvas id="minimapCanvas" width="160" height="160"></canvas>
+          </div>
+        </div>
+        <div id="weatherBadge" class="weather-badge" title="เวลาและสภาพอากาศปัจจุบัน (คลิกเพื่อทดสอบเปลี่ยนเวลา/สภาพอากาศ)">
+          <span id="txtWeatherStatus">☀️ กลางวัน • แจ่มใส</span>
+        </div>
+        <div class="utility-buttons">
+          <button id="btnOpenCharModal" class="util-btn" title="ข้อมูลตัวละครและอัปสเตตัส [C] (Character & Stats)" style="border-color: #f59e0b; color: #fde047;">👤</button>
+          <a href="studio_anim.html" target="_blank" class="util-btn" title="สตูดิโอตรวจแอนิเมชันมอนสเตอร์ (Animation Studio)" style="border-color: #38bdf8; color: #38bdf8; text-decoration: none; display: flex; align-items: center; justify-content: center;">🎬</a>
+          <a href="admin.html" target="_blank" class="util-btn" title="ศูนย์พัฒนาและแต่งแมพ (Map Editor & Admin)" style="border-color: #ca8a04; color: #fde047; text-decoration: none; display: flex; align-items: center; justify-content: center;">🛠️</a>
+          <button id="btnMute" class="util-btn" title="เปิด/ปิดเสียง">🔊</button>
+          <button id="btnBgm" class="util-btn" title="เปิด/ปิดดนตรีประกอบ">🎵</button>
+          <button id="btnHelp" class="util-btn" title="คู่มือการเล่น">❓</button>
+          <button id="btnFullscreen" class="util-btn" title="เต็มจอ">⛶</button>
+        </div>
+
+        <!-- Right Side: Quest Tracker (Naturally placed below utility buttons) -->
+        <div id="questTracker">
+          <div class="quest-header" id="btnToggleQuest" style="cursor: pointer;" title="คลิกเพื่อย่อ/ขยายภารกิจ">
+            <span>📜</span>
+            <span style="flex: 1;">ภารกิจหิมพานต์</span>
+            <span id="questToggleIcon" style="font-size: 11px; opacity: 0.8;">▲</span>
+          </div>
+          <ul id="questItems">
+            <!-- Populated by JavaScript -->
+          </ul>
+        </div>
+      </div>
+
+      <!-- Bottom Center: PC Hotbar -->
+      <div class="hud-bottom-bar interactive">
+        <div class="gold-counter" title="เงินพดด้วง (Gold Coins)">
+          <img src="Assets/ui/icon_coin.png" class="gold-coin-img" alt="เงินพดด้วง">
+          <span id="txtGold">0</span>
+        </div>
+
+        <!-- Normal Attack Indicator -->
+        <div class="skill-slot" title="เพลงกระบองยักษ์ตรีศูล (Space / คลิกซ้าย)">
+          <span class="skill-key">Space</span>
+          <img src="Assets/ui/icon_attack.png" class="skill-img" alt="โจมตีปกติ">
+        </div>
+
+        <!-- Skill 1: Ground Slam -->
+        <div id="hudSkill1" class="skill-slot" title="ยักษ์ทุบปฐพี [1 / J] - ใช้ 25 MP">
+          <span class="skill-key">1 / J</span>
+          <img src="Assets/ui/icon_skill1.png" class="skill-img" alt="ยักษ์ทุบปฐพี">
+          <div id="cdSkill1" class="cooldown-overlay"></div>
+        </div>
+
+        <!-- Skill 2: Roar Buff -->
+        <div id="hudSkill2" class="skill-slot" title="คำรามก้องฟ้า [2 / K] - ใช้ 30 MP">
+          <span class="skill-key">2 / K</span>
+          <img src="Assets/ui/icon_skill2.png" class="skill-img" alt="คำรามก้องฟ้า">
+          <div id="cdSkill2" class="cooldown-overlay"></div>
+        </div>
+
+        <!-- Skill 3: Spiritual Renewal (Heal) -->
+        <div id="hudSkill3" class="skill-slot" title="มนต์ฟื้นกายา [3 / L] - ใช้ 35 MP">
+          <span class="skill-key">3 / L</span>
+          <img src="Assets/ui/icon_skill3.png" class="skill-img" alt="มนต์ฟื้นกายา">
+          <div id="cdSkill3" class="cooldown-overlay"></div>
+        </div>
+
+        <!-- HP Potion -->
+        <div id="hudHpPotion" class="skill-slot" title="โอสถชาดฟื้นกายา [Q]">
+          <span class="skill-key">Q</span>
+          <img src="Assets/ui/icon_potion_hp.png" class="skill-img" alt="โอสถชาดฟื้นกายา">
+          <span id="txtHpPotions" class="potion-badge">3</span>
+        </div>
+
+        <!-- MP Potion -->
+        <div id="hudMpPotion" class="skill-slot" title="โอสถครามฟื้นอาคม [E]">
+          <span class="skill-key">E</span>
+          <img src="Assets/ui/icon_potion_mp.png" class="skill-img" alt="โอสถครามฟื้นอาคม">
+          <span id="txtMpPotions" class="potion-badge potion-badge-mp">3</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mobile Touch Controls Layer -->
+    <div id="mobileControls">
+      <!-- Virtual Joystick Zone (Left) -->
+      <div id="joystickZone">
+        <div id="joystickBase">
+          <div id="joystickKnob"></div>
+        </div>
+      </div>
+
+      <!-- Virtual Action Buttons (Right) -->
+      <div id="mobileActionGroup">
+        <!-- Quick Potions Row -->
+        <div class="mobile-potions-row">
+          <button id="btnHpPotion" class="m-pot-btn" title="โอสถชาดฟื้นกายา">
+            <img src="Assets/ui/icon_potion_hp.png" class="m-icon-img" alt="โอสถชาด">
+            <span id="mHpPotionCount" class="potion-badge">3</span>
+          </button>
+          <button id="btnMpPotion" class="m-pot-btn" title="โอสถครามฟื้นอาคม">
+            <img src="Assets/ui/icon_potion_mp.png" class="m-icon-img" alt="โอสถคราม">
+            <span id="mMpPotionCount" class="potion-badge potion-badge-mp">3</span>
+          </button>
+        </div>
+
+        <!-- Skills and Attack Row -->
+        <div class="mobile-skills-row">
+          <button id="btnSkill1" class="m-btn" title="ยักษ์ทุบปฐพี">
+            <img src="Assets/ui/icon_skill1.png" class="m-icon-img" alt="ยักษ์ทุบปฐพี">
+            <div id="mCdSkill1" class="cooldown-overlay"></div>
+          </button>
+          <button id="btnSkill2" class="m-btn" title="คำรามก้องฟ้า">
+            <img src="Assets/ui/icon_skill2.png" class="m-icon-img" alt="คำรามก้องฟ้า">
+            <div id="mCdSkill2" class="cooldown-overlay"></div>
+          </button>
+          <button id="btnSkill3" class="m-btn" title="มนต์ฟื้นกายา">
+            <img src="Assets/ui/icon_skill3.png" class="m-icon-img" alt="มนต์ฟื้นกายา">
+            <div id="mCdSkill3" class="cooldown-overlay"></div>
+          </button>
+          <button id="btnAttack" class="m-btn m-attack-btn" title="เพลงกระบองยักษ์">
+            <img src="Assets/ui/icon_attack.png" class="m-icon-img" alt="โจมตีปกติ">
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Loading Screen -->
+    <div id="loadingScreen" class="modal-screen">
+      <h1>มหาศึกยักษ์ไทย</h1>
+      <p>ตำนานผู้พิทักษ์ป่าหิมพานต์</p>
+      <div class="loading-bar-wrap">
+        <div id="loadingProgress"></div>
+      </div>
+      <p id="loadingText" style="font-size: 14px; color: #94a3b8;">กำลังเตรียมความพร้อมของเกม...</p>
+    </div>
+
+    <!-- Modal: Game Over Screen -->
+    <div id="gameOverScreen" class="modal-screen" style="display: none;">
+      <h1 style="color: #ef4444;">ยักษ์สิ้นชีพ!</h1>
+      <p>ท่านถูกพลังอำนาจแห่งมารร้ายโค่นล้มในป่าหิมพานต์...</p>
+      <button id="btnRevive" class="action-btn-large">ฟื้นคืนชีพ ณ วิหารศักดิ์สิทธิ์</button>
+    </div>
+
+    <!-- Modal: Victory Screen -->
+    <div id="victoryScreen" class="modal-screen" style="display: none;">
+      <h1 style="color: #facc15;">ชัยชนะอันเกรียงไกร!</h1>
+      <p>ท่านได้ปราบท้าวอสูรทมิฬและนำความสงบสุขกลับคืนสู่ป่าหิมพานต์ได้สำเร็จ!</p>
+      <button id="btnRestartVic" class="action-btn-large">ออกผจญภัยใหม่อีกครั้ง</button>
+    </div>
+
+    <!-- Modal: Help / Instructions -->
+    <div id="helpModal" class="modal-screen">
+      <div class="help-box">
+        <h2>คู่มือการผจญภัย</h2>
+        <div class="help-grid">
+          <div class="help-col">
+            <h3>🎮 การควบคุมบน PC</h3>
+            <ul>
+              <li><strong>เดิน 8 ทิศ:</strong> W A S D หรือ ปุ่มลูกศร</li>
+              <li><strong>ฟันกระบอง:</strong> Space หรือ คลิกซ้าย</li>
+              <li><strong>ยักษ์ทุบปฐพี:</strong> เลข 1 หรือ J</li>
+              <li><strong>คำรามบัฟพลัง:</strong> เลข 2 หรือ K</li>
+              <li><strong>มนต์ฟื้นกายา:</strong> เลข 3 หรือ L</li>
+              <li><strong>ดื่มยา HP/MP:</strong> ปุ่ม Q / E</li>
+              <li><strong>ข้อมูล & อัปสเตตัส:</strong> ปุ่ม C หรือคลิกการ์ดตัวละคร</li>
+            </ul>
+          </div>
+          <div class="help-col">
+            <h3>📱 บนมือถือ / แท็บเล็ต</h3>
+            <ul>
+              <li><strong>เดิน:</strong> สัมผัสลากอนาล็อกทางซ้าย</li>
+              <li><strong>โจมตี:</strong> ปุ่มดาบสีแดงขนาดใหญ่</li>
+              <li><strong>สกิล 1, 2, 3:</strong> ปุ่มวงกลมรอบปุ่มโจมตี</li>
+              <li><strong>ดื่มยา:</strong> ปุ่มขวดยาเหนือสกิล</li>
+            </ul>
+          </div>
+        </div>
+        <div style="background: rgba(30, 41, 59, 0.7); padding: 10px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; color: #e2e8f0;">
+          💡 <strong>เคล็ดลับ:</strong> กึ่งกลางแผนที่มี <em>แท่นศิลาศักดิ์สิทธิ์</em> เมื่อเดินเข้าไปจะฟื้นฟูเลือดและมานาเต็มทันที!
+        </div>
+        <button id="btnCloseHelp" class="action-btn-large" style="width: 100%;">เข้าใจแล้ว เข้าสู่เกม</button>
+      </div>
+    </div>
+
+
+  <!-- Character Status & Level Up Stats Modal (กด C หรือคลิกการ์ดตัวละคร) -->
+  <div id="charModal" class="modal-screen" style="display: none; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px);">
+    <div class="boss-settings-box" style="max-width: 580px; border-color: #f59e0b; box-shadow: 0 12px 40px rgba(0,0,0,0.9), 0 0 24px rgba(245, 158, 11, 0.3);">
+      <div class="boss-settings-header" style="border-bottom-color: #b45309;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 28px;">👑</span>
+          <div>
+            <h2 style="margin: 0; font-size: 19px; color: #fde047; text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);">
+              ข้อมูลตัวละครและอัปสเตตัส (Character Stats)
+            </h2>
+            <p style="margin: 0; font-size: 12px; color: #cbd5e1;">ยักษ์นักรบแห่งหิมพานต์ • ปรับแต่งสายการเล่น (Build) เพื่อพิชิตบอส</p>
+          </div>
+        </div>
+        <button id="btnCloseCharModal" class="boss-close-btn" title="ปิดหน้าต่าง">✕</button>
+      </div>
+
+      <div class="boss-settings-body">
+        <!-- Hero Overview Card -->
+        <div class="char-hero-banner">
+          <div class="char-avatar-box">
+            <img src="Assets/yak/Idle/rotations/south.png" alt="ยักษ์ไทย">
+          </div>
+          <div class="char-hero-info">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <span class="char-hero-name">ยักษ์ไทย (Yaksha Hero)</span>
+              <span id="charModalLevel" class="char-badge-lvl">LV. 1</span>
+            </div>
+            <!-- EXP Bar -->
+            <div class="bar-wrapper" style="height: 10px; margin-top: 6px;">
+              <div id="charModalExpBar" class="bar-fill bar-exp" style="width: 0%;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px; color: #94a3b8; margin-top: 3px;">
+              <span>ค่าประสบการณ์ (EXP)</span>
+              <span id="charModalExpText">0 / 100 EXP</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Available Stat Points Banner -->
+        <div class="char-stat-points-banner">
+          <div>
+            <div style="font-size: 12px; color: #fbbf24; font-weight: 600;">แต้มสเตตัสคงเหลือ (Available Points)</div>
+            <div style="font-size: 11px; color: #94a3b8;">ได้รับ 5 แต้มทุกครั้งที่เลเวลอัป กด [+] เพื่อเพิ่มค่าพลัง</div>
+          </div>
+          <div id="charModalAvailablePoints" class="char-points-pill">0</div>
+        </div>
+
+        <!-- 4 Core Attributes (STR, VIT, AGI, SPI) Allocation Section -->
+        <div class="char-attributes-grid">
+          <!-- STR -->
+          <div class="char-attr-card">
+            <div class="char-attr-top">
+              <div class="char-attr-title">
+                <span class="char-attr-icon" style="background: rgba(239, 68, 68, 0.2); color: #f87171;">⚔️</span>
+                <div>
+                  <strong>พละกำลัง (STR)</strong>
+                  <span class="char-attr-sub">มหาโยธิน</span>
+                </div>
+              </div>
+              <div class="char-attr-val-box">
+                <span id="statValStr" class="char-attr-val">10</span>
+                <button class="btn-stat-add" data-stat="str" title="เพิ่ม STR 1 แต้ม">+</button>
+              </div>
+            </div>
+            <div class="char-attr-desc">
+              +3.2 พลังโจมตี (ATK), +1.5% ดาเมจคริติคอล/ท่าปิดคอมโบ
+            </div>
+          </div>
+
+          <!-- VIT -->
+          <div class="char-attr-card">
+            <div class="char-attr-top">
+              <div class="char-attr-title">
+                <span class="char-attr-icon" style="background: rgba(34, 197, 94, 0.2); color: #4ade80;">🛡️</span>
+                <div>
+                  <strong>กายาเหล็ก (VIT)</strong>
+                  <span class="char-attr-sub">เพชรหล่อหลอม</span>
+                </div>
+              </div>
+              <div class="char-attr-val-box">
+                <span id="statValVit" class="char-attr-val">10</span>
+                <button class="btn-stat-add" data-stat="vit" title="เพิ่ม VIT 1 แต้ม">+</button>
+              </div>
+            </div>
+            <div class="char-attr-desc">
+              +14 Max HP, +0.85 พลังป้องกัน (DEF), ลดดาเมจเลือดไหล (Bleed Resist)
+            </div>
+          </div>
+
+          <!-- AGI -->
+          <div class="char-attr-card">
+            <div class="char-attr-top">
+              <div class="char-attr-title">
+                <span class="char-attr-icon" style="background: rgba(234, 179, 8, 0.2); color: #facc15;">⚡</span>
+                <div>
+                  <strong>วายุพริ้ว (AGI)</strong>
+                  <span class="char-attr-sub">เหินเวหา</span>
+                </div>
+              </div>
+              <div class="char-attr-val-box">
+                <span id="statValAgi" class="char-attr-val">10</span>
+                <button class="btn-stat-add" data-stat="agi" title="เพิ่ม AGI 1 แต้ม">+</button>
+              </div>
+            </div>
+            <div class="char-attr-desc">
+              +1.5 ความเร็วเดิน (Speed), +0.6% คริติคอล (CRIT), โจมตีไวขึ้น
+            </div>
+          </div>
+
+          <!-- SPI -->
+          <div class="char-attr-card">
+            <div class="char-attr-top">
+              <div class="char-attr-title">
+                <span class="char-attr-icon" style="background: rgba(59, 130, 246, 0.2); color: #60a5fa;">🌸</span>
+                <div>
+                  <strong>อาคมญาณ (SPI)</strong>
+                  <span class="char-attr-sub">มนตราหิมพานต์</span>
+                </div>
+              </div>
+              <div class="char-attr-val-box">
+                <span id="statValSpi" class="char-attr-val">10</span>
+                <button class="btn-stat-add" data-stat="spi" title="เพิ่ม SPI 1 แต้ม">+</button>
+              </div>
+            </div>
+            <div class="char-attr-desc">
+              +8 Max MP, +0.12 ฟื้นฟู MP/วิ, เพิ่มพลังสกิลฟื้นกายา
+            </div>
+          </div>
+        </div>
+
+        <!-- Derived Combat Stats Table -->
+        <div class="char-derived-stats-box">
+          <div style="font-size: 13px; font-weight: 700; color: #f1f5f9; margin-bottom: 8px;">
+            📊 พลังการต่อสู้ปัจจุบัน (Combat Performance)
+          </div>
+          <div class="char-stats-table">
+            <div class="char-stat-row">
+              <span class="label">❤️ พลังชีวิตสูงสุด (Max HP):</span>
+              <span id="derivedMaxHp" class="val">260</span>
+            </div>
+            <div class="char-stat-row">
+              <span class="label">💧 พลังมานาสูงสุด (Max MP):</span>
+              <span id="derivedMaxMp" class="val">120</span>
+            </div>
+            <div class="char-stat-row">
+              <span class="label">🗡️ พลังโจมตีพื้นฐาน (Attack):</span>
+              <span id="derivedAttack" class="val">45</span>
+            </div>
+            <div class="char-stat-row">
+              <span class="label">🛡️ พลังป้องกัน (Defense):</span>
+              <span id="derivedDefense" class="val">12</span>
+            </div>
+            <div class="char-stat-row">
+              <span class="label">🏃 ความเร็วเคลื่อนที่ (Move Speed):</span>
+              <span id="derivedSpeed" class="val">190 px/s</span>
+            </div>
+            <div class="char-stat-row">
+              <span class="label">💥 อัตราคริติคอล (Crit Chance):</span>
+              <span id="derivedCrit" class="val">16%</span>
+            </div>
+            <div class="char-stat-row">
+              <span class="label">⏱️ คูลดาวน์โจมตีปกติ (Atk Cooldown):</span>
+              <span id="derivedAtkCd" class="val">0.31s</span>
+            </div>
+            <div class="char-stat-row">
+              <span class="label">🩸 ต้านทานคำสาปโลหิต (Bleed Resist):</span>
+              <span id="derivedBleedResist" class="val">0%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notification Status -->
+        <div id="charModalStatus" class="boss-status-text" style="display: none;"></div>
+
+        <!-- Footer Actions -->
+        <div class="char-modal-footer">
+          <button id="btnResetStats" class="boss-preset-btn" style="flex: 1; border-color: #ef4444; color: #fca5a5;">
+            🔄 รีเซ็ตสเตตัสฟรี (Reset All)
+          </button>
+          <button id="btnSaveStats" class="action-btn-large" style="flex: 1.5; font-size: 14px; padding: 10px 14px;">
+            💾 บันทึกความคืบหน้า (Save)
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Giant World Map Modal (กด M หรือคลิกที่ Minimap) -->
+  <div id="worldMapModal" class="modal-screen" style="display: none; z-index: 1200; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px);">
+    <div class="world-map-dialog">
+      <!-- Modal Header -->
+      <div class="world-map-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 20px;">🗺️</span>
+          <div>
+            <h2 class="world-map-title">แผนที่ดินแดนหิมพานต์ (Himavanta World Map)</h2>
+            <div class="world-map-subtitle">กด [M] หรือคลิก [X] เพื่อปิด • แผนที่สำรวจภูมิประเทศและจุดสำคัญ</div>
+          </div>
+        </div>
+        <button id="btnCloseWorldMap" class="btn-close-map" title="ปิดแผนที่ (Esc / M)">✖</button>
+      </div>
+
+      <!-- Main Map Body -->
+      <div class="world-map-body">
+        <!-- Giant Map Canvas -->
+        <div class="world-map-canvas-container">
+          <canvas id="worldMapCanvas" width="560" height="560"></canvas>
+        </div>
+
+        <!-- Right Side: Legend & Location Markers Info -->
+        <div class="world-map-sidebar">
+          <div class="map-sidebar-section">
+            <div class="sidebar-sec-title">📍 พิกัดตัวละคร</div>
+            <div class="player-coord-box">
+              <div>ตำแหน่ง: <span id="lblPlayerCoords" style="color: #4ade80; font-weight: bold;">(X: 0, Y: 0)</span></div>
+              <div>โซน: <span style="color: #fde047;">ป่าหิมพานต์ชั้นนอก</span></div>
+            </div>
+          </div>
+
+          <div class="map-sidebar-section">
+            <div class="sidebar-sec-title">🏷️ สัญลักษณ์บนแผนที่</div>
+            <div class="map-legend-list">
+              <div class="legend-item"><span class="legend-dot" style="background: #22c55e; border: 1.5px solid #fff;"></span> <span>ตัวละครของคุณ (พร้อมกรวยทิศทาง)</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #dc2626; border: 1.5px solid #fde047;"></span> <span>พญาเปรตอเวจี (บอสใหญ่ ☠)</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #38bdf8; transform: rotate(45deg); width: 8px; height: 8px;"></span> <span>ศาลเจ้าศักดิ์สิทธิ์ (ฟื้นพลัง)</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #facc15; border: 1px solid #78350f; border-radius: 2px;"></span> <span>หีบสมบัติทองคำ</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #ea580c; border: 1px solid #059669; border-radius: 2px;"></span> <span>พระอุโบสถวัดพระแก้ว</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #34d399;"></span> <span>ผีกระสือ (Krasue)</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #f97316;"></span> <span>สมิงพราย (Tiger)</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #60a5fa;"></span> <span>นักดาบอาคม (Swordsman)</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #fbbf24;"></span> <span>วานรปีศาจ (Monkey)</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #10b981;"></span> <span>พญางูอสูร (Naga Serpent)</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background: #c084fc;"></span> <span>ภูตเงา (Shadow Imp)</span></div>
+            </div>
+          </div>
+
+          <div class="map-sidebar-section" style="margin-top: auto;">
+            <div style="font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.4;">
+              💡 <em>ใช้ปุ่ม [M] บนคีย์บอร์ดเพื่อเปิด/ปิดแผนที่ได้ตลอดเวลา</em>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <!-- Game Scripts (modular architecture) -->
+  <script src="js/audio.js"></script>
+  <script src="js/assets.js?v=8dir_v1"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/weather.js"></script>
+  <script src="js/map_assets.js"></script>
+  <script src="js/map_generator.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/map.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/boss_settings.js"></script>
+  <script src="js/enemies.js?v=8dir_v1"></script>
+  <script src="js/input.js"></script>
+  <script src="js/character_stats.js"></script>
+  <script src="js/game.js"></script>
+
+  <!-- Help & Fullscreen Event Handlers -->
+  <script>
+    const helpModal = document.getElementById('helpModal');
+    const btnHelp = document.getElementById('btnHelp');
+    const btnCloseHelp = document.getElementById('btnCloseHelp');
+    const btnFullscreen = document.getElementById('btnFullscreen');
+
+    if (btnHelp) {
+      btnHelp.addEventListener('click', () => {
+        helpModal.style.display = 'flex';
+      });
+    }
+
+    if (btnCloseHelp) {
+      btnCloseHelp.addEventListener('click', () => {
+        helpModal.style.display = 'none';
+      });
+    }
+
+    if (btnFullscreen) {
+      btnFullscreen.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      });
+    }
+
+    // Toggle Quest Tracker Collapse
+    const btnToggleQuest = document.getElementById('btnToggleQuest');
+    const questItemsList = document.getElementById('questItems');
+    const questToggleIcon = document.getElementById('questToggleIcon');
+    if (btnToggleQuest && questItemsList) {
+      btnToggleQuest.addEventListener('click', () => {
+        const isCollapsed = questItemsList.style.display === 'none';
+        questItemsList.style.display = isCollapsed ? 'flex' : 'none';
+        if (questToggleIcon) questToggleIcon.innerText = isCollapsed ? '▲' : '▼';
+      });
+    }
+  </script>
+</body>
+</html>

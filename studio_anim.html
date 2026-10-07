@@ -1,0 +1,1639 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎬 Yaksha RPG - สตูดิโอตรวจแอนิเมชันและสไปรท์ (Monster Animation Studio)</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    :root {
+      --bg-dark: #070a13;
+      --panel-bg: rgba(15, 23, 42, 0.95);
+      --panel-border: #334155;
+      --gold: #ca8a04;
+      --gold-light: #fde047;
+      --accent: #3b82f6;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body.studio-body {
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Kanit', sans-serif;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    /* Top Studio Bar */
+    .studio-header {
+      background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+      border-bottom: 2px solid var(--gold);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+      z-index: 100;
+    }
+
+    .studio-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .studio-brand h1 {
+      margin: 0;
+      font-size: 19px;
+      color: var(--gold-light);
+      text-shadow: 0 2px 8px rgba(250, 204, 21, 0.4);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .studio-badge {
+      background: rgba(202, 138, 4, 0.2);
+      border: 1px solid var(--gold);
+      color: var(--gold-light);
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 12px;
+    }
+
+    .studio-top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .studio-btn {
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .studio-btn:hover {
+      background: #334155;
+      color: var(--gold-light);
+      border-color: var(--gold);
+    }
+
+    .studio-btn.primary {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      border-color: #86efac;
+      color: #fff;
+    }
+
+    .studio-btn.primary:hover {
+      background: #22c55e;
+    }
+
+    /* Main Studio Work Area */
+    .studio-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 280px 1fr 300px;
+      overflow: hidden;
+      height: calc(100vh - 56px);
+    }
+
+    /* Left Sidebar: Selectors */
+    .studio-sidebar {
+      background: #0b1120;
+      border-right: 1px solid var(--panel-border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .sidebar-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold-light);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid rgba(202, 138, 4, 0.3);
+      padding-bottom: 4px;
+    }
+
+    /* Monster List */
+    .monster-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .monster-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 12px;
+      background: #131c31;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .monster-item:hover {
+      background: #1e293b;
+      border-color: var(--gold);
+      transform: translateX(3px);
+    }
+
+    .monster-item.active {
+      background: rgba(202, 138, 4, 0.18);
+      border-color: var(--gold);
+      box-shadow: 0 0 12px rgba(202, 138, 4, 0.3);
+    }
+
+    .monster-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .monster-icon {
+      font-size: 18px;
+    }
+
+    .monster-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .monster-tag {
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+
+    .tag-boss { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+    .tag-elite { background: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid #f59e0b; }
+    .tag-hero { background: rgba(59, 130, 246, 0.2); color: #93c5fd; border: 1px solid #3b82f6; }
+    .tag-mob { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border: 1px solid #64748b; }
+
+    /* Action Tabs */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .action-btn {
+      padding: 8px 10px;
+      background: #131c31;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      background: #1e293b;
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+
+    .action-btn.active {
+      background: var(--gold);
+      color: #0f172a;
+      border-color: var(--gold-light);
+      font-weight: 700;
+    }
+
+    /* 8-Direction Dial */
+    .direction-dial {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: #131c31;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #1e293b;
+    }
+
+    .dir-btn {
+      height: 38px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .dir-btn span {
+      font-size: 9px;
+      margin-top: 1px;
+    }
+
+    .dir-btn:hover {
+      background: #334155;
+      color: var(--gold-light);
+      border-color: var(--gold);
+    }
+
+    .dir-btn.active {
+      background: var(--gold);
+      color: #0f172a;
+      border-color: var(--gold-light);
+      font-weight: 700;
+      box-shadow: 0 0 10px rgba(202, 138, 4, 0.6);
+    }
+
+    .dir-center {
+      background: #0f172a !important;
+      border: 1px dashed #475569 !important;
+      color: #64748b !important;
+      cursor: default !important;
+      font-size: 11px !important;
+    }
+
+    .auto-turntable-btn {
+      margin-top: 8px;
+      width: 100%;
+      padding: 8px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #f1f5f9;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .auto-turntable-btn:hover {
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+
+    .auto-turntable-btn.active {
+      background: linear-gradient(135deg, #ca8a04 0%, #a16207 100%);
+      color: #0f172a;
+      font-weight: 700;
+      box-shadow: 0 0 12px rgba(202, 138, 4, 0.5);
+    }
+
+    /* Center Stage Viewport */
+    .studio-viewport {
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #090d16;
+      overflow: hidden;
+    }
+
+    .viewport-toolbar {
+      position: absolute;
+      top: 14px;
+      left: 14px;
+      right: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 50;
+      pointer-events: none;
+    }
+
+    .tool-group {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 4px;
+      display: flex;
+      gap: 4px;
+      pointer-events: auto;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+    }
+
+    .tool-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: #cbd5e1;
+      padding: 5px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s;
+    }
+
+    .tool-btn:hover {
+      background: #1e293b;
+      color: var(--gold-light);
+    }
+
+    .tool-btn.active {
+      background: rgba(202, 138, 4, 0.2);
+      border-color: var(--gold);
+      color: var(--gold-light);
+    }
+
+    /* Canvas Stage Container */
+    .stage-canvas-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      cursor: grab;
+    }
+
+    .stage-canvas-container:active {
+      cursor: grabbing;
+    }
+
+    #stageCanvas {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    /* Backgrounds */
+    .bg-black { background: #000000; }
+    .bg-checker {
+      background-color: #0b1120;
+      background-image: 
+        linear-gradient(45deg, #162035 25%, transparent 25%),
+        linear-gradient(-45deg, #162035 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #162035 75%),
+        linear-gradient(-45deg, transparent 75%, #162035 75%);
+      background-size: 24px 24px;
+      background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+    }
+    .bg-grass {
+      background: url('Assets/map_assets/terrain_grass.png?v=realistic_v6') repeat;
+      background-size: 64px 64px;
+    }
+    .bg-temple {
+      background: url('Assets/map_assets/terrain_stone.png?v=realistic_v6') repeat;
+      background-size: 64px 64px;
+    }
+    .bg-water {
+      background: url('Assets/map_assets/terrain_water_deep.png?v=realistic_v6') repeat;
+      background-size: 64px 64px;
+    }
+
+    /* Bottom Timeline & Controls */
+    .studio-timeline {
+      background: #0f172a;
+      border-top: 1px solid var(--panel-border);
+      padding: 12px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      z-index: 50;
+      box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .playback-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .play-btn {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--gold);
+      border: 1px solid var(--gold-light);
+      color: #0f172a;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .play-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 0 12px rgba(202, 138, 4, 0.6);
+    }
+
+    .step-btn {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      background: #1e293b;
+      border: 1px solid #475569;
+      color: #cbd5e1;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .step-btn:hover {
+      background: #334155;
+      color: var(--gold-light);
+      border-color: var(--gold);
+    }
+
+    .fps-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .fps-control input[type="range"] {
+      width: 100px;
+      accent-color: var(--gold);
+    }
+
+    .fps-badge {
+      background: #1e293b;
+      border: 1px solid #475569;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--gold-light);
+      min-width: 48px;
+      text-align: center;
+    }
+
+    .speed-presets {
+      display: flex;
+      gap: 4px;
+    }
+
+    .preset-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .preset-btn:hover {
+      color: var(--gold-light);
+    }
+
+    .preset-btn.active {
+      background: rgba(202, 138, 4, 0.2);
+      border-color: var(--gold);
+      color: var(--gold-light);
+      font-weight: 700;
+    }
+
+    /* Filmstrip */
+    .filmstrip-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .filmstrip-frame {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: #131c31;
+      border: 2px solid #1e293b;
+      border-radius: 6px;
+      padding: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      min-width: 60px;
+    }
+
+    .filmstrip-frame:hover {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+    }
+
+    .filmstrip-frame.active {
+      border-color: var(--gold-light);
+      background: rgba(202, 138, 4, 0.2);
+      box-shadow: 0 0 10px rgba(202, 138, 4, 0.5);
+    }
+
+    .filmstrip-frame img {
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+
+    .filmstrip-num {
+      font-size: 10px;
+      font-weight: 700;
+      color: #94a3b8;
+    }
+
+    .filmstrip-frame.active .filmstrip-num {
+      color: var(--gold-light);
+    }
+
+    /* Right Sidebar: Inspector Info */
+    .studio-inspector {
+      background: #0b1120;
+      border-left: 1px solid var(--panel-border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+
+    .info-card {
+      background: #131c31;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 4px;
+    }
+
+    .info-label {
+      color: var(--text-muted);
+    }
+
+    .info-val {
+      color: #f1f5f9;
+      font-weight: 600;
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .info-path {
+      font-family: monospace;
+      font-size: 11px;
+      color: #38bdf8;
+      background: #090d16;
+      padding: 6px;
+      border-radius: 4px;
+      border: 1px solid #1e293b;
+      word-break: break-all;
+      user-select: text;
+    }
+
+    .slider-control {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 12px;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      color: #cbd5e1;
+    }
+
+    .slider-control input[type="range"] {
+      accent-color: var(--gold);
+    }
+
+    .instructions-box {
+      font-size: 11px;
+      color: #94a3b8;
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px;
+      line-height: 1.5;
+    }
+
+    .instructions-box strong {
+      color: var(--gold-light);
+    }
+  </style>
+</head>
+<body class="studio-body">
+
+  <!-- Top Studio Bar -->
+  <header class="studio-header">
+    <div class="studio-brand">
+      <h1>🎬 Yaksha RPG <span>Animation Studio</span></h1>
+      <span class="studio-badge">Sprite Inspector & Motion Lab</span>
+    </div>
+
+    <div class="studio-top-actions">
+      <a href="admin.html" class="studio-btn" title="กลับไปหน้าแต่งแมพและปรับแต่งบอส">
+        <span>🛠️</span> แอดมินสตูดีโอ (Admin)
+      </a>
+      <a href="index.html" class="studio-btn primary" target="_blank" title="เปิดหน้าเล่นเกมในแท็บใหม่">
+        <span>🎮</span> เข้าเล่นเกม (Play Game) ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- Studio Work Area -->
+  <div class="studio-layout">
+
+    <!-- Left Column: Monster, Action & Direction -->
+    <aside class="studio-sidebar">
+      
+      <!-- 1. Monster Selector -->
+      <div>
+        <div class="sidebar-section-title">
+          <span>👾</span> เลือกมอนสเตอร์ (Monsters)
+        </div>
+        <div class="monster-list" id="monsterListContainer">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- 2. Action Selector -->
+      <div>
+        <div class="sidebar-section-title">
+          <span>🏃</span> ท่าทาง (Action State)
+        </div>
+        <div class="action-grid" id="actionBtnContainer">
+          <button class="action-btn active" data-action="walking">
+            <span>🏃</span> เดิน (Walk)
+          </button>
+          <button class="action-btn" data-action="idle">
+            <span>🧍</span> ยืนนิ่ง (Idle)
+          </button>
+          <button class="action-btn" data-action="attack" id="btnActionAttack">
+            <span>⚔️</span> โจมตี (Attack)
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. 8-Direction Dial -->
+      <div>
+        <div class="sidebar-section-title">
+          <span>🧭</span> ทิศทาง (8 Directions)
+        </div>
+        <div class="direction-dial">
+          <button class="dir-btn" data-dir="north-west" title="ตะวันตกเฉียงเหนือ">↖<span>NW</span></button>
+          <button class="dir-btn" data-dir="north" title="เหนือ (หันหลัง)">⬆<span>N</span></button>
+          <button class="dir-btn" data-dir="north-east" title="ตะวันออกเฉียงเหนือ">↗<span>NE</span></button>
+          
+          <button class="dir-btn" data-dir="west" title="ตะวันตก (หันซ้าย)">⬅<span>W</span></button>
+          <div class="dir-btn dir-center">🎯</div>
+          <button class="dir-btn" data-dir="east" title="ตะวันออก (หันขวา)">➡️<span>E</span></button>
+          
+          <button class="dir-btn" data-dir="south-west" title="ตะวันตกเฉียงใต้">↙<span>SW</span></button>
+          <button class="dir-btn active" data-dir="south" title="ใต้ (หน้าตรง)">⬇<span>S</span></button>
+          <button class="dir-btn" data-dir="south-east" title="ตะวันออกเฉียงใต้">↘<span>SE</span></button>
+        </div>
+
+        <button class="auto-turntable-btn" id="btnAutoTurntable" title="หมุนรอบตัว 360 องศาแบบอัตโนมัติ">
+          <span>🔄</span> โหมดหมุน 360° (Auto Turntable)
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- Center Column: Viewport & Stage -->
+    <main class="studio-viewport">
+      
+      <!-- Top Viewport Floating Toolbar -->
+      <div class="viewport-toolbar">
+        
+        <!-- Left Tools: Overlays -->
+        <div class="tool-group">
+          <button class="tool-btn active" id="btnToggleGround" title="เส้นระนาบพื้นดิน (Ground Baseline)">
+            <span>🟢</span> เส้นพื้น
+          </button>
+          <button class="tool-btn active" id="btnToggleAxis" title="เส้นแกนกึ่งกลาง (Center Axis)">
+            <span>🔵</span> แกนกลาง
+          </button>
+          <button class="tool-btn" id="btnToggleBox" title="กรอบขนาดสไปรท์ (Bounding Box)">
+            <span>🟡</span> กรอบ
+          </button>
+          <button class="tool-btn" id="btnToggleShadow" title="เงาตกกระทบใต้เท้า">
+            <span>👥</span> เงา
+          </button>
+        </div>
+
+        <!-- Center Tools: Zoom -->
+        <div class="tool-group">
+          <button class="tool-btn" data-zoom="1">1x</button>
+          <button class="tool-btn" data-zoom="2">2x</button>
+          <button class="tool-btn active" data-zoom="3">3x</button>
+          <button class="tool-btn" data-zoom="4">4x</button>
+          <button class="tool-btn" data-zoom="6">6x</button>
+        </div>
+
+        <!-- Right Tools: Background Switcher -->
+        <div class="tool-group">
+          <button class="tool-btn active" data-bg="bg-checker" title="ตารางโปร่งใส (Checkerboard)">🏁</button>
+          <button class="tool-btn" data-bg="bg-black" title="พื้นหลังสีดำสนิท (OLED Black)">⬛</button>
+          <button class="tool-btn" data-bg="bg-grass" title="พื้นหญ้าสมจริงในเกม (Game Grass)">🌿</button>
+          <button class="tool-btn" data-bg="bg-temple" title="ลานหินวิหารวัดพระแก้ว (Temple Stone)">🏛️</button>
+          <button class="tool-btn" data-bg="bg-water" title="แม่น้ำลึก (River Water)">🌊</button>
+        </div>
+
+      </div>
+
+      <!-- Canvas Display Stage -->
+      <div class="stage-canvas-container bg-checker" id="canvasContainer">
+        <canvas id="stageCanvas" width="400" height="400"></canvas>
+      </div>
+
+      <!-- Bottom Timeline & Playback Controller -->
+      <div class="studio-timeline">
+        
+        <div class="playback-controls">
+          
+          <div class="playback-left">
+            <button class="step-btn" id="btnFirstFrame" title="เฟรมแรก (Home)">⏮</button>
+            <button class="step-btn" id="btnPrevFrame" title="เฟรมก่อนหน้า (ลูกศรซ้าย)">◀</button>
+            <button class="play-btn" id="btnPlayPause" title="เล่น/หยุดชั่วคราว (Spacebar)">⏸</button>
+            <button class="step-btn" id="btnNextFrame" title="เฟรมถัดไป (ลูกศรขวา)">▶</button>
+            <button class="step-btn" id="btnLastFrame" title="เฟรมสุดท้าย (End)">⏭</button>
+
+            <span id="frameCounter" style="font-weight: 700; color: var(--gold-light); font-size: 13px; margin-left: 8px;">
+              Frame 0 / 7
+            </span>
+          </div>
+
+          <!-- FPS Slider & Presets -->
+          <div class="fps-control">
+            <span>ความเร็ว (Speed):</span>
+            <div class="speed-presets">
+              <button class="preset-btn" data-fps="2">0.25x</button>
+              <button class="preset-btn" data-fps="4">0.5x</button>
+              <button class="preset-btn active" data-fps="8">1.0x (เกม)</button>
+              <button class="preset-btn" data-fps="12">1.5x</button>
+              <button class="preset-btn" data-fps="16">2.0x</button>
+            </div>
+            <input type="range" id="fpsRange" min="1" max="24" value="8">
+            <span class="fps-badge" id="fpsDisplay">8 FPS</span>
+          </div>
+
+        </div>
+
+        <!-- Frame Thumbnails Filmstrip -->
+        <div class="filmstrip-container" id="filmstripContainer">
+          <!-- Populated by JS -->
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Right Column: Inspector Details & Real-Time Adjustments -->
+    <aside class="studio-inspector">
+      
+      <div class="sidebar-section-title">
+        <span>🔍</span> ข้อมูลสไปรท์ (Sprite Specs)
+      </div>
+
+      <div class="info-card">
+        <div class="info-row">
+          <span class="info-label">มอนสเตอร์:</span>
+          <span class="info-val" id="infoMonsterName">พญาควายธนู</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">ท่าทาง:</span>
+          <span class="info-val" id="infoActionName">เดิน (Walking)</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">ทิศทาง:</span>
+          <span class="info-val" id="infoDirName">ใต้ (South)</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">ขนาดภาพต้นฉบับ:</span>
+          <span class="info-val" id="infoDimensions">128 × 128 px</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">จำนวนเฟรมทั้งหมด:</span>
+          <span class="info-val" id="infoTotalFrames">8 เฟรม</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">สถานะการโหลด:</span>
+          <span class="info-val" id="infoStatus" style="color: #4ade80;">● โหลดสมบูรณ์</span>
+        </div>
+
+        <div style="margin-top: 6px;">
+          <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 3px;">ตำแหน่งไฟล์ (File Path):</div>
+          <div class="info-path" id="infoFilePath">Assets/buffalo/Idle/animations/Walking/south/0.png</div>
+        </div>
+      </div>
+
+      <!-- Real-time Anchor & Scale Sliders -->
+      <div class="sidebar-section-title">
+        <span>📐</span> ระนาบและการจัดวาง (Alignment)
+      </div>
+
+      <div class="info-card">
+        <div class="slider-control">
+          <div class="slider-header">
+            <span>ขนาดแสดงผล (Scale):</span>
+            <span id="valScale">1.25x</span>
+          </div>
+          <input type="range" id="rangeScale" min="0.5" max="3.0" step="0.05" value="1.25">
+        </div>
+
+        <div class="slider-control">
+          <div class="slider-header">
+            <span>จุดกึ่งกลาง X (Anchor X):</span>
+            <span id="valAnchorX">64 px</span>
+          </div>
+          <input type="range" id="rangeAnchorX" min="0" max="128" step="1" value="64">
+        </div>
+
+        <div class="slider-control">
+          <div class="slider-header">
+            <span>ระนาบเท้าแตะดิน Y (Anchor Y):</span>
+            <span id="valAnchorY">112 px</span>
+          </div>
+          <input type="range" id="rangeAnchorY" min="0" max="128" step="1" value="112">
+        </div>
+
+        <button class="studio-btn" id="btnResetAnchor" style="justify-content: center; margin-top: 4px;">
+          <span>🔄</span> คืนค่าตำแหน่งเริ่มต้น (Reset)
+        </button>
+      </div>
+
+      <!-- Keyboard Shortcuts -->
+      <div class="instructions-box">
+        <strong>⌨️ คีย์ลัด (Shortcuts):</strong><br>
+        • <strong>Space:</strong> เล่น / หยุดชั่วคราว<br>
+        • <strong>ลูกศร ซ้าย / ขวา:</strong> เลื่อนดูทีละเฟรม<br>
+        • <strong>แป้นพิมพ์ 1–8:</strong> สลับ 8 ทิศทางรอบตัว<br>
+        • <strong>ปุ่ม R:</strong> เปิด/ปิด โหมดหมุน 360°<br>
+        • <strong>ลากเมาส์:</strong> เลื่อนมุมมองบนสเตจ
+      </div>
+
+    </aside>
+
+  </div>
+
+  <script>
+    // --- Monster Definitions & Data Registry ---
+    const MONSTERS = [
+      {
+        id: 'buffalo',
+        name: 'พญาควายธนู',
+        tag: 'ELITE',
+        tagClass: 'tag-elite',
+        icon: '🐂',
+        size: 128,
+        defaultScale: 1.25,
+        defaultAnchorX: 64,
+        defaultAnchorY: 112,
+        hasAttack: false,
+        actions: ['walking', 'idle'],
+        pathResolver: (action, dir, frame) => {
+          if (action === 'idle') return `Assets/buffalo/Idle/rotations/${dir}.png?v=buffalo_v5`;
+          return `Assets/buffalo/Idle/animations/Walking/${dir}/${frame}.png?v=buffalo_v5`;
+        },
+        framesCount: { walking: 8, idle: 1 }
+      },
+      {
+        id: 'bosspreat',
+        name: 'พญาเปรตวัดสุทัศน์',
+        tag: 'BOSS',
+        tagClass: 'tag-boss',
+        icon: '👑',
+        size: 88,
+        defaultScale: 2.2,
+        defaultAnchorX: 44,
+        defaultAnchorY: 78,
+        hasAttack: false,
+        actions: ['walking', 'idle'],
+        pathResolver: (action, dir, frame) => {
+          if (action === 'idle') return `Assets/bosspreat/Idle/rotations/${dir}.png`;
+          const pad = String(frame).padStart(3, '0');
+          return `Assets/bosspreat/Idle/animations/Walking/${dir}/frame_${pad}.png`;
+        },
+        framesCount: { walking: 8, idle: 1 }
+      },
+      {
+        id: 'yak',
+        name: 'นักรบยักษ์ไทย',
+        tag: 'HERO',
+        tagClass: 'tag-hero',
+        icon: '🧌',
+        size: 68,
+        defaultScale: 1.5,
+        defaultAnchorX: 34,
+        defaultAnchorY: 57,
+        hasAttack: true,
+        actions: ['walking', 'idle', 'attack'],
+        pathResolver: (action, dir, frame) => {
+          if (action === 'idle') return `Assets/yak/Idle/rotations/${dir}.png`;
+          const pad = String(frame).padStart(3, '0');
+          if (action === 'attack') return `Assets/yak/Idle/animations/Attack/${dir}/frame_${pad}.png`;
+          return `Assets/yak/Idle/animations/Walking/${dir}/frame_${pad}.png`;
+        },
+        framesCount: { walking: 8, idle: 1, attack: 4 }
+      },
+      {
+        id: 'tiger',
+        name: 'เสือสมิง',
+        tag: 'ELITE',
+        tagClass: 'tag-elite',
+        icon: '🐯',
+        size: 68,
+        defaultScale: 1.55,
+        defaultAnchorX: 34,
+        defaultAnchorY: 57,
+        hasAttack: true,
+        actions: ['walking', 'idle', 'attack'],
+        pathResolver: (action, dir, frame) => {
+          if (action === 'idle') return `Assets/tiger/Idle/rotations/${dir}.png`;
+          const pad = String(frame).padStart(3, '0');
+          if (action === 'attack') return `Assets/tiger/Idle/animations/Attack/${dir}/frame_${pad}.png`;
+          return `Assets/tiger/Idle/animations/Walking/${dir}/frame_${pad}.png`;
+        },
+        framesCount: { walking: 8, idle: 1, attack: 4 }
+      },
+      {
+        id: 'krasue',
+        name: 'ผีกระสือ',
+        tag: 'MOB',
+        tagClass: 'tag-mob',
+        icon: '👻',
+        size: 68,
+        defaultScale: 1.35,
+        defaultAnchorX: 34,
+        defaultAnchorY: 57,
+        hasAttack: false,
+        actions: ['walking', 'idle'],
+        pathResolver: (action, dir, frame) => {
+          if (action === 'idle') return `Assets/krasue/Idle/rotations/${dir}.png`;
+          const pad = String(frame).padStart(3, '0');
+          return `Assets/krasue/Idle/animations/Walking/${dir}/frame_${pad}.png`;
+        },
+        framesCount: { walking: 8, idle: 1 }
+      },
+      {
+        id: 'monkey',
+        name: 'วานรปีศาจ',
+        tag: 'MOB',
+        tagClass: 'tag-mob',
+        icon: '🐒',
+        size: 68,
+        defaultScale: 1.35,
+        defaultAnchorX: 34,
+        defaultAnchorY: 57,
+        hasAttack: true,
+        actions: ['walking', 'idle', 'attack'],
+        pathResolver: (action, dir, frame) => {
+          if (action === 'idle') return `Assets/monkey/idle_${dir}.png?v=8dir_v1`;
+          if (action === 'attack') return `Assets/monkey/attack_${dir}_${frame % 4}.png?v=8dir_v1`;
+          return `Assets/monkey/walk_${dir}_${frame % 8}.png?v=8dir_v1`;
+        },
+        framesCount: { walking: 8, idle: 1, attack: 4 }
+      },
+      {
+        id: 'serpent',
+        name: 'พญางูอสูร',
+        tag: 'MOB',
+        tagClass: 'tag-mob',
+        icon: '🐍',
+        size: 68,
+        defaultScale: 1.45,
+        defaultAnchorX: 34,
+        defaultAnchorY: 57,
+        hasAttack: true,
+        actions: ['walking', 'idle', 'attack'],
+        pathResolver: (action, dir, frame) => {
+          if (action === 'idle') return `Assets/serpent/idle_${dir}.png?v=8dir_v1`;
+          if (action === 'attack') return `Assets/serpent/attack_${dir}_${frame % 4}.png?v=8dir_v1`;
+          return `Assets/serpent/walk_${dir}_${frame % 8}.png?v=8dir_v1`;
+        },
+        framesCount: { walking: 8, idle: 1, attack: 4 }
+      },
+      {
+        id: 'imp',
+        name: 'ภูตเงา',
+        tag: 'MOB',
+        tagClass: 'tag-mob',
+        icon: '👿',
+        size: 68,
+        defaultScale: 1.25,
+        defaultAnchorX: 34,
+        defaultAnchorY: 57,
+        hasAttack: true,
+        actions: ['walking', 'idle', 'attack'],
+        pathResolver: (action, dir, frame) => {
+          if (action === 'idle') return `Assets/imp/idle_${dir}.png?v=8dir_v1`;
+          if (action === 'attack') return `Assets/imp/attack_${dir}_${frame % 4}.png?v=8dir_v1`;
+          return `Assets/imp/walk_${dir}_${frame % 8}.png?v=8dir_v1`;
+        },
+        framesCount: { walking: 8, idle: 1, attack: 4 }
+      }
+    ];
+
+    const DIRECTIONS = [
+      'north', 'north-east', 'east', 'south-east',
+      'south', 'south-west', 'west', 'north-west'
+    ];
+
+    // --- State Management ---
+    let currentMonster = MONSTERS[0];
+    let currentAction = 'walking';
+    let currentDir = 'south';
+    let currentFrame = 0;
+    let isPlaying = true;
+    let currentFps = 8;
+    let currentZoom = 3;
+    let isTurntableActive = false;
+    let turntableTimer = 0;
+
+    // Alignment & Anchors
+    let customScale = currentMonster.defaultScale;
+    let customAnchorX = currentMonster.defaultAnchorX;
+    let customAnchorY = currentMonster.defaultAnchorY;
+
+    // View Options
+    let showGround = true;
+    let showAxis = true;
+    let showBox = false;
+    let showShadow = false;
+
+    // Pan
+    let panX = 0;
+    let panY = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // Animation Timing
+    let lastTime = performance.now();
+    let animAccumulator = 0;
+
+    // Image Cache
+    const imgCache = new Map();
+
+    function getImage(src) {
+      if (imgCache.has(src)) return imgCache.get(src);
+      const img = new Image();
+      img.src = src;
+      imgCache.set(src, img);
+      return img;
+    }
+
+    // --- Elements ---
+    const canvas = document.getElementById('stageCanvas');
+    const ctx = canvas.getContext('2d');
+    const canvasContainer = document.getElementById('canvasContainer');
+
+    // --- Init UI ---
+    function initUI() {
+      // 1. Build Monster List
+      const monsterListContainer = document.getElementById('monsterListContainer');
+      monsterListContainer.innerHTML = '';
+      MONSTERS.forEach(m => {
+        const item = document.createElement('div');
+        item.className = `monster-item ${m.id === currentMonster.id ? 'active' : ''}`;
+        item.innerHTML = `
+          <div class="monster-info">
+            <span class="monster-icon">${m.icon}</span>
+            <span class="monster-name">${m.name}</span>
+          </div>
+          <span class="monster-tag ${m.tagClass}">${m.tag}</span>
+        `;
+        item.addEventListener('click', () => selectMonster(m));
+        monsterListContainer.appendChild(item);
+      });
+
+      // 2. Action Buttons
+      document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.action-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentAction = btn.dataset.action;
+          currentFrame = 0;
+          updateFilmstrip();
+          updateInspectorInfo();
+        });
+      });
+
+      // 3. Direction Dial
+      document.querySelectorAll('.dir-btn[data-dir]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.dir-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentDir = btn.dataset.dir;
+          isTurntableActive = false;
+          document.getElementById('btnAutoTurntable').classList.remove('active');
+          updateFilmstrip();
+          updateInspectorInfo();
+        });
+      });
+
+      // 4. Auto Turntable Button
+      const btnTurntable = document.getElementById('btnAutoTurntable');
+      btnTurntable.addEventListener('click', () => {
+        isTurntableActive = !isTurntableActive;
+        btnTurntable.classList.toggle('active', isTurntableActive);
+      });
+
+      // 5. Overlays Toggles
+      setupToggle('btnToggleGround', val => showGround = val, showGround);
+      setupToggle('btnToggleAxis', val => showAxis = val, showAxis);
+      setupToggle('btnToggleBox', val => showBox = val, showBox);
+      setupToggle('btnToggleShadow', val => showShadow = val, showShadow);
+
+      // 6. Zoom Buttons
+      document.querySelectorAll('[data-zoom]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-zoom]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentZoom = parseFloat(btn.dataset.zoom);
+          resizeCanvas();
+        });
+      });
+
+      // 7. Background Switcher
+      document.querySelectorAll('[data-bg]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('[data-bg]').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          canvasContainer.className = `stage-canvas-container ${btn.dataset.bg}`;
+        });
+      });
+
+      // 8. Playback Controls
+      const btnPlay = document.getElementById('btnPlayPause');
+      btnPlay.addEventListener('click', togglePlay);
+
+      document.getElementById('btnPrevFrame').addEventListener('click', () => stepFrame(-1));
+      document.getElementById('btnNextFrame').addEventListener('click', () => stepFrame(1));
+      document.getElementById('btnFirstFrame').addEventListener('click', () => { currentFrame = 0; updateFilmstripActive(); });
+      document.getElementById('btnLastFrame').addEventListener('click', () => { 
+        currentFrame = getMaxFrames() - 1; 
+        updateFilmstripActive(); 
+      });
+
+      // 9. FPS Range & Presets
+      const fpsRange = document.getElementById('fpsRange');
+      fpsRange.addEventListener('input', (e) => {
+        setFps(parseInt(e.target.value));
+      });
+
+      document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          setFps(parseInt(btn.dataset.fps));
+        });
+      });
+
+      // 10. Anchor & Scale Sliders
+      const rangeScale = document.getElementById('rangeScale');
+      const rangeAnchorX = document.getElementById('rangeAnchorX');
+      const rangeAnchorY = document.getElementById('rangeAnchorY');
+
+      rangeScale.addEventListener('input', (e) => {
+        customScale = parseFloat(e.target.value);
+        document.getElementById('valScale').textContent = `${customScale.toFixed(2)}x`;
+      });
+
+      rangeAnchorX.addEventListener('input', (e) => {
+        customAnchorX = parseInt(e.target.value);
+        document.getElementById('valAnchorX').textContent = `${customAnchorX} px`;
+      });
+
+      rangeAnchorY.addEventListener('input', (e) => {
+        customAnchorY = parseInt(e.target.value);
+        document.getElementById('valAnchorY').textContent = `${customAnchorY} px`;
+      });
+
+      document.getElementById('btnResetAnchor').addEventListener('click', () => {
+        customScale = currentMonster.defaultScale;
+        customAnchorX = currentMonster.defaultAnchorX;
+        customAnchorY = currentMonster.defaultAnchorY;
+        rangeScale.value = customScale;
+        rangeAnchorX.value = customAnchorX;
+        rangeAnchorY.value = customAnchorY;
+        document.getElementById('valScale').textContent = `${customScale.toFixed(2)}x`;
+        document.getElementById('valAnchorX').textContent = `${customAnchorX} px`;
+        document.getElementById('valAnchorY').textContent = `${customAnchorY} px`;
+      });
+
+      // 11. Canvas Dragging
+      canvasContainer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragStartX = e.clientX - panX;
+        dragStartY = e.clientY - panY;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        panX = e.clientX - dragStartX;
+        panY = e.clientY - dragStartY;
+      });
+
+      window.addEventListener('mouseup', () => isDragging = false);
+
+      // Keyboard shortcuts
+      window.addEventListener('keydown', handleKey);
+
+      resizeCanvas();
+      selectMonster(currentMonster);
+    }
+
+    function setupToggle(id, callback, defaultVal) {
+      const btn = document.getElementById(id);
+      let val = defaultVal;
+      btn.addEventListener('click', () => {
+        val = !val;
+        btn.classList.toggle('active', val);
+        callback(val);
+      });
+    }
+
+    function resizeCanvas() {
+      const w = 480;
+      const h = 480;
+      canvas.width = w;
+      canvas.height = h;
+      canvas.style.width = `${w}px`;
+      canvas.style.height = `${h}px`;
+    }
+
+    function selectMonster(m) {
+      currentMonster = m;
+      document.querySelectorAll('.monster-item').forEach(el => {
+        el.classList.toggle('active', el.querySelector('.monster-name').textContent === m.name);
+      });
+
+      // Set attack button visibility
+      const btnAttack = document.getElementById('btnActionAttack');
+      if (m.hasAttack) {
+        btnAttack.style.display = 'flex';
+      } else {
+        btnAttack.style.display = 'none';
+        if (currentAction === 'attack') currentAction = 'walking';
+      }
+
+      // Update action button state
+      document.querySelectorAll('.action-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.action === currentAction);
+      });
+
+      // Reset sliders to monster defaults
+      customScale = m.defaultScale;
+      customAnchorX = m.defaultAnchorX;
+      customAnchorY = m.defaultAnchorY;
+      document.getElementById('rangeScale').value = customScale;
+      document.getElementById('rangeAnchorX').value = customAnchorX;
+      document.getElementById('rangeAnchorY').value = customAnchorY;
+      document.getElementById('valScale').textContent = `${customScale.toFixed(2)}x`;
+      document.getElementById('valAnchorX').textContent = `${customAnchorX} px`;
+      document.getElementById('valAnchorY').textContent = `${customAnchorY} px`;
+
+      currentFrame = 0;
+      updateFilmstrip();
+      updateInspectorInfo();
+    }
+
+    function setFps(fps) {
+      currentFps = fps;
+      document.getElementById('fpsRange').value = fps;
+      document.getElementById('fpsDisplay').textContent = `${fps} FPS`;
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      document.getElementById('btnPlayPause').innerHTML = isPlaying ? '⏸' : '▶';
+    }
+
+    function stepFrame(step) {
+      isPlaying = false;
+      document.getElementById('btnPlayPause').innerHTML = '▶';
+      const maxF = getMaxFrames();
+      currentFrame = (currentFrame + step + maxF) % maxF;
+      updateFilmstripActive();
+      updateInspectorInfo();
+    }
+
+    function getMaxFrames() {
+      if (currentAction === 'idle') return 1;
+      return currentMonster.framesCount[currentAction] || 8;
+    }
+
+    function updateFilmstrip() {
+      const container = document.getElementById('filmstripContainer');
+      container.innerHTML = '';
+      const total = getMaxFrames();
+
+      for (let f = 0; f < total; f++) {
+        const frameDiv = document.createElement('div');
+        frameDiv.className = `filmstrip-frame ${f === currentFrame ? 'active' : ''}`;
+        frameDiv.dataset.frame = f;
+
+        const src = currentMonster.pathResolver(currentAction, currentDir, f);
+        frameDiv.innerHTML = `
+          <img src="${src}" alt="Frame ${f}" onerror="this.style.opacity=0.3;">
+          <span class="filmstrip-num">#${f}</span>
+        `;
+
+        frameDiv.addEventListener('click', () => {
+          isPlaying = false;
+          document.getElementById('btnPlayPause').innerHTML = '▶';
+          currentFrame = f;
+          updateFilmstripActive();
+          updateInspectorInfo();
+        });
+
+        container.appendChild(frameDiv);
+      }
+    }
+
+    function updateFilmstripActive() {
+      document.querySelectorAll('.filmstrip-frame').forEach(el => {
+        el.classList.toggle('active', parseInt(el.dataset.frame) === currentFrame);
+      });
+      document.getElementById('frameCounter').textContent = `Frame ${currentFrame} / ${Math.max(0, getMaxFrames() - 1)}`;
+    }
+
+    function updateInspectorInfo() {
+      document.getElementById('infoMonsterName').textContent = currentMonster.name;
+      
+      const actNames = { walking: 'เดิน (Walking)', idle: 'ยืนนิ่ง (Idle)', attack: 'โจมตี (Attack)' };
+      document.getElementById('infoActionName').textContent = actNames[currentAction] || currentAction;
+
+      const dirNames = {
+        'south': 'ใต้ (South - หน้าตรง)',
+        'north': 'เหนือ (North - หันหลัง)',
+        'east': 'ตะวันออก (East - หันขวา)',
+        'west': 'ตะวันตก (West - หันซ้าย)',
+        'south-east': 'ตะวันออกเฉียงใต้ (South-East)',
+        'south-west': 'ตะวันตกเฉียงใต้ (South-West)',
+        'north-east': 'ตะวันออกเฉียงเหนือ (North-East)',
+        'north-west': 'ตะวันตกเฉียงเหนือ (North-West)'
+      };
+      document.getElementById('infoDirName').textContent = dirNames[currentDir] || currentDir;
+
+      const src = currentMonster.pathResolver(currentAction, currentDir, currentFrame);
+      document.getElementById('infoFilePath').textContent = src;
+
+      document.getElementById('infoDimensions').textContent = `${currentMonster.size} × ${currentMonster.size} px`;
+      document.getElementById('infoTotalFrames').textContent = `${getMaxFrames()} เฟรม`;
+
+      const img = getImage(src);
+      const statusEl = document.getElementById('infoStatus');
+      if (img.complete) {
+        if (img.naturalWidth > 0) {
+          statusEl.innerHTML = '● โหลดสมบูรณ์';
+          statusEl.style.color = '#4ade80';
+        } else {
+          statusEl.innerHTML = '⚠️ ไม่พบไฟล์ภาพ (404)';
+          statusEl.style.color = '#ef4444';
+        }
+      } else {
+        statusEl.innerHTML = '⏳ กำลังโหลด...';
+        statusEl.style.color = '#fde047';
+      }
+    }
+
+    function handleKey(e) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlay();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        stepFrame(-1);
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        stepFrame(1);
+      } else if (e.code === 'KeyR') {
+        document.getElementById('btnAutoTurntable').click();
+      } else if (e.key >= '1' && e.key <= '8') {
+        const idx = parseInt(e.key) - 1;
+        if (idx < DIRECTIONS.length) {
+          currentDir = DIRECTIONS[idx];
+          document.querySelectorAll('.dir-btn[data-dir]').forEach(b => {
+            b.classList.toggle('active', b.dataset.dir === currentDir);
+          });
+          isTurntableActive = false;
+          document.getElementById('btnAutoTurntable').classList.remove('active');
+          updateFilmstrip();
+          updateInspectorInfo();
+        }
+      }
+    }
+
+    // --- Main Rendering Loop ---
+    function render(now) {
+      const dt = (now - lastTime) / 1000;
+      lastTime = now;
+
+      // Animation stepping
+      if (isPlaying) {
+        animAccumulator += dt;
+        const frameTime = 1.0 / currentFps;
+        if (animAccumulator >= frameTime) {
+          animAccumulator %= frameTime;
+          const maxF = getMaxFrames();
+          currentFrame = (currentFrame + 1) % maxF;
+          updateFilmstripActive();
+          updateInspectorInfo();
+        }
+      }
+
+      // Auto Turntable rotating
+      if (isTurntableActive) {
+        turntableTimer += dt;
+        if (turntableTimer >= 0.75) {
+          turntableTimer = 0;
+          const curIdx = DIRECTIONS.indexOf(currentDir);
+          currentDir = DIRECTIONS[(curIdx + 1) % DIRECTIONS.length];
+          document.querySelectorAll('.dir-btn[data-dir]').forEach(b => {
+            b.classList.toggle('active', b.dataset.dir === currentDir);
+          });
+          updateFilmstrip();
+          updateInspectorInfo();
+        }
+      }
+
+      // Clear Canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const cx = canvas.width / 2 + panX;
+      const cy = canvas.height / 2 + panY + 40; // baseline center
+
+      // 1. Draw Reference Overlays (Background Layer)
+      if (showAxis) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.4)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        // Vertical axis
+        ctx.beginPath();
+        ctx.moveTo(cx, 0);
+        ctx.lineTo(cx, canvas.height);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      if (showGround) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(34, 197, 94, 0.75)';
+        ctx.lineWidth = 2;
+        // Ground line
+        ctx.beginPath();
+        ctx.moveTo(0, cy);
+        ctx.lineTo(canvas.width, cy);
+        ctx.stroke();
+
+        // Ground label
+        ctx.font = '10px Kanit, sans-serif';
+        ctx.fillStyle = '#4ade80';
+        ctx.fillText('⚓ ระนาบพื้นดิน (Ground Baseline)', 14, cy - 6);
+        ctx.restore();
+      }
+
+      if (showShadow) {
+        ctx.save();
+        const isBuffalo = currentMonster.id === 'buffalo';
+        const isSide = (currentDir === 'east' || currentDir === 'west');
+        const isDiag = (currentDir === 'south-east' || currentDir === 'south-west' || currentDir === 'north-east' || currentDir === 'north-west');
+        const sBaseRx = isBuffalo ? (isSide ? 58 : (isDiag ? 50 : 44)) : 38;
+        const sBaseRy = isBuffalo ? (isSide ? 22 : (isDiag ? 25 : 28)) : 16;
+        const zoomScale = (currentZoom / 3) * customScale;
+
+        // Soft outer ambient shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + (isBuffalo ? 4 : 0), sBaseRx * 1.15 * zoomScale, sBaseRy * 1.15 * zoomScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Main dense ground shadow
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
+        ctx.beginPath();
+        ctx.ellipse(cx, cy + (isBuffalo ? 4 : 0), sBaseRx * zoomScale, sBaseRy * zoomScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 2. Draw Sprite
+      const src = currentMonster.pathResolver(currentAction, currentDir, currentFrame);
+      const img = getImage(src);
+
+      if (img && img.complete && img.naturalWidth > 0) {
+        const renderScale = (currentZoom / 3) * customScale;
+        const w = img.naturalWidth * renderScale;
+        const h = img.naturalHeight * renderScale;
+        const ax = customAnchorX * renderScale;
+        const ay = customAnchorY * renderScale;
+
+        const drawX = Math.round(cx - ax);
+        const drawY = Math.round(cy - ay);
+
+        ctx.save();
+        ctx.imageSmoothingEnabled = false; // Crisp pixel art
+
+        // Draw shadow glow for dark buffalo if selected
+        if (currentMonster.id === 'buffalo') {
+          const auraPulse = 30 * renderScale + Math.sin(now / 200) * 4;
+          const grad = ctx.createRadialGradient(cx, cy - 25 * renderScale, 4, cx, cy - 25 * renderScale, auraPulse);
+          grad.addColorStop(0, 'rgba(220, 38, 38, 0.35)');
+          grad.addColorStop(0.7, 'rgba(153, 27, 27, 0.1)');
+          grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(cx, cy - 25 * renderScale, auraPulse, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.drawImage(img, drawX, drawY, w, h);
+        ctx.restore();
+
+        // 3. Draw Bounding Box Overlay
+        if (showBox) {
+          ctx.save();
+          ctx.strokeStyle = '#fde047';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.strokeRect(drawX, drawY, w, h);
+
+          // Anchor point cross
+          ctx.strokeStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    // Launch
+    window.addEventListener('DOMContentLoaded', () => {
+      initUI();
+      requestAnimationFrame(render);
+    });
+  </script>
+</body>
+</html>
