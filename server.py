@@ -106,6 +106,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
     def do_GET(self):
         if self.path.startswith('/api/boss_config'):
             self.handle_get_boss_config()
+        elif self.path.startswith('/api/world_saves'):
+            self.handle_list_world_saves()
         elif self.path.startswith('/api/world_save'):
             self.handle_get_world_save()
         elif self.path.startswith('/api/player'):
@@ -127,6 +129,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if self.path.startswith('/api/boss_config'):
             self.handle_save_boss_config()
+        elif self.path.startswith('/api/world_save/delete'):
+            self.handle_delete_world_save()
         elif self.path.startswith('/api/world_save'):
             self.handle_save_world_save()
         elif self.path.startswith('/api/player'):
@@ -208,6 +212,63 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 'message': f'Boss config for "{boss_key}" saved to database successfully',
                 'updated_at': now_iso
             })
+        except Exception as e:
+            self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
+
+    def handle_list_world_saves(self):
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute('SELECT slot_name, world_data, updated_at FROM world_saves ORDER BY updated_at DESC')
+            rows = cur.fetchall()
+            conn.close()
+
+            slots = []
+            for r in rows:
+                slot_info = {
+                    'slot_name': r['slot_name'],
+                    'updated_at': r['updated_at'],
+                    'level': 1,
+                    'hp': 260,
+                    'maxHp': 260,
+                    'gold': 0
+                }
+                try:
+                    wd = json.loads(r['world_data'])
+                    if wd and 'player' in wd:
+                        p = wd['player']
+                        slot_info['level'] = p.get('level', 1)
+                        slot_info['hp'] = p.get('hp', 260)
+                        slot_info['maxHp'] = p.get('maxHp', 260)
+                        slot_info['gold'] = p.get('gold', 0)
+                except Exception:
+                    pass
+                slots.append(slot_info)
+
+            self.send_json_response({'status': 'success', 'slots': slots})
+        except Exception as e:
+            self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
+
+    def handle_delete_world_save(self):
+        try:
+            length = int(self.headers.get('Content-Length', 0))
+            if length == 0:
+                self.send_json_response({'status': 'error', 'message': 'Empty payload'}, code=400)
+                return
+
+            body = self.rfile.read(length).decode('utf-8')
+            payload = json.loads(body)
+            slot = payload.get('slot_name', 'default')
+
+            conn = sqlite3.connect(DB_FILE)
+            cur = conn.cursor()
+            cur.execute('DELETE FROM world_saves WHERE slot_name = ?', (slot,))
+            cur.execute('DELETE FROM player_states WHERE slot_name = ?', (slot,))
+            conn.commit()
+            conn.close()
+
+            self.send_json_response({'status': 'success', 'message': f'Slot "{slot}" deleted successfully'})
         except Exception as e:
             self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
 

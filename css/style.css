@@ -1692,3 +1692,151 @@ body, html {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
 }
 
+/* --- Save Slots & Reset Modal Styles --- */
+.save-slot-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1.5px solid rgba(51, 65, 85, 0.9);
+  border-radius: 12px;
+  padding: 14px 16px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.save-slot-card:hover {
+  border-color: rgba(52, 211, 153, 0.5);
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.save-slot-card.active-slot {
+  border-color: #10b981;
+  background: linear-gradient(145deg, rgba(6, 78, 59, 0.3) 0%, rgba(15, 23, 42, 0.85) 100%);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+.save-slot-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 6px;
+}
+
+.active-badge {
+  background: #059669;
+  color: #ecfdf5;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.save-slot-details {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.slot-stat-chip {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #cbd5e1;
+}
+
+.save-slot-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.slot-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-save-now {
+  background: #047857;
+  border: 1px solid #10b981;
+  color: #ecfdf5;
+}
+.btn-save-now:hover {
+  background: #059669;
+}
+
+.btn-reset-hero {
+  background: rgba(185, 28, 28, 0.25);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+.btn-reset-hero:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+.btn-load-slot {
+  background: #0284c7;
+  border: 1px solid #38bdf8;
+  color: #f0f9ff;
+}
+.btn-load-slot:hover {
+  background: #0369a1;
+}
+
+.btn-new-game {
+  background: #d97706;
+  border: 1px solid #fbbf24;
+  color: #fffbeb;
+}
+.btn-new-game:hover {
+  background: #b45309;
+}
+
+.btn-del-slot {
+  background: rgba(51, 65, 85, 0.6);
+  border: 1px solid #64748b;
+  color: #94a3b8;
+  margin-left: auto;
+}
+.btn-del-slot:hover {
+  background: #7f1d1d;
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.save-modal-status {
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+  font-weight: 600;
+}
+.save-modal-status.status-success {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid #10b981;
+  color: #6ee7b7;
+}
+.save-modal-status.status-error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid #ef4444;
+  color: #fca5a5;
+}
+.save-modal-status.status-info {
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid #3b82f6;
+  color: #93c5fd;
+}
+

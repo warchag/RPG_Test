@@ -273,6 +273,11 @@ class Game {
 
           // Initialize periodic auto-save (every 8s + page exit)
           this.initAutoSave();
+
+          // Initialize Save Slot Manager (Slot 1, 2, 3 & Reset Hero)
+          if (window.SaveSlotManager) {
+            window.saveSlotManager = new window.SaveSlotManager(this);
+          }
         }, 400);
       }
     );
@@ -300,9 +305,14 @@ class Game {
     }
   }
 
+  getActiveSlot() {
+    return localStorage.getItem('yaksha_active_slot') || 'slot1';
+  }
+
   saveFullWorldState() {
     if (!this.player || this.state !== 'PLAYING') return;
 
+    const currentSlot = this.getActiveSlot();
     const fullState = {
       version: 'himavanta_v3',
       map: this.map ? this.map.getState() : {},
@@ -319,15 +329,19 @@ class Game {
     };
 
     if (window.gameDatabase) {
-      window.gameDatabase.saveWorld(fullState, 'default').then(res => {
+      window.gameDatabase.saveWorld(fullState, currentSlot).then(res => {
         // Also keep player slot synced
-        window.gameDatabase.savePlayer({ player: fullState.player, quests: fullState.quests }, 'default').catch(() => {});
+        window.gameDatabase.savePlayer({ player: fullState.player, quests: fullState.quests }, currentSlot).catch(() => {});
+        // Also sync default for backward compatibility
+        if (currentSlot === 'slot1') {
+          window.gameDatabase.saveWorld(fullState, 'default').catch(() => {});
+        }
       }).catch(err => {
         console.warn('[Game] Auto-save world error:', err.message);
       });
     } else {
       try {
-        localStorage.setItem('yaksha_world_save_default', JSON.stringify(fullState));
+        localStorage.setItem(`yaksha_world_save_${currentSlot}`, JSON.stringify(fullState));
       } catch (e) {}
     }
   }
@@ -338,8 +352,13 @@ class Game {
 
   async loadFullWorldState() {
     if (!window.gameDatabase) return false;
+    const currentSlot = this.getActiveSlot();
     try {
-      const res = await window.gameDatabase.loadWorld('default');
+      let res = await window.gameDatabase.loadWorld(currentSlot);
+      if ((!res || !res.success || !res.data) && currentSlot === 'slot1') {
+        // Fallback to legacy default slot if slot1 is fresh
+        res = await window.gameDatabase.loadWorld('default');
+      }
       if (res && res.success && res.data) {
         const data = res.data;
         // 1. Restore monster & boss configurations from SQLite FIRST so enemies spawn with exact custom stats
@@ -433,8 +452,12 @@ class Game {
 
   async loadPlayerProgress() {
     if (!window.gameDatabase) return false;
+    const currentSlot = this.getActiveSlot();
     try {
-      const res = await window.gameDatabase.loadPlayer('default');
+      let res = await window.gameDatabase.loadPlayer(currentSlot);
+      if ((!res || !res.success || !res.data) && currentSlot === 'slot1') {
+        res = await window.gameDatabase.loadPlayer('default');
+      }
       if (res && res.success && res.data) {
         const data = res.data;
         if (data.player && this.player) {

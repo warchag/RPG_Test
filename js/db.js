@@ -256,6 +256,65 @@ class GameDatabase {
   }
 
   /**
+   * List all saved world slots from SQLite DB
+   */
+  async listWorldSlots() {
+    try {
+      const res = await fetch(`${this.apiBase}/world_saves`);
+      if (res.ok) {
+        const json = await res.json();
+        return json.slots || [];
+      }
+    } catch (e) {
+      console.warn('[GameDatabase] List world slots error:', e);
+    }
+    // Fallback: check localStorage for slots
+    const slots = [];
+    ['default', 'slot1', 'slot2', 'slot3'].forEach(s => {
+      const raw = localStorage.getItem(`yaksha_world_save_${s}`);
+      if (raw) {
+        try {
+          const data = JSON.parse(raw);
+          slots.push({
+            slot_name: s,
+            updated_at: new Date().toISOString(),
+            level: data.player ? data.player.level : 1,
+            hp: data.player ? data.player.hp : 260,
+            maxHp: data.player ? data.player.maxHp : 260,
+            gold: data.player ? data.player.gold : 0
+          });
+        } catch (e) {}
+      }
+    });
+    return slots;
+  }
+
+  /**
+   * Delete a world save slot from SQLite DB and LocalStorage
+   */
+  async deleteWorldSlot(slotName) {
+    try {
+      localStorage.removeItem(`yaksha_world_save_${slotName}`);
+      localStorage.removeItem(`yaksha_player_state_${slotName}`);
+    } catch (e) {}
+
+    try {
+      const res = await fetch(`${this.apiBase}/world_save/delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slot_name: slotName })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return { success: true, ...json };
+      }
+    } catch (e) {
+      console.warn('[GameDatabase] Delete world slot server error:', e);
+    }
+    return { success: true, localOnly: true };
+  }
+
+  /**
    * List all saved map slots from SQLite DB
    */
   async listMapSlots() {
