@@ -502,14 +502,14 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             assets_root = os.path.join(base_dir, 'Assets')
             results = []
             
-            # Known monsters to audit
-            monster_keys = ['yak', 'bosspreat', 'buffalo', 'tiger', 'krasue', 'monkey', 'serpent', 'imp', 'mainchar']
+            # Known monsters to audit (characters like 'yak' are kept in Assets/characters/ and excluded from monster scans)
+            monster_keys = ['bosspreat', 'buffalo', 'tiger', 'krasue', 'monkey', 'serpent', 'imp', 'mainchar']
             
-            # Also find any other folders in Assets/
+            # Also find any other folders in Assets/ (ignore characters, map_assets, sound, ui, yak)
             if os.path.isdir(assets_root):
                 for item in os.listdir(assets_root):
                     item_path = os.path.join(assets_root, item)
-                    if os.path.isdir(item_path) and not item.startswith('.') and item not in ['map_assets', 'sound', 'ui']:
+                    if os.path.isdir(item_path) and not item.startswith('.') and item not in ['characters', 'yak', 'map_assets', 'sound', 'ui']:
                         if item not in monster_keys:
                             monster_keys.append(item)
                             
@@ -732,7 +732,6 @@ BUILTIN_NAMES = {
 }
 
 BUILTIN_LIST = [
-    { 'key': 'yak', 'name': 'ยักษ์ไทย', 'role': 'ผู้เล่น (Hero)', 'scale': 1.0 },
     { 'key': 'bosspreat', 'name': 'พญาเปรตวัดสุทัศน์', 'role': 'เวิลด์บอส', 'is_boss': True, 'scale': 1.8 },
     { 'key': 'buffalo', 'name': 'พญาควายธนูทมิฬ', 'role': 'บอส / มินิบอส', 'is_boss': True, 'scale': 1.25 },
     { 'key': 'tiger', 'name': 'เสือสมิง', 'role': 'มอนสเตอร์ชั้นสูง', 'is_boss': False, 'scale': 1.55 },

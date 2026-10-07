@@ -986,10 +986,10 @@
         hasAttack: true,
         actions: ['walking', 'idle', 'attack'],
         pathResolver: (action, dir, frame) => {
-          if (action === 'idle') return `Assets/yak/Idle/rotations/${dir}.png`;
+          if (action === 'idle') return `Assets/characters/yak/Idle/rotations/${dir}.png`;
           const pad = String(frame).padStart(3, '0');
-          if (action === 'attack') return `Assets/yak/Idle/animations/Attack/${dir}/frame_${pad}.png`;
-          return `Assets/yak/Idle/animations/Walking/${dir}/frame_${pad}.png`;
+          if (action === 'attack') return `Assets/characters/yak/Idle/animations/Attack/${dir}/frame_${pad}.png`;
+          return `Assets/characters/yak/Idle/animations/Walking/${dir}/frame_${pad}.png`;
         },
         framesCount: { walking: 8, idle: 1, attack: 4 }
       },

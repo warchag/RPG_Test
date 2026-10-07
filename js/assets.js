@@ -25,7 +25,7 @@ class AssetManager {
 
     // 1. Yak Idle Rotations (8 directions)
     for (const dir of this.directions) {
-      list.push({ key: `yak_idle_${dir}`, src: `Assets/yak/Idle/rotations/${dir}.png` });
+      list.push({ key: `yak_idle_${dir}`, src: `Assets/characters/yak/Idle/rotations/${dir}.png` });
     }
 
     // 2. Yak Walking Frames (8 directions x 8 frames = 64 frames)
@@ -34,19 +34,19 @@ class AssetManager {
         const framePad = String(f).padStart(3, '0');
         list.push({
           key: `yak_walk_${dir}_${f}`,
-          src: `Assets/yak/Idle/animations/Walking/${dir}/frame_${framePad}.png`
+          src: `Assets/characters/yak/Idle/animations/Walking/${dir}/frame_${framePad}.png`
         });
       }
     }
 
     // 2.5 Yak Attack Animation Frames (8 directions x 4 frames = 32 frames)
     for (const dir of this.directions) {
-      list.push({ key: `yak_attack_${dir}`, src: `Assets/yak/Attack/rotations/${dir}.png` });
+      list.push({ key: `yak_attack_${dir}`, src: `Assets/characters/yak/Attack/rotations/${dir}.png` });
       for (let f = 0; f < 4; f++) {
         const framePad = String(f).padStart(3, '0');
         list.push({
           key: `yak_attack_${dir}_${f}`,
-          src: `Assets/yak/Idle/animations/Attack/${dir}/frame_${framePad}.png`
+          src: `Assets/characters/yak/Idle/animations/Attack/${dir}/frame_${framePad}.png`
         });
       }
     }
@@ -164,7 +164,7 @@ class AssetManager {
     // 8.4 Realistic Hand-Painted Fantasy Player Hero Skills & Attack VFX
     const playerVfxKeys = ['vfx_player_skill1', 'vfx_player_skill2', 'vfx_player_skill3', 'vfx_player_attack'];
     for (const key of playerVfxKeys) {
-      list.push({ key, src: `Assets/yak/${key}.png?v=yaksha_vfx_v1` });
+      list.push({ key, src: `Assets/characters/yak/${key}.png?v=yaksha_vfx_v1` });
     }
 
     // 8.5 Thai Demonic Water Buffalo (พญาควายธนูทมิฬ - buffalo)
