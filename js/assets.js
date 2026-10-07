@@ -115,13 +115,13 @@ class AssetManager {
     const newMonsterTypes = ['monkey', 'serpent', 'imp'];
     for (const m of newMonsterTypes) {
       for (const dir of this.directions) {
-        list.push({ key: `${m}_idle_${dir}`, src: `Assets/${m}/idle_${dir}.png?v=8dir_v1` });
-        list.push({ key: `${m}_attack_${dir}`, src: `Assets/${m}/attack_${dir}_0.png?v=8dir_v1` });
+        list.push({ key: `${m}_idle_${dir}`, src: `Assets/${m}/idle_${dir}.png?v=8dir_v2_fixed` });
+        list.push({ key: `${m}_attack_${dir}`, src: `Assets/${m}/attack_${dir}_0.png?v=8dir_v2_fixed` });
         for (let f = 0; f < 8; f++) {
-          list.push({ key: `${m}_walk_${dir}_${f}`, src: `Assets/${m}/walk_${dir}_${f}.png?v=8dir_v1` });
+          list.push({ key: `${m}_walk_${dir}_${f}`, src: `Assets/${m}/walk_${dir}_${f}.png?v=8dir_v2_fixed` });
         }
         for (let f = 0; f < 4; f++) {
-          list.push({ key: `${m}_attack_${dir}_${f}`, src: `Assets/${m}/attack_${dir}_${f}.png?v=8dir_v1` });
+          list.push({ key: `${m}_attack_${dir}_${f}`, src: `Assets/${m}/attack_${dir}_${f}.png?v=8dir_v2_fixed` });
         }
       }
     }
