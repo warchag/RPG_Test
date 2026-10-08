@@ -261,6 +261,7 @@ class Game {
               if (btnBgm) btnBgm.classList.add('active');
             } else if (window.soundSystem) {
               window.soundSystem.stopBGM();
+              window.soundSystem.setWeatherMuted(true);
             }
           } catch (e) {
             console.warn('Audio auto-play deferred until user interaction:', e);
@@ -369,8 +370,10 @@ class Game {
           for (const k of entityKeys) {
             const res = await window.gameDatabase.loadBossConfig(k);
             if (res && res.success && res.data) {
-              if (k === 'preta' || k === 'buffalo' || res.data.isBoss) {
+              const isBoss = (res.data.isBoss !== undefined) ? !!res.data.isBoss : (k === 'preta' || k === 'buffalo');
+              if (isBoss) {
                 window.bossConfigs[k] = res.data;
+                delete window.enemyConfigs[k];
                 if (k === 'preta') {
                   window.pretaBossConfig = Object.assign({}, window.defaultPretaBossConfig, res.data);
                   if (this.enemyManager && this.enemyManager.boss) {
@@ -379,6 +382,7 @@ class Game {
                 }
               } else {
                 window.enemyConfigs[k] = res.data;
+                delete window.bossConfigs[k];
               }
             }
           }

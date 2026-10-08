@@ -503,13 +503,13 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             results = []
             
             # Known monsters to audit (characters like 'yak' are kept in Assets/characters/ and excluded from monster scans)
-            monster_keys = ['bosspreat', 'buffalo', 'tiger', 'krasue', 'monkey', 'serpent', 'imp', 'mainchar']
+            monster_keys = ['bosspreat', 'buffalo', 'tiger', 'krasue', 'monkey', 'serpent', 'imp', 'swordsman']
             
-            # Also find any other folders in Assets/ (ignore characters, map_assets, sound, ui, yak)
+            # Also find any other folders in Assets/ (ignore characters, map_assets, sound, ui, yak, mainchar)
             if os.path.isdir(assets_root):
                 for item in os.listdir(assets_root):
                     item_path = os.path.join(assets_root, item)
-                    if os.path.isdir(item_path) and not item.startswith('.') and item not in ['characters', 'yak', 'map_assets', 'sound', 'ui']:
+                    if os.path.isdir(item_path) and not item.startswith('.') and item not in ['characters', 'yak', 'map_assets', 'sound', 'ui', 'mainchar']:
                         if item not in monster_keys:
                             monster_keys.append(item)
                             
@@ -614,6 +614,16 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             out_dir = os.path.join(base_dir, 'Assets', key)
             os.makedirs(out_dir, exist_ok=True)
             
+            # Write any extra animation frames provided (e.g. walk_south_0, attack_south_0, etc.)
+            extra_sprites = payload.get('extra_sprites', {})
+            if isinstance(extra_sprites, dict):
+                for fname, data_url in extra_sprites.items():
+                    if data_url and ',' in data_url and re.match(r'^[a-z0-9_-]+$', fname):
+                        header, b64_data = data_url.split(',', 1)
+                        raw_png = base64.b64decode(b64_data)
+                        with open(os.path.join(out_dir, f'{fname}.png'), 'wb') as ef:
+                            ef.write(raw_png)
+
             # Write provided sprites (base64 data URLs)
             for d, data_url in sprites.items():
                 if d in REQUIRED_8_DIRS and data_url and ',' in data_url:
@@ -700,19 +710,77 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             payload = json.loads(body)
             key = payload.get('monster_key', '').strip().lower()
             
-            if not key:
+            if not key or not re.match(r'^[a-z0-9_-]+$', key):
                 self.send_json_response({'status': 'error', 'message': 'Missing monster_key'}, code=400)
                 return
-                
+            if key in BUILTIN_NAMES or any(b['key'] == key for b in BUILTIN_LIST):
+                self.send_json_response({'status': 'error', 'message': 'ไม่สามารถลบมอนสเตอร์ระบบ (built-in) ได้'}, code=400)
+                return
+
+            def strip_enemies(lst):
+                if not isinstance(lst, list):
+                    return lst, 0
+                kept = [e for e in lst if not (isinstance(e, dict) and str(e.get('type', '')).lower() == key)]
+                return kept, len(lst) - len(kept)
+
+            removed_spawns = 0
             conn = sqlite3.connect(DB_FILE)
             cur = conn.cursor()
+            # 1. Registry row + per-monster config
             cur.execute('DELETE FROM custom_monsters WHERE monster_key = ?', (key,))
+            cur.execute('DELETE FROM boss_config WHERE boss_key = ?', (key,))
+
+            # 2. Remove its spawns from every saved map
+            for row_id, enemies_json in cur.execute('SELECT id, enemies FROM game_maps').fetchall():
+                try:
+                    kept, n = strip_enemies(json.loads(enemies_json or '[]'))
+                except Exception:
+                    continue
+                if n:
+                    removed_spawns += n
+                    cur.execute('UPDATE game_maps SET enemies = ? WHERE id = ?', (json.dumps(kept), row_id))
+
+            # 3. Remove live instances from world save slots
+            for row_id, world_json in cur.execute('SELECT id, world_data FROM world_saves').fetchall():
+                try:
+                    world = json.loads(world_json or '{}')
+                except Exception:
+                    continue
+                if isinstance(world, dict) and 'enemies' in world:
+                    kept, n = strip_enemies(world['enemies'])
+                    if n:
+                        removed_spawns += n
+                        world['enemies'] = kept
+                        cur.execute('UPDATE world_saves SET world_data = ? WHERE id = ?', (json.dumps(world), row_id))
             conn.commit()
             conn.close()
-            
+
+            # 4. Delete generated sprite files (keep any original export sub-folders such as Idle/ untouched)
+            removed_files = 0
+            out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Assets', key)
+            if os.path.isdir(out_dir):
+                for fname in os.listdir(out_dir):
+                    if re.match(r'^(idle|walk|attack)_[a-z-]+(_\d+)?\.png$', fname):
+                        try:
+                            os.remove(os.path.join(out_dir, fname))
+                            removed_files += 1
+                        except OSError:
+                            pass
+                try:
+                    leftover = [f for f in os.listdir(out_dir) if f != '.DS_Store']
+                    if not leftover:
+                        import shutil
+                        shutil.rmtree(out_dir, ignore_errors=True)
+                except OSError:
+                    pass
+
+            print(f"[Database] Deleted monster '{key}': {removed_spawns} spawns, {removed_files} sprite files")
             self.send_json_response({
                 'status': 'success',
-                'message': f'ลบมอนสเตอร์ {key} ออกจากระบบเรียบร้อย'
+                'monster_key': key,
+                'removed_spawns': removed_spawns,
+                'removed_files': removed_files,
+                'message': f'ลบมอนสเตอร์ {key} ออกจากระบบเรียบร้อย (ลบออกจากแผนที่/เซฟ {removed_spawns} ตัว, ไฟล์สไปรท์ {removed_files} ไฟล์)'
             })
         except Exception as e:
             self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
@@ -720,7 +788,6 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 REQUIRED_8_DIRS = ['south', 'south-east', 'east', 'north-east', 'north', 'north-west', 'west', 'south-west']
 
 BUILTIN_NAMES = {
-    'yak': 'ยักษ์ไทย (ผู้เล่น)',
     'bosspreat': 'พญาเปรตวัดสุทัศน์ (เวิลด์บอส)',
     'buffalo': 'พญาควายธนูทมิฬ (บอส/มินิบอส)',
     'tiger': 'เสือสมิง (มอนสเตอร์ชั้นสูง)',
@@ -728,7 +795,8 @@ BUILTIN_NAMES = {
     'monkey': 'วานรปีศาจ',
     'serpent': 'พญางูอสูร',
     'imp': 'ภูตเงา',
-    'mainchar': 'นักรบดาบอาคม'
+    'swordsman': 'วิญญาณนักรบดาบอาคม',
+    'mainchar': 'วิญญาณนักรบดาบอาคม'
 }
 
 BUILTIN_LIST = [

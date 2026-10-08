@@ -974,26 +974,6 @@
         framesCount: { walking: 8, idle: 1 }
       },
       {
-        id: 'yak',
-        name: 'นักรบยักษ์ไทย',
-        tag: 'HERO',
-        tagClass: 'tag-hero',
-        icon: '🧌',
-        size: 68,
-        defaultScale: 1.5,
-        defaultAnchorX: 34,
-        defaultAnchorY: 57,
-        hasAttack: true,
-        actions: ['walking', 'idle', 'attack'],
-        pathResolver: (action, dir, frame) => {
-          if (action === 'idle') return `Assets/characters/yak/Idle/rotations/${dir}.png`;
-          const pad = String(frame).padStart(3, '0');
-          if (action === 'attack') return `Assets/characters/yak/Idle/animations/Attack/${dir}/frame_${pad}.png`;
-          return `Assets/characters/yak/Idle/animations/Walking/${dir}/frame_${pad}.png`;
-        },
-        framesCount: { walking: 8, idle: 1, attack: 4 }
-      },
-      {
         id: 'tiger',
         name: 'เสือสมิง',
         tag: 'ELITE',
@@ -1045,9 +1025,9 @@
         hasAttack: true,
         actions: ['walking', 'idle', 'attack'],
         pathResolver: (action, dir, frame) => {
-          if (action === 'idle') return `Assets/monkey/idle_${dir}.png?v=8dir_v1`;
-          if (action === 'attack') return `Assets/monkey/attack_${dir}_${frame % 4}.png?v=8dir_v1`;
-          return `Assets/monkey/walk_${dir}_${frame % 8}.png?v=8dir_v1`;
+          if (action === 'idle') return `Assets/monkey/idle_${dir}.png?v=8dir_v3_monkey_fixed`;
+          if (action === 'attack') return `Assets/monkey/attack_${dir}_${frame % 4}.png?v=8dir_v3_monkey_fixed`;
+          return `Assets/monkey/walk_${dir}_${frame % 8}.png?v=8dir_v3_monkey_fixed`;
         },
         framesCount: { walking: 8, idle: 1, attack: 4 }
       },

@@ -199,7 +199,35 @@ class Enemy {
       this.isFlying = !!cm.is_flying;
       this.isBoss = !!cm.is_boss;
       this.scale = cm.scale || 1.35;
+    } else if (!this.spriteKey && !this.name && this.type !== 'boss') {
+      // Unknown type (custom monster whose metadata hasn't loaded yet) -> treat as custom sprite folder Assets/<type>/
+      this.radius = 20;
+      this.maxHp = 200;
+      this.hp = this.maxHp;
+      this.attack = 25;
+      this.speed = 120;
+      this.attackRange = 50;
+      this.aggroRange = 300;
+      this.attackCooldownMax = 1.4;
+      this.expReward = 60;
+      this.goldReward = 40;
+      this.name = this.type;
+      this.dir = 'south';
+      this.animTimer = 0;
+      this.animFrame = 0;
+      this.isAttacking = false;
+      this.attackTime = 0;
+      this.attackDuration = 0.45;
+      this.hasDealtDamage = false;
+      this.isCustom = true;
+      this.scale = 1.35;
+      if (window.assetManager && window.assetManager.registerMonsterAssets && !window.assetManager.images[`${this.type}_idle_south`]) {
+        window.assetManager.registerMonsterAssets(this.type);
+      }
     }
+
+    // Save base original name for role toggling & restorations
+    this.baseName = this.name;
 
     // Apply custom monster/enemy config overrides from SQLite or memory
     const customConfig = (window.bossConfigs && window.bossConfigs[this.type]) ||
@@ -228,7 +256,13 @@ class Enemy {
     }
     if (this.isBoss) {
       if (!this.name.includes('พญา') && !this.name.includes('บอส')) {
-        this.name = `พญา${this.name} (บอส)`;
+        this.name = `พญา${this.baseName || this.name} (บอส)`;
+      }
+    } else {
+      if (this.baseName) {
+        this.name = this.baseName;
+      } else {
+        this.name = this.name.replace(/^พญา/, '').replace(/\s*\(บอส\)$/, '');
       }
     }
   }

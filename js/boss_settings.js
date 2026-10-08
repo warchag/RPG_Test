@@ -363,11 +363,8 @@ class BossSettingsController {
     // 1. Load ALL entity configs from SQLite database upfront
     await this.loadAllConfigsFromDB();
 
-    // 2. Render Picker Grid with exact loaded roles
-    this.renderPickerGrid();
-
-    // 3. Switch to default selected entity with exact loaded values
-    this.switchEntity(this.currentId);
+    // 2. Render and switch to default category & entity
+    this.switchCategory(this.currentCategory, this.currentId);
   }
 
   cacheDOM() {
@@ -488,9 +485,11 @@ class BossSettingsController {
           // Cache globally
           if (this.configs[k].isBoss) {
             window.bossConfigs[k] = Object.assign({}, this.configs[k]);
+            delete window.enemyConfigs[k];
             if (k === 'preta') window.pretaBossConfig = Object.assign({}, this.configs[k]);
           } else {
             window.enemyConfigs[k] = Object.assign({}, this.configs[k]);
+            delete window.bossConfigs[k];
           }
         }
       } catch (err) {
@@ -500,7 +499,7 @@ class BossSettingsController {
     console.log('[Balancer] All entity configs loaded from SQLite successfully');
   }
 
-  switchCategory(cat) {
+  switchCategory(cat, targetId = null) {
     this.currentCategory = cat;
 
     // Toggle active state on category buttons
@@ -526,8 +525,13 @@ class BossSettingsController {
     });
 
     if (list.length > 0) {
-      const exists = list.some(item => item.id === this.currentId);
-      this.switchEntity(exists ? this.currentId : list[0].id);
+      let chosenId = list[0].id;
+      if (targetId && list.some(item => item.id === targetId)) {
+        chosenId = targetId;
+      } else if (list.some(item => item.id === this.currentId)) {
+        chosenId = this.currentId;
+      }
+      this.switchEntity(chosenId);
     }
   }
 
@@ -615,8 +619,6 @@ class BossSettingsController {
     if (!window.ENTITY_REGISTRY[id]) return;
     this.currentId = id;
     this.setEntityRole('boss');
-    this.renderPickerGrid();
-    this.switchEntity(id);
   }
 
   applyRoleUI(isBoss) {
@@ -664,13 +666,13 @@ class BossSettingsController {
     // 5. Sliders ranges
     const rng = entity.ranges || {};
     if (this.hpRange) {
-      this.hpRange.min = isBoss ? 500 : (rng.hp ? rng.hp.min : 20);
-      this.hpRange.max = isBoss ? 15000 : (rng.hp ? rng.hp.max : 1500);
+      this.hpRange.min = isBoss ? 200 : (rng.hp ? rng.hp.min : 20);
+      this.hpRange.max = isBoss ? 15000 : Math.max(3000, rng.hp ? rng.hp.max : 1500);
       this.hpRange.step = rng.hp ? rng.hp.step : 10;
     }
     if (this.atkRange) {
-      this.atkRange.min = isBoss ? 20 : (rng.attack ? rng.attack.min : 5);
-      this.atkRange.max = isBoss ? 350 : (rng.attack ? rng.attack.max : 150);
+      this.atkRange.min = isBoss ? 15 : (rng.attack ? rng.attack.min : 5);
+      this.atkRange.max = isBoss ? 350 : Math.max(200, rng.attack ? rng.attack.max : 150);
       this.atkRange.step = rng.attack ? rng.attack.step : 1;
     }
     if (rng.cd && this.cdRange) {
@@ -690,59 +692,56 @@ class BossSettingsController {
     const entity = window.ENTITY_REGISTRY[id];
     if (!entity) return;
 
+    // 1. Read current form values into memory first for this entity
+    this.readFormIntoMemory(id);
+
     const isBoss = (role === 'boss');
     entity.category = role;
     this.configs[id].isBoss = isBoss;
 
-    // Apply entire role UI
-    this.applyRoleUI(isBoss);
+    // 2. Adjust stats smoothly if out of range, preserving custom stats
+    const rng = entity.ranges || {};
+    const minHp = isBoss ? 200 : (rng.hp ? rng.hp.min : 20);
+    const maxHp = isBoss ? 15000 : Math.max(3000, rng.hp ? rng.hp.max : 1500);
+    const minAtk = isBoss ? 15 : (rng.attack ? rng.attack.min : 5);
+    const maxAtk = isBoss ? 350 : Math.max(200, rng.attack ? rng.attack.max : 150);
 
-    // Adjust numeric sliders if switching out of range
-    if (isBoss) {
-      if (parseInt(this.hpRange.value) < 1000) {
-        this.hpRange.value = 2500;
-        this.hpVal.textContent = '2,500 HP';
-        this.configs[id].maxHp = 2500;
-      }
-      if (parseInt(this.atkRange.value) < 50) {
-        this.atkRange.value = 75;
-        this.atkVal.textContent = '75 DMG';
-        this.configs[id].attack = 75;
-      }
-      this.showStatus(`👑 ตั้งค่า "${entity.name}" เป็น "บอสประจำฉาก" สำเร็จ (บันทึกลง SQLite แล้ว)`, 'success');
-    } else {
-      if (parseInt(this.hpRange.value) > 1500) {
-        this.hpRange.value = 200;
-        this.hpVal.textContent = '200 HP';
-        this.configs[id].maxHp = 200;
-      }
-      if (parseInt(this.atkRange.value) > 150) {
-        this.atkRange.value = 25;
-        this.atkVal.textContent = '25 DMG';
-        this.configs[id].attack = 25;
-      }
-      this.showStatus(`👾 ปรับ "${entity.name}" เป็น "มอนสเตอร์ทั่วไป" สำเร็จ (บันทึกลง SQLite แล้ว)`, 'info');
+    let curHp = Number(this.configs[id].maxHp) || 200;
+    let curAtk = Number(this.configs[id].attack) || 20;
+
+    // Elevate stats if switching to boss and current stats are weak
+    if (isBoss && curHp < 800) {
+      curHp = 1500;
+    }
+    if (isBoss && curAtk < 35) {
+      curAtk = 50;
     }
 
-    // Immediately persist to SQLite so refresh NEVER bounces back
+    // Clamp within valid bounds without resetting user fine-tuning
+    this.configs[id].maxHp = Math.max(minHp, Math.min(maxHp, curHp));
+    this.configs[id].attack = Math.max(minAtk, Math.min(maxAtk, curAtk));
+
+    // 3. Keep global caches in sync
+    if (isBoss) {
+      window.bossConfigs[id] = Object.assign({}, this.configs[id]);
+      delete window.enemyConfigs[id];
+      if (id === 'preta') window.pretaBossConfig = Object.assign({}, this.configs[id]);
+    } else {
+      window.enemyConfigs[id] = Object.assign({}, this.configs[id]);
+      delete window.bossConfigs[id];
+    }
+
+    // 4. Switch category tab to follow the entity so it never disappears!
+    this.switchCategory(role, id);
+
+    // 5. Persist to SQLite
     this.saveToDB(false);
 
-    // Refresh picker grid
-    this.renderPickerGrid();
-
-    // Check if the current entity still belongs to the active category
-    const list = Object.values(window.ENTITY_REGISTRY).filter(e => {
-      const isBossEnt = !!(this.configs[e.id] && this.configs[e.id].isBoss !== undefined 
-                           ? this.configs[e.id].isBoss 
-                           : (e.category === 'boss'));
-      return this.currentCategory === 'boss' ? isBossEnt : !isBossEnt;
-    });
-
-    if (list.length > 0) {
-      const stillInList = list.some(item => item.id === this.currentId);
-      if (!stillInList) {
-        this.switchEntity(list[0].id);
-      }
+    // 6. Show status notification
+    if (isBoss) {
+      this.showStatus(`👑 ตั้งค่า "${entity.name}" เป็น "บอสประจำฉาก" สำเร็จ (บันทึกลง SQLite แล้ว)`, 'success');
+    } else {
+      this.showStatus(`👾 ปรับ "${entity.name}" เป็น "มอนสเตอร์ทั่วไป" สำเร็จ (บันทึกลง SQLite แล้ว)`, 'info');
     }
   }
 
@@ -853,9 +852,11 @@ class BossSettingsController {
     // Keep global config objects in sync
     if (cfg.isBoss) {
       window.bossConfigs[id] = Object.assign({}, cfg);
+      delete window.enemyConfigs[id];
       if (id === 'preta') window.pretaBossConfig = Object.assign({}, cfg);
     } else {
       window.enemyConfigs[id] = Object.assign({}, cfg);
+      delete window.bossConfigs[id];
     }
   }
 

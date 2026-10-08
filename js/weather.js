@@ -129,9 +129,13 @@ class WeatherSystem {
     // Smooth rain transition
     this.rainIntensity += (this.targetRainIntensity - this.rainIntensity) * (dt * 0.4);
 
-    // Update ambient rain audio volume in SoundSystem
-    if (window.soundSystem && window.soundSystem.setRainIntensity) {
+    // Update ambient rain audio volume in SoundSystem (disabled in Admin Studio & Settings)
+    const isAdmin = (this.game && this.game.isAdminMode) ||
+                    (typeof window !== 'undefined' && window.location && window.location.pathname.includes('admin'));
+    if (!isAdmin && window.soundSystem && window.soundSystem.setRainIntensity) {
       window.soundSystem.setRainIntensity(this.rainIntensity);
+    } else if (isAdmin && window.soundSystem && window.soundSystem.stopAmbient) {
+      window.soundSystem.stopAmbient();
     }
 
     // 3. Lightning during Rain
@@ -293,8 +297,10 @@ class WeatherSystem {
 
   triggerLightning() {
     this.lightningAlpha = 0.55;
-    // Play subtle thunder rumble if audio exists
-    if (window.soundSystem && window.soundSystem.playThunder) {
+    // Play subtle thunder rumble if audio exists (disabled in Admin Studio & Settings)
+    const isAdmin = (this.game && this.game.isAdminMode) ||
+                    (typeof window !== 'undefined' && window.location && window.location.pathname.includes('admin'));
+    if (!isAdmin && window.soundSystem && window.soundSystem.playThunder) {
       window.soundSystem.playThunder();
     }
   }

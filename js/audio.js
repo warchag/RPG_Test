@@ -9,6 +9,7 @@ class SoundSystem {
     this.bgmGain = null;
     this.sfxGain = null;
     this.isMuted = false;
+    this.isWeatherMuted = false;
     this.bgmPlaying = false;
     this.bgmTimer = null;
     this.bgmStep = 0;
@@ -119,15 +120,34 @@ class SoundSystem {
     }
   }
 
+  stopAmbient() {
+    if (this.rainGain && this.ctx) {
+      this.rainGain.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+    }
+  }
+
+  setWeatherMuted(muted = true) {
+    this.isWeatherMuted = muted;
+    if (muted) {
+      this.stopAmbient();
+    }
+  }
+
   setRainIntensity(intensity) {
     if (!this.ctx) return;
+    if (this.isMuted || this.isWeatherMuted) {
+      if (this.rainGain) {
+        this.rainGain.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+      }
+      return;
+    }
     if (!this.rainSource && intensity > 0.01) {
       this.initRain();
     }
     if (!this.rainGain) return;
 
     const t = this.ctx.currentTime;
-    const target = this.isMuted ? 0.0001 : Math.max(0.0001, intensity * 0.22);
+    const target = Math.max(0.0001, intensity * 0.22);
     this.rainGain.gain.linearRampToValueAtTime(target, t + 0.15);
   }
 
@@ -641,7 +661,7 @@ class SoundSystem {
 
   // Distant Atmospheric Thunder Rumble
   playThunder() {
-    if (this.isMuted) return;
+    if (this.isMuted || this.isWeatherMuted) return;
     this.resume();
     if (!this.ctx) return;
 

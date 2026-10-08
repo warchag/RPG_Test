@@ -115,13 +115,13 @@ class AssetManager {
     const newMonsterTypes = ['monkey', 'serpent', 'imp'];
     for (const m of newMonsterTypes) {
       for (const dir of this.directions) {
-        list.push({ key: `${m}_idle_${dir}`, src: `Assets/${m}/idle_${dir}.png?v=8dir_v2_fixed` });
-        list.push({ key: `${m}_attack_${dir}`, src: `Assets/${m}/attack_${dir}_0.png?v=8dir_v2_fixed` });
+        list.push({ key: `${m}_idle_${dir}`, src: `Assets/${m}/idle_${dir}.png?v=8dir_v3_monkey_fixed` });
+        list.push({ key: `${m}_attack_${dir}`, src: `Assets/${m}/attack_${dir}_0.png?v=8dir_v3_monkey_fixed` });
         for (let f = 0; f < 8; f++) {
-          list.push({ key: `${m}_walk_${dir}_${f}`, src: `Assets/${m}/walk_${dir}_${f}.png?v=8dir_v2_fixed` });
+          list.push({ key: `${m}_walk_${dir}_${f}`, src: `Assets/${m}/walk_${dir}_${f}.png?v=8dir_v3_monkey_fixed` });
         }
         for (let f = 0; f < 4; f++) {
-          list.push({ key: `${m}_attack_${dir}_${f}`, src: `Assets/${m}/attack_${dir}_${f}.png?v=8dir_v2_fixed` });
+          list.push({ key: `${m}_attack_${dir}_${f}`, src: `Assets/${m}/attack_${dir}_${f}.png?v=8dir_v3_monkey_fixed` });
         }
       }
     }
@@ -253,6 +253,7 @@ class AssetManager {
   }
 
   getImage(key) {
+    if (!key) return null;
     if (this.images[key]) return this.images[key];
     // Directional fallback for 4-direction monsters requesting 8-direction keys
     for (const d8 of ['south-east', 'south-west', 'north-east', 'north-west']) {
@@ -317,16 +318,23 @@ class AssetManager {
 
   registerMonsterAssets(key) {
     const dirs = this.directions;
+    const v = `v=${Date.now()}`;
     for (const dir of dirs) {
-      this.loadImageIfNotPresent(`${key}_idle_${dir}`, `Assets/${key}/idle_${dir}.png`);
-      this.loadImageIfNotPresent(`${key}_attack_${dir}`, `Assets/${key}/attack_${dir}_0.png`);
+      this.loadImageDirectly(`${key}_idle_${dir}`, `Assets/${key}/idle_${dir}.png?${v}`);
+      this.loadImageDirectly(`${key}_attack_${dir}`, `Assets/${key}/attack_${dir}_0.png?${v}`);
       for (let f = 0; f < 8; f++) {
-        this.loadImageIfNotPresent(`${key}_walk_${dir}_${f}`, `Assets/${key}/walk_${dir}_${f}.png`);
+        this.loadImageDirectly(`${key}_walk_${dir}_${f}`, `Assets/${key}/walk_${dir}_${f}.png?${v}`);
       }
       for (let f = 0; f < 4; f++) {
-        this.loadImageIfNotPresent(`${key}_attack_${dir}_${f}`, `Assets/${key}/attack_${dir}_${f}.png`);
+        this.loadImageDirectly(`${key}_attack_${dir}_${f}`, `Assets/${key}/attack_${dir}_${f}.png?${v}`);
       }
     }
+  }
+
+  loadImageDirectly(key, src) {
+    const img = new Image();
+    img.onload = () => { this.images[key] = img; };
+    img.src = src;
   }
 
   loadImageIfNotPresent(key, src) {
