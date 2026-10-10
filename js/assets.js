@@ -17,13 +17,13 @@ class AssetManager {
     ];
   }
 
-  loadAll(onProgress, onComplete) {
+  async loadAll(onProgress, onComplete) {
     this.onProgress = onProgress;
     this.onComplete = onComplete;
 
     const list = [];
 
-    // 1. Yak Idle Rotations (8 directions)
+    // 1. Yak Idle Rotations (8 directions) - Player Hero
     for (const dir of this.directions) {
       list.push({ key: `yak_idle_${dir}`, src: `Assets/characters/yak/Idle/rotations/${dir}.png` });
     }
@@ -51,82 +51,13 @@ class AssetManager {
       }
     }
 
-    // 3. Krasue Ghost Idle Rotations (8 directions)
-    for (const dir of this.directions) {
-      list.push({ key: `krasue_idle_${dir}`, src: `Assets/krasue/Idle/rotations/${dir}.png` });
+    // 3. Realistic Hand-Painted Fantasy Player Hero Skills & Attack VFX
+    const playerVfxKeys = ['vfx_player_skill1', 'vfx_player_skill2', 'vfx_player_skill3', 'vfx_player_attack'];
+    for (const key of playerVfxKeys) {
+      list.push({ key, src: `Assets/characters/yak/${key}.png?v=yaksha_vfx_v1` });
     }
 
-    // 4. Krasue Ghost Walking Frames (8 directions x 8 frames)
-    for (const dir of this.directions) {
-      for (let f = 0; f < 8; f++) {
-        const framePad = String(f).padStart(3, '0');
-        list.push({
-          key: `krasue_walk_${dir}_${f}`,
-          src: `Assets/krasue/Idle/animations/Walking/${dir}/frame_${framePad}.png`
-        });
-      }
-    }
-
-    // 4.5 Krasue portrait
-    list.push({ key: 'krasue_portrait', src: 'Assets/krasue/krasue_portrait.jpg' });
-
-    // 5. Mainchar / Ancient Thai Swordsman (นายจันหนวดเขี้ยว)
-    // 5.1 Idle Rotations (8 directions)
-    for (const dir of this.directions) {
-      list.push({ key: `mainchar_idle_${dir}`, src: `Assets/mainchar/Idle/rotations/${dir}.png` });
-    }
-    // 5.2 Walking Frames (8 directions x 8 frames = 64 frames)
-    for (const dir of this.directions) {
-      for (let f = 0; f < 8; f++) {
-        const framePad = String(f).padStart(3, '0');
-        list.push({
-          key: `mainchar_walk_${dir}_${f}`,
-          src: `Assets/mainchar/Idle/animations/Walking/${dir}/frame_${framePad}.png`
-        });
-      }
-    }
-    // 5.3 Attack Animation Frames (8 directions x 4 frames = 32 frames)
-    for (const dir of this.directions) {
-      list.push({ key: `mainchar_attack_${dir}`, src: `Assets/mainchar/Attack/rotations/${dir}.png` });
-      for (let f = 0; f < 4; f++) {
-        const framePad = String(f).padStart(3, '0');
-        list.push({
-          key: `mainchar_attack_${dir}_${f}`,
-          src: `Assets/mainchar/Idle/animations/Attack/${dir}/frame_${framePad}.png`
-        });
-      }
-    }
-
-    // 6. Tiger Shaman / เสือสมิง (idle 48x48, walk & attack 68x68)
-    for (const dir of this.directions) {
-      list.push({ key: `tiger_idle_${dir}`, src: `Assets/tiger/Idle/rotations/${dir}.png` });
-      list.push({ key: `tiger_attack_${dir}`, src: `Assets/tiger/Attack/rotations/${dir}.png` });
-      for (let f = 0; f < 8; f++) {
-        const framePad = String(f).padStart(3, '0');
-        list.push({ key: `tiger_walk_${dir}_${f}`, src: `Assets/tiger/Idle/animations/Walking/${dir}/frame_${framePad}.png` });
-      }
-      for (let f = 0; f < 4; f++) {
-        const framePad = String(f).padStart(3, '0');
-        list.push({ key: `tiger_attack_${dir}_${f}`, src: `Assets/tiger/Idle/animations/Attack/${dir}/frame_${framePad}.png` });
-      }
-    }
-
-    // 6.5 New Mythical Monsters: Monkey, Serpent, and Shadow Imp (Full 8 Directions)
-    const newMonsterTypes = ['monkey', 'serpent', 'imp'];
-    for (const m of newMonsterTypes) {
-      for (const dir of this.directions) {
-        list.push({ key: `${m}_idle_${dir}`, src: `Assets/${m}/idle_${dir}.png?v=8dir_v3_monkey_fixed` });
-        list.push({ key: `${m}_attack_${dir}`, src: `Assets/${m}/attack_${dir}_0.png?v=8dir_v3_monkey_fixed` });
-        for (let f = 0; f < 8; f++) {
-          list.push({ key: `${m}_walk_${dir}_${f}`, src: `Assets/${m}/walk_${dir}_${f}.png?v=8dir_v3_monkey_fixed` });
-        }
-        for (let f = 0; f < 4; f++) {
-          list.push({ key: `${m}_attack_${dir}_${f}`, src: `Assets/${m}/attack_${dir}_${f}.png?v=8dir_v3_monkey_fixed` });
-        }
-      }
-    }
-
-    // 7. Map & Environment Assets (AI Generated Himavanta Pixel-Art)
+    // 4. Map & Environment Assets (AI Generated Himavanta Pixel-Art)
     const mapAssetKeys = [
       'tile_grass', 'tile_dirt', 'tile_sand', 'tile_water_deep', 'tile_water_shallow',
       'tile_stepping_stones', 'tile_bridge_h', 'tile_bridge_v',
@@ -139,47 +70,94 @@ class AssetManager {
       list.push({ key, src: `Assets/map_assets/${key}.png?v=realistic_v6` });
     }
 
-    // 8. Boss Preta (พญาเปรตวัดสุทัศน์ - bosspreat)
-    // 8.1 Idle Rotations (8 directions)
-    for (const dir of this.directions) {
-      list.push({ key: `bosspreat_idle_${dir}`, src: `Assets/bosspreat/Idle/rotations/${dir}.png` });
-    }
-    // 8.2 Walking Frames (8 directions x 8 frames = 64 frames)
-    for (const dir of this.directions) {
-      for (let f = 0; f < 8; f++) {
-        const framePad = String(f).padStart(3, '0');
-        list.push({
-          key: `bosspreat_walk_${dir}_${f}`,
-          src: `Assets/bosspreat/Idle/animations/Walking/${dir}/frame_${framePad}.png`
-        });
+    // 5. Dynamic Active Monsters from Database ONLY
+    let activeMonsters = [];
+    try {
+      const res = await fetch('/api/monsters');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && Array.isArray(data.monsters)) {
+          activeMonsters = data.monsters.filter(m => m && m.can_enter_game && m.key !== 'yak' && !m.is_player);
+        }
       }
+    } catch (e) {
+      console.warn('[AssetManager] Failed to fetch active monsters:', e);
     }
 
-    // 8.3 Realistic Dark Fantasy Boss Attack VFX (4 Directions: Front, Left, Right, Back)
-    const bossVfxKeys = ['vfx_preta_front', 'vfx_preta_left', 'vfx_preta_right', 'vfx_preta_back'];
-    for (const key of bossVfxKeys) {
-      list.push({ key, src: `Assets/bosspreat/${key}.png?v=realistic_vfx_v2` });
-    }
+    window.customMonsters = window.customMonsters || {};
+    for (const m of activeMonsters) {
+      window.customMonsters[m.key] = m;
+      const key = m.key;
+      const v = m.updated_at ? `v=${encodeURIComponent(m.updated_at)}` : `v=${m.id || 1}`;
 
-    // 8.4 Realistic Hand-Painted Fantasy Player Hero Skills & Attack VFX
-    const playerVfxKeys = ['vfx_player_skill1', 'vfx_player_skill2', 'vfx_player_skill3', 'vfx_player_attack'];
-    for (const key of playerVfxKeys) {
-      list.push({ key, src: `Assets/characters/yak/${key}.png?v=yaksha_vfx_v1` });
-    }
-
-    // 8.5 Thai Demonic Water Buffalo (พญาควายธนูทมิฬ - buffalo)
-    // 8.5.1 Idle Rotations (8 directions)
-    for (const dir of this.directions) {
-      list.push({ key: `buffalo_idle_${dir}`, src: `Assets/buffalo/Idle/rotations/${dir}.png?v=buffalo_v5` });
-    }
-    // 8.5.2 Walking Frames (8 directions x 8 frames = 64 frames)
-    for (const dir of this.directions) {
-      for (let f = 0; f < 8; f++) {
-        const framePad = String(f).padStart(3, '0');
-        list.push({
-          key: `buffalo_walk_${dir}_${f}`,
-          src: `Assets/buffalo/Idle/animations/Walking/${dir}/frame_${framePad}.png?v=buffalo_v5`
-        });
+      if (key === 'bosspreat') {
+        for (const dir of this.directions) {
+          list.push({ key: `bosspreat_idle_${dir}`, src: `Assets/bosspreat/Idle/rotations/${dir}.png` });
+          for (let f = 0; f < 8; f++) {
+            const framePad = String(f).padStart(3, '0');
+            list.push({ key: `bosspreat_walk_${dir}_${f}`, src: `Assets/bosspreat/Idle/animations/Walking/${dir}/frame_${framePad}.png` });
+          }
+        }
+        for (const vk of ['vfx_preta_front', 'vfx_preta_left', 'vfx_preta_right', 'vfx_preta_back']) {
+          list.push({ key: vk, src: `Assets/bosspreat/${vk}.png?v=realistic_v2` });
+        }
+      } else if (key === 'buffalo') {
+        for (const dir of this.directions) {
+          list.push({ key: `buffalo_idle_${dir}`, src: `Assets/buffalo/Idle/rotations/${dir}.png?v=buffalo_v5` });
+          for (let f = 0; f < 8; f++) {
+            const framePad = String(f).padStart(3, '0');
+            list.push({ key: `buffalo_walk_${dir}_${f}`, src: `Assets/buffalo/Idle/animations/Walking/${dir}/frame_${framePad}.png?v=buffalo_v5` });
+          }
+        }
+      } else if (key === 'krasue') {
+        for (const dir of this.directions) {
+          list.push({ key: `krasue_idle_${dir}`, src: `Assets/krasue/Idle/rotations/${dir}.png` });
+          for (let f = 0; f < 8; f++) {
+            const framePad = String(f).padStart(3, '0');
+            list.push({ key: `krasue_walk_${dir}_${f}`, src: `Assets/krasue/Idle/animations/Walking/${dir}/frame_${framePad}.png` });
+          }
+        }
+        list.push({ key: 'krasue_portrait', src: 'Assets/krasue/krasue_portrait.jpg' });
+      } else if (key === 'swordsman' || key === 'mainchar') {
+        const folder = 'mainchar';
+        for (const dir of this.directions) {
+          list.push({ key: `mainchar_idle_${dir}`, src: `Assets/${folder}/Idle/rotations/${dir}.png` });
+          list.push({ key: `mainchar_attack_${dir}`, src: `Assets/${folder}/Attack/rotations/${dir}.png` });
+          for (let f = 0; f < 8; f++) {
+            const framePad = String(f).padStart(3, '0');
+            list.push({ key: `mainchar_walk_${dir}_${f}`, src: `Assets/${folder}/Idle/animations/Walking/${dir}/frame_${framePad}.png` });
+          }
+          for (let f = 0; f < 4; f++) {
+            const framePad = String(f).padStart(3, '0');
+            list.push({ key: `mainchar_attack_${dir}_${f}`, src: `Assets/${folder}/Idle/animations/Attack/${dir}/frame_${framePad}.png` });
+          }
+        }
+      } else if (key === 'tiger') {
+        for (const dir of this.directions) {
+          list.push({ key: `tiger_idle_${dir}`, src: `Assets/tiger/Idle/rotations/${dir}.png` });
+          list.push({ key: `tiger_attack_${dir}`, src: `Assets/tiger/Attack/rotations/${dir}.png` });
+          for (let f = 0; f < 8; f++) {
+            const framePad = String(f).padStart(3, '0');
+            list.push({ key: `tiger_walk_${dir}_${f}`, src: `Assets/tiger/Idle/animations/Walking/${dir}/frame_${framePad}.png` });
+          }
+          for (let f = 0; f < 4; f++) {
+            const framePad = String(f).padStart(3, '0');
+            list.push({ key: `tiger_attack_${dir}_${f}`, src: `Assets/tiger/Idle/animations/Attack/${dir}/frame_${framePad}.png` });
+          }
+        }
+      } else {
+        // Standard 8-directional custom monster or new monster
+        const folder = (m && m.sprite_dir) ? m.sprite_dir : `monsters/${key}`;
+        for (const dir of this.directions) {
+          list.push({ key: `${key}_idle_${dir}`, src: `Assets/${folder}/idle_${dir}.png?${v}`, fallbackSrc: `Assets/${key}/idle_${dir}.png?${v}` });
+          list.push({ key: `${key}_attack_${dir}`, src: `Assets/${folder}/attack_${dir}_0.png?${v}`, fallbackSrc: `Assets/${key}/attack_${dir}_0.png?${v}` });
+          for (let f = 0; f < 8; f++) {
+            list.push({ key: `${key}_walk_${dir}_${f}`, src: `Assets/${folder}/walk_${dir}_${f}.png?${v}`, fallbackSrc: `Assets/${key}/walk_${dir}_${f}.png?${v}` });
+          }
+          for (let f = 0; f < 4; f++) {
+            list.push({ key: `${key}_attack_${dir}_${f}`, src: `Assets/${folder}/attack_${dir}_${f}.png?${v}`, fallbackSrc: `Assets/${key}/attack_${dir}_${f}.png?${v}` });
+          }
+        }
       }
     }
 
@@ -223,7 +201,10 @@ class AssetManager {
       }
     };
 
-    list.forEach(item => {
+    const CONCURRENCY = 20;
+    let nextIndex = 0;
+
+    const loadItem = (item) => {
       const img = new Image();
       let handled = false;
 
@@ -236,20 +217,37 @@ class AssetManager {
           this.images[item.key] = this.createFallbackImage();
         }
         checkDone();
+        // Load next item in queue
+        if (nextIndex < list.length) {
+          loadItem(list[nextIndex++]);
+        }
       };
 
       img.onload = () => markDone(true);
-      img.onerror = () => markDone(false);
+      img.onerror = () => {
+        if (item.fallbackSrc && !item._triedFallback) {
+          item._triedFallback = true;
+          img.src = item.fallbackSrc;
+          return;
+        }
+        markDone(false);
+      };
 
-      // Individual sprite timeout after 2.5s
+      // Individual sprite timeout after 3s
       setTimeout(() => {
         if (!handled && !isFinished) {
           markDone(false);
         }
-      }, 2500);
+      }, 3000);
 
       img.src = item.src;
-    });
+    };
+
+    // Start initial pool of concurrent loaders
+    const initialBatch = Math.min(CONCURRENCY, list.length);
+    for (let i = 0; i < initialBatch; i++) {
+      loadItem(list[nextIndex++]);
+    }
   }
 
   getImage(key) {
@@ -319,21 +317,46 @@ class AssetManager {
   registerMonsterAssets(key) {
     const dirs = this.directions;
     const v = `v=${Date.now()}`;
+    const m = window.customMonsters && window.customMonsters[key];
+    const folder = (m && m.sprite_dir) ? m.sprite_dir : `monsters/${key}`;
+
     for (const dir of dirs) {
-      this.loadImageDirectly(`${key}_idle_${dir}`, `Assets/${key}/idle_${dir}.png?${v}`);
-      this.loadImageDirectly(`${key}_attack_${dir}`, `Assets/${key}/attack_${dir}_0.png?${v}`);
+      this.loadImageDirectly(
+        `${key}_idle_${dir}`, 
+        `Assets/${folder}/idle_${dir}.png?${v}`,
+        `Assets/${key}/idle_${dir}.png?${v}`
+      );
+      this.loadImageDirectly(
+        `${key}_attack_${dir}`, 
+        `Assets/${folder}/attack_${dir}_0.png?${v}`,
+        `Assets/${key}/attack_${dir}_0.png?${v}`
+      );
       for (let f = 0; f < 8; f++) {
-        this.loadImageDirectly(`${key}_walk_${dir}_${f}`, `Assets/${key}/walk_${dir}_${f}.png?${v}`);
+        this.loadImageDirectly(
+          `${key}_walk_${dir}_${f}`, 
+          `Assets/${folder}/walk_${dir}_${f}.png?${v}`,
+          `Assets/${key}/walk_${dir}_${f}.png?${v}`
+        );
       }
       for (let f = 0; f < 4; f++) {
-        this.loadImageDirectly(`${key}_attack_${dir}_${f}`, `Assets/${key}/attack_${dir}_${f}.png?${v}`);
+        this.loadImageDirectly(
+          `${key}_attack_${dir}_${f}`, 
+          `Assets/${folder}/attack_${dir}_${f}.png?${v}`,
+          `Assets/${key}/attack_${dir}_${f}.png?${v}`
+        );
       }
     }
   }
 
-  loadImageDirectly(key, src) {
+  loadImageDirectly(key, src, fallbackSrc = null) {
     const img = new Image();
     img.onload = () => { this.images[key] = img; };
+    if (fallbackSrc) {
+      img.onerror = () => {
+        img.onerror = null;
+        img.src = fallbackSrc;
+      };
+    }
     img.src = src;
   }
 

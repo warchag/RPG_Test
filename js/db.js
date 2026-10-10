@@ -38,6 +38,10 @@ class GameDatabase {
       collisionGrid: mapData.collisionGrid,
       props: mapData.props,
       colliders: mapData.colliders,
+      chests: mapData.chests || [],
+      shrines: mapData.shrines || [],
+      pickups: mapData.pickups || [],
+      spawnPoint: mapData.spawnPoint || { x: 1600, y: 1600 },
       enemies: mapData.enemies || [],
       weather: mapData.weather || { timeMode: 'auto', rainMode: 'auto' }
     };
@@ -391,6 +395,10 @@ class GameDatabase {
           localStorage.setItem(`yaksha_boss_config_${bossKey}`, JSON.stringify(json.data));
         } catch (e) {}
         return { success: true, data: json.data };
+      } else if (json.status === 'not_found' || !json.data) {
+        const raw = localStorage.getItem(`yaksha_boss_config_${bossKey}`);
+        if (raw) return { success: true, data: JSON.parse(raw), fallback: true };
+        return { success: false, notFound: true };
       }
     } catch (err) {
       try {
@@ -398,7 +406,7 @@ class GameDatabase {
         if (raw) return { success: true, data: JSON.parse(raw), fallback: true };
       } catch (e) {}
     }
-    return { success: false };
+    return { success: false, notFound: true };
   }
 }
 

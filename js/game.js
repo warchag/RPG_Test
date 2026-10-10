@@ -2,14 +2,16 @@
  * game.js - Main Game Loop, Quests, HUD Manager & State Orchestrator
  */
 class Game {
-  constructor() {
-    this.canvas = document.getElementById('gameCanvas');
+  constructor(canvas) {
+    this.canvas = canvas || document.getElementById('gameCanvas');
     this.ctx = this.canvas.getContext('2d');
 
-    this.minimapCanvas = document.getElementById('minimapCanvas');
-    this.minimapCtx = this.minimapCanvas.getContext('2d');
+    this.isAdminMode = (window.location && (window.location.pathname.includes('admin') || window.location.href.includes('admin.html'))) || false;
 
-    this.state = 'LOADING'; // 'LOADING', 'PLAYING', 'GAMEOVER', 'VICTORY'
+    this.minimapCanvas = document.getElementById('minimapCanvas');
+    this.minimapCtx = this.minimapCanvas ? this.minimapCanvas.getContext('2d') : null;
+
+    this.state = this.isAdminMode ? 'EDITOR' : 'LOADING'; // 'LOADING', 'PLAYING', 'EDITOR', 'GAMEOVER', 'VICTORY'
     this.lastTime = performance.now();
 
     // Map & Camera
@@ -67,8 +69,63 @@ class Game {
       { id: 'boss', title: 'บุกวิหารทิศเหนือ สยบพญาเปรตวัดสุทัศน์', current: 0, target: 1, done: false, rewardExp: 750 }
     ];
 
+    this._isWorldLoaded = false;
     this.initWindow();
     this.bindUI();
+    this.initSyncChannels();
+  }
+
+  initSyncChannels() {
+    // 1. Cross-tab BroadcastChannel for real-time deletions & sync
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        this.eventChannel = new BroadcastChannel('yaksha_events');
+        this.eventChannel.onmessage = (ev) => {
+          if (!ev || !ev.data) return;
+          if (ev.data.type === 'MONSTER_DELETED' && ev.data.key) {
+            this.handleExternalMonsterDeleted(ev.data.key);
+          }
+        };
+      } catch (e) {
+        console.warn('[Game] BroadcastChannel not supported:', e);
+      }
+    }
+
+    // 2. Storage event fallback for cross-tab sync
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'yaksha_deleted_monster' && e.newValue) {
+        this.handleExternalMonsterDeleted(e.newValue);
+      }
+    });
+  }
+
+  handleExternalMonsterDeleted(monsterKey) {
+    if (!monsterKey) return;
+    console.log(`[Game] Received notification: monster '${monsterKey}' deleted externally. Purging from live game...`);
+
+    // Remove from active live enemies
+    if (this.enemyManager && Array.isArray(this.enemyManager.enemies)) {
+      this.enemyManager.enemies = this.enemyManager.enemies.filter(e => e.type !== monsterKey);
+    }
+
+    // Remove from map's savedEnemies
+    if (this.map && Array.isArray(this.map.savedEnemies)) {
+      this.map.savedEnemies = this.map.savedEnemies.filter(e => e.type !== monsterKey);
+    }
+
+    // Clean up registries
+    if (window.customMonsters && window.customMonsters[monsterKey]) {
+      delete window.customMonsters[monsterKey];
+    }
+    if (window.ENTITY_REGISTRY && window.ENTITY_REGISTRY[monsterKey]) {
+      delete window.ENTITY_REGISTRY[monsterKey];
+    }
+    if (window.enemyConfigs && window.enemyConfigs[monsterKey]) {
+      delete window.enemyConfigs[monsterKey];
+    }
+    if (window.bossConfigs && window.bossConfigs[monsterKey]) {
+      delete window.bossConfigs[monsterKey];
+    }
   }
 
   initWindow() {
@@ -90,16 +147,21 @@ class Game {
     const btnMute = document.getElementById('btnMute');
     if (btnMute) {
       btnMute.addEventListener('click', () => {
-        const isMuted = window.soundSystem.toggleMute();
-        btnMute.innerHTML = isMuted ? '🔇' : '🔊';
+        const isMuted = window.soundSystem ? window.soundSystem.toggleMute() : false;
+        btnMute.classList.toggle('muted', isMuted);
+        btnMute.dataset.tooltipBadge = isMuted ? 'ปิดเสียงอยู่' : 'เปิดเสียงอยู่';
+        btnMute.removeAttribute('title');
       });
     }
 
     const btnBgm = document.getElementById('btnBgm');
     if (btnBgm) {
       btnBgm.addEventListener('click', () => {
-        const isPlaying = window.soundSystem.toggleBGM();
+        const isPlaying = window.soundSystem ? window.soundSystem.toggleBGM() : false;
         btnBgm.classList.toggle('active', isPlaying);
+        btnBgm.classList.toggle('muted', !isPlaying);
+        btnBgm.dataset.tooltipBadge = isPlaying ? 'กำลังเล่น' : 'ปิดเพลงอยู่';
+        btnBgm.removeAttribute('title');
       });
     }
 
@@ -185,6 +247,78 @@ class Game {
         }
       });
     }
+
+    // Initialize Global HUD Tooltips
+    this.initHudTooltips();
+  }
+
+  initHudTooltips() {
+    const tooltip = document.getElementById('hudTooltip');
+    const ttTitle = document.getElementById('hudTtTitle');
+    const ttBadge = document.getElementById('hudTtBadge');
+    const ttDesc = document.getElementById('hudTtDesc');
+    const ttArrow = tooltip ? tooltip.querySelector('.hud-tt-arrow') : null;
+    if (!tooltip || !ttTitle || !ttDesc) return;
+
+    const targets = document.querySelectorAll('[data-tooltip-title]');
+    targets.forEach((elem) => {
+      elem.addEventListener('mouseenter', () => {
+        const title = elem.dataset.tooltipTitle || '';
+        const desc = elem.dataset.tooltipDesc || '';
+        const badge = elem.dataset.tooltipBadge || '';
+
+        ttTitle.textContent = title;
+        ttDesc.textContent = desc;
+        if (badge && ttBadge) {
+          ttBadge.textContent = badge;
+          ttBadge.style.display = 'inline-block';
+        } else if (ttBadge) {
+          ttBadge.style.display = 'none';
+        }
+
+        tooltip.classList.add('visible');
+
+        // Measure & position
+        const ttRect = tooltip.getBoundingClientRect();
+        const btnRect = elem.getBoundingClientRect();
+
+        const top = btnRect.bottom + 8;
+        const left = btnRect.left + (btnRect.width / 2) - (ttRect.width / 2);
+
+        // Keep inside viewport
+        const maxLeft = window.innerWidth - ttRect.width - 12;
+        const minLeft = 12;
+        const clampedLeft = Math.max(minLeft, Math.min(left, maxLeft));
+
+        // Center arrow below hovered button
+        if (ttArrow) {
+          const arrowOffset = (btnRect.left + btnRect.width / 2) - clampedLeft;
+          ttArrow.style.left = `${Math.max(12, Math.min(arrowOffset, ttRect.width - 12))}px`;
+        }
+
+        tooltip.style.top = `${top}px`;
+        tooltip.style.left = `${clampedLeft}px`;
+      });
+
+      elem.addEventListener('mouseleave', () => {
+        tooltip.classList.remove('visible');
+      });
+
+      elem.addEventListener('click', () => {
+        // Quick update after interaction
+        setTimeout(() => {
+          if (elem.id === 'btnMute') {
+            const isMuted = elem.classList.contains('muted');
+            elem.dataset.tooltipBadge = isMuted ? 'ปิดเสียงอยู่' : 'เปิดเสียงอยู่';
+            if (ttBadge) ttBadge.textContent = elem.dataset.tooltipBadge;
+          } else if (elem.id === 'btnBgm') {
+            const isPlaying = elem.classList.contains('active');
+            elem.dataset.tooltipBadge = isPlaying ? 'กำลังเล่น' : 'ปิดเพลงอยู่';
+            if (ttBadge) ttBadge.textContent = elem.dataset.tooltipBadge;
+          }
+        }, 50);
+      });
+    });
   }
 
   toggleWorldMap(forceState) {
@@ -193,7 +327,7 @@ class Game {
     this.worldMapModal.style.display = this.isWorldMapOpen ? 'flex' : 'none';
 
     if (this.isWorldMapOpen) {
-      if (window.soundSystem) window.soundSystem.playClick();
+      if (window.soundSystem && window.soundSystem.playClick) window.soundSystem.playClick();
       // Clear movement targets & pressed actions
       if (this.player) {
         this.player.targetPos = null;
@@ -206,9 +340,10 @@ class Game {
         this.input.joystick.active = false;
       }
       this.updateWorldMapInfo();
+      this.updateWorldMapLegend();
       this.renderWorldMap();
     } else {
-      if (window.soundSystem) window.soundSystem.playClick();
+      if (window.soundSystem && window.soundSystem.playClick) window.soundSystem.playClick();
       if (this.player) {
         this.player.targetPos = null;
         this.player.targetEnemy = null;
@@ -223,6 +358,93 @@ class Game {
     }
   }
 
+  updateWorldMapLegend() {
+    const container = document.getElementById('mapLegendList');
+    if (!container) return;
+    let html = '';
+
+    // 1. Player (always present in game)
+    html += `
+      <div class="legend-item">
+        <span class="legend-dot" style="background: #22c55e; border: 1.5px solid #fff;"></span>
+        <span>ตัวละครของคุณ (พร้อมกรวยทิศทาง)</span>
+      </div>
+    `;
+
+    // 2. Colossal Boss (ONLY if present in this map)
+    const boss = this.enemyManager ? this.enemyManager.boss : null;
+    if (boss && !boss.isDead && !boss.isPhantom) {
+      const bossName = boss.name || 'พญาเปรตอเวจี (บอสใหญ่ ☠)';
+      html += `
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #dc2626; border: 1.5px solid #fde047;"></span>
+          <span>${bossName}</span>
+        </div>
+      `;
+    }
+
+    // 3. Sacred Shrines (ONLY if placed in this map)
+    if (this.map && Array.isArray(this.map.shrines) && this.map.shrines.length > 0) {
+      html += `
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #38bdf8; transform: rotate(45deg); width: 8px; height: 8px; border-radius: 1px;"></span>
+          <span>ศาลเจ้าศักดิ์สิทธิ์ (ฟื้นพลัง)</span>
+        </div>
+      `;
+    }
+
+    // 4. Treasure Chests (ONLY if unopened chests exist in this map)
+    if (this.map && Array.isArray(this.map.chests) && this.map.chests.some(c => !c.opened)) {
+      html += `
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #facc15; border: 1px solid #78350f; border-radius: 2px;"></span>
+          <span>หีบสมบัติทองคำ</span>
+        </div>
+      `;
+    }
+
+    // 5. Wat Phra Kaew (ONLY if grand temple prop is placed in this map)
+    if (this.map && Array.isArray(this.map.props) && this.map.props.some(p => p.type === 'prop_wat_phra_kaew')) {
+      html += `
+        <div class="legend-item">
+          <span class="legend-dot" style="background: #ea580c; border: 1px solid #059669; border-radius: 2px;"></span>
+          <span>พระอุโบสถวัดพระแก้ว</span>
+        </div>
+      `;
+    }
+
+    // 6. Regular Monsters (ONLY the unique types that actually exist in the current map!)
+    const activeEnemies = (this.enemyManager && Array.isArray(this.enemyManager.enemies))
+      ? this.enemyManager.enemies.filter(e => !e.isPhantom)
+      : [];
+
+    const presentTypes = [];
+    const seen = new Set();
+    for (const e of activeEnemies) {
+      if (e.type && e.type !== 'boss' && e.type !== 'bosspreat') {
+        const t = String(e.type).toLowerCase();
+        if (!seen.has(t)) {
+          seen.add(t);
+          presentTypes.push(t);
+        }
+      }
+    }
+
+    // Render legend item for each unique monster type in this map
+    for (const type of presentTypes) {
+      const color = window.getMonsterColor ? window.getMonsterColor(type) : '#ef4444';
+      const name = window.getMonsterDisplayName ? window.getMonsterDisplayName(type) : type;
+      html += `
+        <div class="legend-item">
+          <span class="legend-dot" style="background: ${color}; border: 1px solid rgba(0, 0, 0, 0.4);"></span>
+          <span>${name}</span>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+  }
+
   renderWorldMap() {
     if (!this.worldMapCtx || !this.isWorldMapOpen) return;
     this.map.renderMinimap(
@@ -234,6 +456,48 @@ class Game {
   }
 
   start() {
+    if (this.isAdminMode) {
+      this.state = 'EDITOR';
+      this.lastTime = performance.now();
+      try {
+        if (window.soundSystem) {
+          window.soundSystem.stopBGM();
+          window.soundSystem.setWeatherMuted(true);
+          window.soundSystem.stopAmbient();
+        }
+      } catch (_) {}
+
+      // Center camera immediately on player spawn point in editor mode
+      const spX = (this.map && this.map.spawnPoint) ? this.map.spawnPoint.x : (this.player ? this.player.x : 1600);
+      const spY = (this.map && this.map.spawnPoint) ? this.map.spawnPoint.y : (this.player ? this.player.y : 1600);
+      this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, spX - this.camera.width / 2));
+      this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, spY - this.camera.height / 2));
+
+      // Load saved map from database into editor
+      if (window.gameDatabase) {
+        window.gameDatabase.loadMap('default').then(mRes => {
+          if (mRes && mRes.success && mRes.data) {
+            this.loadMapData(mRes.data);
+            const sx = (this.map && this.map.spawnPoint) ? this.map.spawnPoint.x : 1600;
+            const sy = (this.map && this.map.spawnPoint) ? this.map.spawnPoint.y : 1600;
+            this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, sx - this.camera.width / 2));
+            this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, sy - this.camera.height / 2));
+          } else {
+            this.loadFullWorldState();
+          }
+        }).catch(() => {
+          this.loadFullWorldState();
+        });
+      }
+
+      if (this.mapEditor) {
+        this.mapEditor.open();
+      }
+
+      requestAnimationFrame((t) => this.loop(t));
+      return;
+    }
+
     const loadingScreen = document.getElementById('loadingScreen');
     const loadingBar = document.getElementById('loadingProgress');
     const loadingText = document.getElementById('loadingText');
@@ -248,9 +512,20 @@ class Game {
       () => {
         if (loadingBar) loadingBar.style.width = '100%';
         if (loadingText) loadingText.innerText = 'โหลดเสร็จสิ้น! เข้าสู่ดินแดนหิมพานต์...';
-        setTimeout(() => {
+        setTimeout(async () => {
+          if (loadingText) loadingText.innerText = 'กำลังโหลดข้อมูลเซฟและโลกหิมพานต์...';
+          // Check SQLite Database / LocalStorage for saved full world state
+          await this.loadFullWorldState();
+
           if (loadingScreen) loadingScreen.style.display = 'none';
-          this.state = 'PLAYING';
+
+          const isAdmin = this.isAdminMode || (window.location && window.location.pathname.includes('admin'));
+          if (!isAdmin && window.characterSelect) {
+            this.state = 'CHAR_SELECT';
+            window.characterSelect.show();
+          } else {
+            this.state = 'PLAYING';
+          }
           this.lastTime = performance.now();
           // Start background music safely (Only in game, completely disabled in admin mode)
           try {
@@ -267,19 +542,24 @@ class Game {
             console.warn('Audio auto-play deferred until user interaction:', e);
           }
 
-          // Check SQLite Database for saved full world state (map, props, chests, shrines, pickups, monsters, player, weather)
-          if (window.gameDatabase) {
-            this.loadFullWorldState();
-          }
-
           // Initialize periodic auto-save (every 8s + page exit)
           this.initAutoSave();
 
-          // Initialize Save Slot Manager (Slot 1, 2, 3 & Reset Hero)
-          if (window.SaveSlotManager) {
-            window.saveSlotManager = new window.SaveSlotManager(this);
+          // Initialize Quick Save button
+          const btnQuickSave = document.getElementById('btnQuickSave');
+          if (btnQuickSave) {
+            btnQuickSave.addEventListener('click', () => {
+              this.saveFullWorldState();
+              if (window.soundSystem && window.soundSystem.playPowerUp) {
+                window.soundSystem.playPowerUp();
+              }
+              if (window.effectsManager && this.player) {
+                window.effectsManager.addDamageText(this.player.x, this.player.y - 45, '💾 บันทึกเกมสำเร็จ!', 'heal_hp');
+                window.effectsManager.addAuraBurst(this.player.x, this.player.y, '#10b981', 25);
+              }
+            });
           }
-        }, 400);
+        }, 100);
       }
     );
 
@@ -296,7 +576,15 @@ class Game {
     if (data.chests && this.map) this.map.chests = data.chests;
     if (data.shrines && this.map) this.map.shrines = data.shrines;
     if (data.pickups && this.map) this.map.pickups = data.pickups;
+    if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
+      this.map.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
+      if (this.player && (this.isAdminMode || (this.player.x === 1600 && this.player.y === 1600))) {
+        this.player.x = data.spawnPoint.x;
+        this.player.y = data.spawnPoint.y;
+      }
+    }
     if (data.enemies && this.enemyManager) {
+      this.map.savedEnemies = JSON.parse(JSON.stringify(data.enemies));
       this.enemyManager.loadEnemyData(data.enemies);
     }
     if (data.weather && this.weather) {
@@ -307,13 +595,17 @@ class Game {
   }
 
   getActiveSlot() {
-    return localStorage.getItem('yaksha_active_slot') || 'slot1';
+    return 'default';
   }
 
   saveFullWorldState() {
-    if (!this.player || this.state !== 'PLAYING') return;
+    if (!this.player || (this.state !== 'PLAYING' && this.state !== 'EDITOR')) return;
+    if (!this._isWorldLoaded && !this.isAdminMode) {
+      console.warn('[Game] Skipping save: world state has not finished loading yet.');
+      return;
+    }
 
-    const currentSlot = this.getActiveSlot();
+    const currentSlot = 'default';
     const fullState = {
       version: 'himavanta_v3',
       map: this.map ? this.map.getState() : {},
@@ -329,21 +621,28 @@ class Game {
       savedAt: Date.now()
     };
 
+    // Mirror to localStorage as instant offline backup across all slots
+    try {
+      const playerData = { player: fullState.player, quests: fullState.quests };
+      const serializedFull = JSON.stringify(fullState);
+      const serializedPlayer = JSON.stringify(playerData);
+      ['default', 'slot1', 'slot2', 'slot3'].forEach(s => {
+        localStorage.setItem(`yaksha_world_save_${s}`, serializedFull);
+        localStorage.setItem(`yaksha_player_state_${s}`, serializedPlayer);
+      });
+      localStorage.setItem('yaksha_active_slot', 'default');
+    } catch (e) {}
+
     if (window.gameDatabase) {
-      window.gameDatabase.saveWorld(fullState, currentSlot).then(res => {
-        // Also keep player slot synced
-        window.gameDatabase.savePlayer({ player: fullState.player, quests: fullState.quests }, currentSlot).catch(() => {});
-        // Also sync default for backward compatibility
-        if (currentSlot === 'slot1') {
-          window.gameDatabase.saveWorld(fullState, 'default').catch(() => {});
-        }
+      window.gameDatabase.saveWorld(fullState, 'default').then(res => {
+        window.gameDatabase.savePlayer({ player: fullState.player, quests: fullState.quests }, 'default').catch(() => {});
+        ['slot1', 'slot2', 'slot3'].forEach(s => {
+          window.gameDatabase.saveWorld(fullState, s).catch(() => {});
+          window.gameDatabase.savePlayer({ player: fullState.player, quests: fullState.quests }, s).catch(() => {});
+        });
       }).catch(err => {
         console.warn('[Game] Auto-save world error:', err.message);
       });
-    } else {
-      try {
-        localStorage.setItem(`yaksha_world_save_${currentSlot}`, JSON.stringify(fullState));
-      } catch (e) {}
     }
   }
 
@@ -351,82 +650,158 @@ class Game {
     this.saveFullWorldState();
   }
 
+  scheduleSave(delayMs = 400) {
+    if (this._saveTimeout) clearTimeout(this._saveTimeout);
+    this._saveTimeout = setTimeout(() => {
+      this._saveTimeout = null;
+      if (this.state === 'PLAYING' && this.player && !this.player.isDead) {
+        this.savePlayerProgress();
+      }
+    }, delayMs);
+  }
+
   async loadFullWorldState() {
-    if (!window.gameDatabase) return false;
     const currentSlot = this.getActiveSlot();
     try {
-      let res = await window.gameDatabase.loadWorld(currentSlot);
-      if ((!res || !res.success || !res.data) && currentSlot === 'slot1') {
-        // Fallback to legacy default slot if slot1 is fresh
-        res = await window.gameDatabase.loadWorld('default');
-      }
-      if (res && res.success && res.data) {
-        const data = res.data;
-        // 1. Restore monster & boss configurations from SQLite FIRST so enemies spawn with exact custom stats
+      // 1. ALWAYS load the Master Map & Monster Layout from Map Editor (game_maps) FIRST!
+      let masterLoaded = false;
+      if (window.gameDatabase) {
         try {
-          const entityKeys = ['preta', 'buffalo', 'krasue', 'imp', 'tiger', 'swordsman', 'monkey', 'serpent'];
+          const mapRes = await window.gameDatabase.loadMap('default');
+          if (mapRes && mapRes.success && mapRes.data) {
+            this.loadMapData(mapRes.data);
+            masterLoaded = true;
+            console.log(`[Game] Successfully loaded Master Map from Map Editor: ${this.map.props.length} props, ${(mapRes.data.enemies || []).length} monsters.`);
+          }
+        } catch (me) {
+          console.warn('[Game] Could not load master map from SQLite:', me);
+        }
+      }
+
+      // 2. Restore monster & boss configurations from SQLite in parallel
+      if (window.gameDatabase) {
+        try {
+          const entityKeys = Object.keys(window.ENTITY_REGISTRY || {});
           window.enemyConfigs = window.enemyConfigs || {};
           window.bossConfigs = window.bossConfigs || {};
-          for (const k of entityKeys) {
-            const res = await window.gameDatabase.loadBossConfig(k);
-            if (res && res.success && res.data) {
-              const isBoss = (res.data.isBoss !== undefined) ? !!res.data.isBoss : (k === 'preta' || k === 'buffalo');
-              if (isBoss) {
-                window.bossConfigs[k] = res.data;
-                delete window.enemyConfigs[k];
-                if (k === 'preta') {
-                  window.pretaBossConfig = Object.assign({}, window.defaultPretaBossConfig, res.data);
-                  if (this.enemyManager && this.enemyManager.boss) {
-                    this.enemyManager.boss.applyConfig(window.pretaBossConfig);
-                  }
+          const configPromises = entityKeys.map(k => window.gameDatabase.loadBossConfig(k).then(res => ({ k, res })).catch(() => null));
+          const results = await Promise.all(configPromises);
+          for (const item of results) {
+            if (!item || !item.res || !item.res.success || !item.res.data) continue;
+            const { k, res } = item;
+            const isBoss = (res.data.isBoss !== undefined) ? !!res.data.isBoss : (k === 'preta' || k === 'buffalo');
+            if (isBoss) {
+              window.bossConfigs[k] = res.data;
+              delete window.enemyConfigs[k];
+              if (k === 'preta') {
+                window.pretaBossConfig = Object.assign({}, window.defaultPretaBossConfig, res.data);
+                if (this.enemyManager && this.enemyManager.boss) {
+                  this.enemyManager.boss.applyConfig(window.pretaBossConfig);
                 }
-              } else {
-                window.enemyConfigs[k] = res.data;
-                delete window.bossConfigs[k];
               }
+            } else {
+              window.enemyConfigs[k] = res.data;
+              delete window.bossConfigs[k];
             }
           }
-          console.log('[Game] Loaded custom monster & boss configs from SQLite database');
+          console.log('[Game] Loaded custom monster & boss configs');
         } catch (e) {
           console.warn('[Game] Could not load entity configs from DB:', e);
         }
+      }
 
-        // 2. Restore map, tiles, props, colliders, chests, shrines, pickups
-        if (data.map && this.map) {
-          this.map.loadState(data.map);
+      // Ensure all active enemies receive their loaded stats
+      if (this.enemyManager && this.enemyManager.enemies) {
+        for (const e of this.enemyManager.enemies) {
+          const cfg = (window.bossConfigs && window.bossConfigs[e.type]) ||
+                      (window.enemyConfigs && window.enemyConfigs[e.type]);
+          if (cfg && e.applyConfig) {
+            e.applyConfig(cfg);
+          }
+        }
+      }
+
+      // 3. Restore Player Progress & Quests from Save Slot (SQLite first, then LocalStorage fallback)
+      let worldData = null;
+      if (window.gameDatabase) {
+        try {
+          let res = await window.gameDatabase.loadWorld('default');
+          if ((!res || !res.success || !res.data)) {
+            for (const s of ['slot1', 'slot2', 'slot3']) {
+              res = await window.gameDatabase.loadWorld(s);
+              if (res && res.success && res.data) break;
+            }
+          }
+          if (res && res.success && res.data) {
+            worldData = res.data;
+          }
+        } catch (e) {
+          console.warn('[Game] Error loading world from DB:', e);
+        }
+      }
+
+      // If DB didn't return data (e.g. server down or offline), check LocalStorage offline backup
+      if (!worldData) {
+        try {
+          for (const s of ['default', 'slot1', 'slot2', 'slot3']) {
+            const raw = localStorage.getItem(`yaksha_world_save_${s}`);
+            if (raw) {
+              worldData = JSON.parse(raw);
+              console.log(`[Game] Restored world state from LocalStorage (${s})`);
+              break;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (worldData) {
+        const data = worldData;
+
+        // 1. Restore player position, level, exp, hp, mp, stats, inventory FIRST
+        if (data.player && this.player) {
+          this.player.loadState(data.player);
+          // Ensure player doesn't spawn inside a newly placed solid collider
+          if (this.map.checkCollision(this.player.x, this.player.y, this.player.radius)) {
+            for (let r = 20; r <= 600; r += 30) {
+              let found = false;
+              for (let a = 0; a < 8; a++) {
+                const ang = (a * Math.PI) / 4;
+                const tx = this.player.x + Math.cos(ang) * r;
+                const ty = this.player.y + Math.sin(ang) * r;
+                if (!this.map.checkCollision(tx, ty, this.player.radius)) {
+                  this.player.x = tx;
+                  this.player.y = ty;
+                  found = true;
+                  break;
+                }
+              }
+              if (found) break;
+            }
+          }
+          this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, this.player.x - this.camera.width / 2));
+          this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, this.player.y - this.camera.height / 2));
         }
 
-        // 3. Restore enemies & boss with exact hp and status
-        if (Array.isArray(data.enemies) && this.enemyManager) {
-          this.enemyManager.loadEnemyData(data.enemies);
-
-          // Ensure all restored enemies immediately receive their loaded stats
-          for (const e of this.enemyManager.enemies) {
-            const cfg = (window.bossConfigs && window.bossConfigs[e.type]) ||
-                        (window.enemyConfigs && window.enemyConfigs[e.type]);
-            if (cfg && e.applyConfig) {
-              e.applyConfig(cfg);
-            }
+        // 2. Synchronize dead/alive states, damaged HP & respawn timers with accurate player position
+        if (!masterLoaded) {
+          if (data.map && this.map) this.map.loadState(data.map);
+          if (Array.isArray(data.enemies) && this.enemyManager) {
+            this.enemyManager.loadEnemyData(data.enemies);
+          }
+          if (data.weather && this.weather) {
+            if (data.weather.timeMode) this.weather.setTimeMode(data.weather.timeMode);
+            if (data.weather.rainMode) this.weather.setRainMode(data.weather.rainMode);
+            if (typeof data.weather.timeOfDay === 'number') this.weather.timeOfDay = data.weather.timeOfDay;
+            if (typeof data.weather.isRaining === 'boolean') this.weather.isRaining = data.weather.isRaining;
+            if (this.mapEditor) this.mapEditor.syncWeatherUI();
+          }
+        } else {
+          if (Array.isArray(data.enemies) && this.enemyManager) {
+            this.enemyManager.syncSavedStates(data.enemies);
           }
         }
 
-        // 4. Restore player position, level, exp, hp, mp, stats, inventory
-        if (data.player && this.player) {
-          this.player.loadState(data.player);
-          this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, this.player.x - this.camera.width / 2));
-          this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, this.player.y - this.camera.height / 2));
-        }
-
-        // 5. Restore weather & time
-        if (data.weather && this.weather) {
-          if (data.weather.timeMode) this.weather.setTimeMode(data.weather.timeMode);
-          if (data.weather.rainMode) this.weather.setRainMode(data.weather.rainMode);
-          if (typeof data.weather.timeOfDay === 'number') this.weather.timeOfDay = data.weather.timeOfDay;
-          if (typeof data.weather.isRaining === 'boolean') this.weather.isRaining = data.weather.isRaining;
-          if (this.mapEditor) this.mapEditor.syncWeatherUI();
-        }
-
-        // 6. Restore quests
+        // Restore quests
         if (Array.isArray(data.quests) && this.quests) {
           data.quests.forEach(sq => {
             const tq = this.quests.find(q => q.id === sq.id);
@@ -437,35 +812,82 @@ class Game {
           });
         }
 
+        // Keep local backup synchronized
+        try {
+          localStorage.setItem(`yaksha_world_save_${currentSlot}`, JSON.stringify(data));
+          if (data.player) {
+            localStorage.setItem(`yaksha_player_state_${currentSlot}`, JSON.stringify({ player: data.player, quests: data.quests }));
+          }
+        } catch (e) {}
+
+        this._isWorldLoaded = true;
         this.updateHUD();
-        console.log(`[Game] Successfully restored full world from SQLite: ${this.map.props.length} props, ${this.map.chests.length} chests, Player Level ${this.player.level} at (${this.player.x}, ${this.player.y})`);
+        console.log(`[Game] Successfully restored player progress: Level ${this.player.level} at (${this.player.x}, ${this.player.y})`);
         return true;
+      } else {
+        // Fallback: check player_states
+        await this.loadPlayerProgress();
       }
+
+      this._isWorldLoaded = true;
+      this.updateHUD();
+      return true;
     } catch (e) {
       console.warn('[Game] Load full world state error:', e.message);
+      // Emergency offline fallback
+      try {
+        const raw = localStorage.getItem(`yaksha_player_state_${currentSlot}`) ||
+                    (currentSlot === 'slot1' ? localStorage.getItem('yaksha_player_state_default') : null);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const pObj = parsed.player || parsed;
+          if (pObj && this.player) {
+            this.player.loadState(pObj);
+          }
+        }
+      } catch (_) {}
+      this._isWorldLoaded = true;
+      this.updateHUD();
     }
 
-    // Fallback: If no full world save found, load player or map fallback
-    const pRes = await this.loadPlayerProgress();
-    // Persist this newly generated world to SQLite so it stays fixed
-    setTimeout(() => {
-      this.saveFullWorldState();
-    }, 1200);
-    return pRes;
+    return false;
   }
 
   async loadPlayerProgress() {
-    if (!window.gameDatabase) return false;
-    const currentSlot = this.getActiveSlot();
     try {
-      let res = await window.gameDatabase.loadPlayer(currentSlot);
-      if ((!res || !res.success || !res.data) && currentSlot === 'slot1') {
-        res = await window.gameDatabase.loadPlayer('default');
+      let pData = null;
+      if (window.gameDatabase) {
+        try {
+          let res = await window.gameDatabase.loadPlayer('default');
+          if (!res || !res.success || !res.data) {
+            for (const s of ['slot1', 'slot2', 'slot3']) {
+              res = await window.gameDatabase.loadPlayer(s);
+              if (res && res.success && res.data) break;
+            }
+          }
+          if (res && res.success && res.data) {
+            pData = res.data;
+          }
+        } catch (e) {}
       }
-      if (res && res.success && res.data) {
-        const data = res.data;
-        if (data.player && this.player) {
-          this.player.loadState(data.player);
+
+      if (!pData) {
+        try {
+          for (const s of ['default', 'slot1', 'slot2', 'slot3']) {
+            const raw = localStorage.getItem(`yaksha_player_state_${s}`);
+            if (raw) {
+              pData = JSON.parse(raw);
+              break;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (pData) {
+        const data = pData;
+        const pObj = data.player || data;
+        if (pObj && this.player) {
+          this.player.loadState(pObj);
           this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, this.player.x - this.camera.width / 2));
           this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, this.player.y - this.camera.height / 2));
         }
@@ -478,12 +900,14 @@ class Game {
             }
           });
         }
+        this._isWorldLoaded = true;
         this.updateHUD();
         return true;
       }
     } catch (e) {
       console.warn('[Game] Load player state error:', e.message);
     }
+    this._isWorldLoaded = true;
     return false;
   }
 
@@ -511,27 +935,66 @@ class Game {
   }
 
   restartGame() {
+    const spX = (this.map && this.map.spawnPoint && typeof this.map.spawnPoint.x === 'number') ? this.map.spawnPoint.x : 1600;
+    const spY = (this.map && this.map.spawnPoint && typeof this.map.spawnPoint.y === 'number') ? this.map.spawnPoint.y : 1600;
+
     if (this.player) {
-      // Respawn at safe central shrine with full HP/MP while preserving Level & Stats
-      this.player.x = 1600;
-      this.player.y = 1600;
+      // Respawn at map editor's designated spawn point with full HP/MP while preserving Level & Stats
+      this.player.x = spX;
+      this.player.y = spY;
       this.player.hp = this.player.maxHp;
       this.player.mp = this.player.maxMp;
       this.player.isDead = false;
+      this.player.invulnerableTime = 2.0; // 2 seconds safety invulnerability
       this.player.targetEnemy = null;
+      this.player.targetPos = null;
     } else {
-      this.player = new Player(1600, 1600);
+      this.player = new Player(spX, spY);
       window.player = this.player;
     }
 
-    this.map = new GameMap(3200, 3200);
-    window.gameMap = this.map;
-    this.enemyManager = new EnemyManager(this.map.width, this.map.height);
-    window.enemyManager = this.enemyManager;
+    // Keep camera focused on player respawn point
+    this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, spX - this.camera.width / 2));
+    this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, spY - this.camera.height / 2));
 
-    document.getElementById('gameOverScreen').style.display = 'none';
-    document.getElementById('victoryScreen').style.display = 'none';
+    // Restore enemies so monsters DO NOT disappear upon player death!
+    if (this.enemyManager) {
+      if (this.map && Array.isArray(this.map.savedEnemies) && this.map.savedEnemies.length > 0) {
+        this.enemyManager.loadEnemyData(this.map.savedEnemies);
+      } else {
+        // Revive existing enemies and reset them to patrol
+        for (const e of this.enemyManager.enemies) {
+          e.isDead = false;
+          e.hp = e.maxHp;
+          e.x = e.startX || e.x;
+          e.y = e.startY || e.y;
+          e.state = 'patrol';
+          e.isAttacking = false;
+          e.isProvoked = false;
+        }
+        if (this.enemyManager.boss) {
+          this.enemyManager.boss.isDead = false;
+          this.enemyManager.boss.hp = this.enemyManager.boss.maxHp;
+          this.enemyManager.boss.x = this.enemyManager.boss.startX || this.enemyManager.boss.x;
+          this.enemyManager.boss.y = this.enemyManager.boss.startY || this.enemyManager.boss.y;
+          this.enemyManager.boss.state = 'idle';
+        }
+      }
+
+      // Re-apply monster & boss custom stats
+      for (const e of this.enemyManager.enemies) {
+        const cfg = (window.bossConfigs && window.bossConfigs[e.type]) ||
+                    (window.enemyConfigs && window.enemyConfigs[e.type]);
+        if (cfg && e.applyConfig) e.applyConfig(cfg);
+      }
+    }
+
+    const goScreen = document.getElementById('gameOverScreen');
+    if (goScreen) goScreen.style.display = 'none';
+    const vicScreen = document.getElementById('victoryScreen');
+    if (vicScreen) vicScreen.style.display = 'none';
     this.state = 'PLAYING';
+    this.lastTime = performance.now();
     this.updateHUD();
     this.savePlayerProgress();
   }
@@ -542,30 +1005,45 @@ class Game {
 
     if (this.state === 'PLAYING') {
       this.update(dt);
+    } else if (this.state === 'EDITOR') {
+      this.updateEditor(dt);
     }
 
     this.render();
     requestAnimationFrame((t) => this.loop(t));
   }
 
-  update(dt) {
-    // If Admin Mode or Map Editor is active, pause gameplay logic and allow camera panning with keys
-    if (this.isAdminMode || (this.mapEditor && this.mapEditor.isActive)) {
-      const camSpeed = 700 * dt;
-      if (this.input.keys['KeyA'] || this.input.keys['ArrowLeft']) this.camera.x -= camSpeed;
-      if (this.input.keys['KeyD'] || this.input.keys['ArrowRight']) this.camera.x += camSpeed;
-      if (this.input.keys['KeyW'] || this.input.keys['ArrowUp']) this.camera.y -= camSpeed;
-      if (this.input.keys['KeyS'] || this.input.keys['ArrowDown']) this.camera.y += camSpeed;
-      this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, this.camera.x));
-      this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, this.camera.y));
+  updateEditor(dt) {
+    // 1. Camera Panning via Keyboard (WASD / Arrows)
+    const camSpeed = 800 * dt;
+    if (this.input.keys['KeyA'] || this.input.keys['ArrowLeft']) this.camera.x -= camSpeed;
+    if (this.input.keys['KeyD'] || this.input.keys['ArrowRight']) this.camera.x += camSpeed;
+    if (this.input.keys['KeyW'] || this.input.keys['ArrowUp']) this.camera.y -= camSpeed;
+    if (this.input.keys['KeyS'] || this.input.keys['ArrowDown']) this.camera.y += camSpeed;
+    this.camera.x = Math.max(0, Math.min(this.map.width - this.camera.width, this.camera.x));
+    this.camera.y = Math.max(0, Math.min(this.map.height - this.camera.height, this.camera.y));
 
-      // Clear any pending mouse clicks so player never moves or attacks in editor/admin mode
-      this.input.mouse.clickEvent = null;
-      if (this.player) {
-        this.player.targetPos = null;
-        this.player.targetEnemy = null;
-        this.player.isMoving = false;
-      }
+    // 2. Prevent player from moving or attacking (clear all mouse pulses)
+    this.input.mouse.clickEvent = null;
+    if (this.player) {
+      this.player.targetPos = null;
+      this.player.targetEnemy = null;
+      this.player.isMoving = false;
+    }
+
+    // 3. Update Visual Effects if any (auras, markers)
+    window.effectsManager.update(dt, this.map.width, this.map.height, this.player);
+
+    // 4. Update weather atmosphere visually without sound
+    if (this.weather) {
+      this.weather.update(dt, this.player, this.map);
+    }
+  }
+
+  update(dt) {
+    // If Admin Mode or Map Editor is active, forward to updateEditor
+    if (this.isAdminMode || (this.mapEditor && this.mapEditor.isActive)) {
+      this.updateEditor(dt);
       return;
     }
 
@@ -732,6 +1210,22 @@ class Game {
   }
 
   updateHUD() {
+    // Live Player Coordinates in HUD & World Map
+    if (this.player) {
+      const px = Math.round(this.player.x);
+      const py = Math.round(this.player.y);
+      const pCol = Math.floor(px / 64);
+      const pRow = Math.floor(py / 64);
+      const lblCoords = document.getElementById('lblPlayerCoords');
+      if (lblCoords) {
+        lblCoords.innerText = `(X: ${px}, Y: ${py}) [Tile: ${pCol}, ${pRow}]`;
+      }
+      const txtLiveCoords = document.getElementById('txtLiveCoords');
+      if (txtLiveCoords) {
+        txtLiveCoords.innerText = `X: ${px} | Y: ${py}`;
+      }
+    }
+
     // Level & EXP
     const txtLvl = document.getElementById('txtLevel');
     if (txtLvl) txtLvl.innerText = `Lv. ${this.player.level}`;
@@ -904,6 +1398,14 @@ class Game {
         this.enemyManager.enemies,
         this.enemyManager.boss
       );
+      if (this.isAdminMode) {
+        const camLabel = document.getElementById('lblAdminCamCoords');
+        if (camLabel) {
+          const cx = Math.round(this.camera.x + this.camera.width / 2);
+          const cy = Math.round(this.camera.y + this.camera.height / 2);
+          camLabel.innerText = `(${cx}, ${cy})`;
+        }
+      }
     }
 
     if (this.isWorldMapOpen) {
@@ -954,9 +1456,39 @@ class Game {
       }
     }
 
-    // Hero Yaksha (Player)
+    // Hero Yaksha (Player Spawn Point in Editor vs Player Hero in Game)
     if (this.player && !this.player.isDead) {
-      list.push({ y: this.player.y, render: (ctx, cam) => this.player.render(ctx, cam) });
+      if (this.isAdminMode) {
+        list.push({
+          y: this.player.y,
+          render: (ctx, cam) => {
+            const sx = Math.round(this.player.x - cam.x);
+            const sy = Math.round(this.player.y - cam.y);
+            ctx.save();
+            // Golden spawn zone ring
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.arc(sx, sy, 28, 0, Math.PI * 2);
+            ctx.stroke();
+            // Soft translucent fill
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.2)';
+            ctx.fill();
+            // Spawn point badge with exact coordinates
+            ctx.font = 'bold 11px Kanit, sans-serif';
+            ctx.fillStyle = '#fde047';
+            ctx.textAlign = 'center';
+            ctx.fillText(`🚩 จุดเกิดผู้เล่น (X: ${Math.round(this.player.x)}, Y: ${Math.round(this.player.y)})`, sx, sy - 34);
+            // Player translucent idle preview
+            ctx.globalAlpha = 0.6;
+            this.player.render(ctx, cam);
+            ctx.restore();
+          }
+        });
+      } else {
+        list.push({ y: this.player.y, render: (ctx, cam) => this.player.render(ctx, cam) });
+      }
     }
 
     // Sort strictly by Y (smaller Y drawn first, larger Y drawn on top)
@@ -969,18 +1501,31 @@ class Game {
   }
 }
 
-function bootYakshaGame() {
+async function bootYakshaGame() {
   if (window._yakshaBooted) return;
+  // If on admin.html (Map Editor Studio), do NOT auto boot playable game!
+  if (window.location && (window.location.pathname.includes('admin') || window.location.href.includes('admin.html'))) {
+    console.log('[Game] Admin Map Editor detected - skipping auto game boot.');
+    return;
+  }
   window._yakshaBooted = true;
 
   try {
     console.log('[Game] Initializing Yaksha RPG...');
+    // Ensure entity registry and custom monsters are synchronized with backend first
+    if (window.entityRegistryReady) {
+      try { await window.entityRegistryReady; } catch (_) {}
+    }
+    if (window.assetManager && window.assetManager.syncMonstersFromAPI) {
+      try { await window.assetManager.syncMonstersFromAPI(); } catch (_) {}
+    }
     if (window.MapAssetFactory) {
       const factory = new window.MapAssetFactory();
       factory.initAll();
     }
     const game = new Game();
     window.game = game;
+    window.testLevelUp = () => { if (window.game && window.game.player) window.game.player.levelUp(); };
     game.start();
     console.log('[Game] Yaksha RPG initialized successfully.');
   } catch (err) {

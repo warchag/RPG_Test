@@ -48,12 +48,32 @@ class CharacterStatsController {
       btnClose.addEventListener('click', () => this.closeModal());
     }
 
+    const btnOpenCharSelect = document.getElementById('btnOpenCharSelectFromModal');
+    if (btnOpenCharSelect) {
+      btnOpenCharSelect.addEventListener('click', () => {
+        this.closeModal();
+        if (window.characterSelect) {
+          window.characterSelect.show();
+        }
+      });
+    }
+
     if (btnReset) {
       btnReset.addEventListener('click', () => this.handleResetStats());
     }
 
     if (btnSave) {
       btnSave.addEventListener('click', () => this.handleSaveStats());
+    }
+
+    const btnTestLvl = document.getElementById('btnTestLevelUp');
+    if (btnTestLvl) {
+      btnTestLvl.addEventListener('click', () => {
+        if (window.game && window.game.player) {
+          window.game.player.levelUp();
+          this.refreshUI();
+        }
+      });
     }
 
     // Bind individual '+' buttons for STR, VIT, AGI, SPI
@@ -118,6 +138,11 @@ class CharacterStatsController {
     // 1. Level & EXP
     const lvlEl = document.getElementById('charModalLevel');
     if (lvlEl) lvlEl.innerText = `LV. ${player.level}`;
+
+    const nameEl = document.getElementById('charHeroName');
+    if (nameEl && player.className) {
+      nameEl.innerText = `${player.className} (${player.charClass ? player.charClass.toUpperCase() : 'HERO'})`;
+    }
 
     const expBar = document.getElementById('charModalExpBar');
     if (expBar) {

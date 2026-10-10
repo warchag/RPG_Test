@@ -1,4 +1,4 @@
-/**
+  /**
  * boss_settings.js - Unified Monster & Boss Balancer Controller
  * Supports individual tuning, presets & SQLite persistence for:
  * 1. 👾 มอนสเตอร์ทั่วไป (Regular Monsters): ผีกระสือ, ภูตเงา, เสือสมิง, นักรบดาบอาคม, วานรปีศาจ, พญางูอสูร
@@ -62,8 +62,8 @@ window.defaultBuffaloBossConfig = {
   minionCount: 2
 };
 
-// Unified Registry of all entities in the game
-window.ENTITY_REGISTRY = {
+// Unified Registry Templates for built-in entities
+window.ENTITY_TEMPLATES = {
   // === 1. REGULAR MONSTERS ===
   krasue: {
     id: 'krasue',
@@ -339,8 +339,108 @@ window.ENTITY_REGISTRY = {
   }
 };
 
-// Aliases for backward compatibility
+// Unified dynamic registry (populated only with active monsters from SQLite / API)
+window.ENTITY_REGISTRY = {};
 window.BOSS_REGISTRY = window.ENTITY_REGISTRY;
+
+window.syncEntityRegistryFromAPI = async function() {
+  try {
+    const res = await fetch('/api/monsters');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || !Array.isArray(data.monsters)) return;
+
+    window.ENTITY_REGISTRY = {};
+    window.customMonsters = window.customMonsters || {};
+
+    for (const m of data.monsters) {
+      if (m.key === 'yak' || m.is_player || (m.role && m.role.includes('ผู้เล่น'))) continue;
+      if (!m.can_enter_game) continue;
+      const key = m.key;
+
+      if (window.ENTITY_TEMPLATES && window.ENTITY_TEMPLATES[key]) {
+        // Built-in template (if active in database)
+        window.ENTITY_REGISTRY[key] = Object.assign({}, window.ENTITY_TEMPLATES[key]);
+        if (m.name) window.ENTITY_REGISTRY[key].name = m.name;
+        if (m.role) window.ENTITY_REGISTRY[key].role = m.role;
+      } else {
+        // Custom monster from SQLite
+        const isBoss = !!m.is_boss;
+        const defHp = m.hp || (isBoss ? 2500 : 150);
+        const defAtk = m.attack || (isBoss ? 60 : 20);
+        const defSpd = m.speed || (isBoss ? 150 : 120);
+
+        window.ENTITY_REGISTRY[key] = {
+          id: key,
+          category: isBoss ? 'boss' : 'monster',
+          name: m.name || key,
+          badge: isBoss ? '👑 บอสประจำฉาก' : (m.is_flying ? '🦇 มอนสเตอร์บิน' : '👾 มอนสเตอร์สร้างเอง'),
+          avatar: isBoss ? '👑' : (m.is_flying ? '🦇' : '👾'),
+          avatarBg: isBoss 
+            ? 'radial-gradient(circle, #7f1d1d 0%, #0f172a 100%)' 
+            : 'radial-gradient(circle, #1e3a8a 0%, #0f172a 100%)',
+          role: isBoss ? 'บอสประจำฉาก • กำหนดสมดุล' : (m.is_flying ? 'มอนสเตอร์บินลอยเวหา' : 'มอนสเตอร์สร้างเอง'),
+          lore: `มอนสเตอร์ ${m.name || key} (${key}) นำเข้าจาก Monster Studio ปรับสมดุล HP, พลังโจมตี, ความเร็ว, ค่าตอบแทน และกลไกการต่อสู้`,
+          isCustom: true,
+          ranges: {
+            hp: { min: 20, max: isBoss ? 10000 : 2500, step: 10 },
+            attack: { min: 5, max: isBoss ? 300 : 150, step: 1 },
+            cd: { min: 0.30, max: 2.50, step: 0.05 },
+            speed: { min: 50, max: 300, step: 5 },
+            aggro: { min: 100, max: 600, step: 10 },
+            exp: { min: 5, max: 1000, step: 5 },
+            gold: { min: 0, max: 500, step: 5 }
+          },
+          defaultConfig: {
+            maxHp: defHp,
+            attack: defAtk,
+            attackCooldownMax: isBoss ? 0.95 : 1.25,
+            speed: defSpd,
+            aggroRange: isBoss ? 450 : 320,
+            expReward: isBoss ? 400 : 60,
+            goldReward: isBoss ? 250 : 40,
+            isBoss: isBoss
+          },
+          presets: {
+            nightmare: {
+              maxHp: Math.round(defHp * 1.6),
+              attack: Math.round(defAtk * 1.5),
+              attackCooldownMax: 0.8,
+              speed: Math.round(defSpd * 1.25),
+              aggroRange: 450,
+              expReward: Math.round((isBoss ? 400 : 60) * 1.6),
+              goldReward: Math.round((isBoss ? 250 : 40) * 1.6)
+            },
+            balanced: {
+              maxHp: defHp,
+              attack: defAtk,
+              attackCooldownMax: isBoss ? 0.95 : 1.25,
+              speed: defSpd,
+              aggroRange: isBoss ? 450 : 320,
+              expReward: isBoss ? 400 : 60,
+              goldReward: isBoss ? 250 : 40
+            },
+            classic: {
+              maxHp: Math.round(defHp * 0.65),
+              attack: Math.round(defAtk * 0.7),
+              attackCooldownMax: 1.35,
+              speed: Math.round(defSpd * 0.9),
+              aggroRange: 260,
+              expReward: Math.round((isBoss ? 400 : 60) * 0.6),
+              goldReward: Math.round((isBoss ? 250 : 40) * 0.6)
+            }
+          }
+        };
+      }
+      window.customMonsters[key] = m;
+    }
+    window.BOSS_REGISTRY = window.ENTITY_REGISTRY;
+  } catch (err) {
+    console.warn('[boss_settings] syncEntityRegistryFromAPI error:', err);
+  }
+};
+// Trigger background sync immediately when script loads
+window.entityRegistryReady = window.syncEntityRegistryFromAPI();
 
 class BossSettingsController {
   constructor() {
@@ -360,11 +460,47 @@ class BossSettingsController {
   }
 
   async initAsync() {
-    // 1. Load ALL entity configs from SQLite database upfront
+    // 1. Sync custom monsters from /api/monsters
+    await this.syncMonstersFromAPI();
+
+    // 2. Load ALL entity configs from SQLite database upfront
     await this.loadAllConfigsFromDB();
 
-    // 2. Render and switch to default category & entity
+    // 3. Render and switch to default category & entity
     this.switchCategory(this.currentCategory, this.currentId);
+  }
+
+    async syncMonstersFromAPI() {
+    try {
+      await window.syncEntityRegistryFromAPI();
+      for (const [key, ent] of Object.entries(window.ENTITY_REGISTRY)) {
+        if (!this.configs[key]) {
+          this.configs[key] = Object.assign({}, ent.defaultConfig);
+        }
+      }
+      // Clean up any monsters that were deleted from API
+      const activeKeys = new Set(Object.keys(window.ENTITY_REGISTRY));
+      for (const k of Object.keys(this.configs)) {
+        if (!activeKeys.has(k)) {
+          delete this.configs[k];
+          if (window.bossConfigs) delete window.bossConfigs[k];
+          if (window.enemyConfigs) delete window.enemyConfigs[k];
+        }
+      }
+    } catch (err) {
+      console.warn('[Balancer] syncMonstersFromAPI error:', err);
+    }
+  }
+
+  async refreshMonsters() {
+    await this.syncMonstersFromAPI();
+    await this.loadAllConfigsFromDB();
+    this.renderPickerGrid();
+    if (!window.ENTITY_REGISTRY[this.currentId]) {
+      this.switchCategory(this.currentCategory);
+    } else {
+      this.switchEntity(this.currentId);
+    }
   }
 
   cacheDOM() {
@@ -566,9 +702,12 @@ class BossSettingsController {
                         : (item.category === 'boss'));
       const btn = document.createElement('button');
       btn.className = `boss-picker-btn ${item.id === this.currentId ? 'active' : ''}`;
-      btn.dataset.entity = item.id;
+      const spritePath = item.sprite_dir || (item.is_builtin ? item.id : `monsters/${item.id}`);
+      const avatarHtml = item.isCustom
+        ? `<img src="Assets/${spritePath}/idle_south.png?v=${Date.now()}" style="width:26px;height:26px;object-fit:contain;image-rendering:pixelated;" onerror="if(!this._triedLegacy){this._triedLegacy=true;this.src='Assets/${item.id}/idle_south.png';}else{this.onerror=null;this.parentElement.textContent='${item.avatar}';}">`
+        : item.avatar;
       btn.innerHTML = `
-        <span class="boss-picker-icon">${item.avatar}</span>
+        <span class="boss-picker-icon">${avatarHtml}</span>
         <div class="boss-picker-info">
           <span class="boss-picker-name">${item.name}</span>
           <span class="boss-picker-role">${isBoss ? '👑 บอสประจำฉาก' : item.role}</span>
@@ -771,7 +910,12 @@ class BossSettingsController {
 
     // 4. Update Header Card UI
     if (this.bossAvatarEl) {
-      this.bossAvatarEl.textContent = entity.avatar;
+      if (entity.isCustom) {
+        const spritePath = entity.sprite_dir || (entity.is_builtin ? entity.id : `monsters/${entity.id}`);
+        this.bossAvatarEl.innerHTML = `<img src="Assets/${spritePath}/idle_south.png?v=${Date.now()}" style="width:52px;height:52px;object-fit:contain;image-rendering:pixelated;" onerror="if(!this._triedLegacy){this._triedLegacy=true;this.src='Assets/${entity.id}/idle_south.png';}else{this.onerror=null;this.parentElement.textContent='${entity.avatar}';}">`;
+      } else {
+        this.bossAvatarEl.textContent = entity.avatar;
+      }
       this.bossAvatarEl.style.background = entity.avatarBg;
     }
     if (this.bossTitleEl) {

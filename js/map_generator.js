@@ -428,68 +428,110 @@ class ProceduralMapGenerator {
       return null;
     };
 
-    // 7.1 วานรปีศาจ (Demon Monkey) in Highland Pine & Deep Woods
-    const monkeyBases = [
-      { c: cols - 12, r: 14 },
-      { c: 10, r: 12 },
-      { c: Math.floor(cols * 0.35), r: rows - 14 }
-    ];
-    for (const b of monkeyBases) {
-      for (let k = 0; k < 2; k++) {
-        const pos = safeMonsterSpawn(b.c * tileSize, b.r * tileSize, 160);
-        if (pos) map.savedEnemies.push({ type: 'monkey', x: pos.x, y: pos.y });
+    // -------------------------------------------------------------
+    // 7. Dynamic Ecosystem Monster Placement from Database
+    // -------------------------------------------------------------
+    let activeMonsters = options.activeMonsters;
+    if (!Array.isArray(activeMonsters)) {
+      if (window.ENTITY_REGISTRY && Object.keys(window.ENTITY_REGISTRY).length > 0) {
+        activeMonsters = Object.values(window.ENTITY_REGISTRY)
+          .filter(e => e && e.id && e.id !== 'yak' && !e.is_player)
+          .map(e => ({
+            key: (e.id === 'bosspreat' || e.id === 'preta') ? 'boss' : e.id,
+            name: e.name,
+            is_boss: e.category === 'boss',
+            is_flying: !!e.isFlying
+          }));
+      } else {
+        activeMonsters = [];
       }
     }
 
-    // 7.2 พญางูอสูร (Naga Serpent) along Riverbank Sands & Waters
-    for (let i = 0; i < 5; i++) {
-      const riverR = Math.floor(rows * (0.2 + (i / 5) * 0.65));
-      const riverC = Math.round(riverCenterX(riverR));
-      const side = (i % 2 === 0) ? 1 : -1;
-      const targetC = riverC + side * Math.round(riverHalfWidth(riverR) + 1.2);
-      const pos = safeMonsterSpawn(targetC * tileSize, riverR * tileSize, 120);
-      if (pos) map.savedEnemies.push({ type: 'serpent', x: pos.x, y: pos.y });
-    }
+    // Filter valid monsters (exclude hero player yak)
+    const validMonsters = activeMonsters.filter(m => m && (m.key || m.id) && m.key !== 'yak' && !m.is_player);
 
-    // 7.3 ภูตเงา (Shadow Imp) in Ancient Stupa Ruins & Shadows
-    const impBases = [
-      { c: 8, r: 24 },
-      { c: cols - 8, r: 24 },
-      { c: southClearingC, r: southClearingR - 6 }
-    ];
-    for (const b of impBases) {
-      const pos = safeMonsterSpawn(b.c * tileSize, b.r * tileSize, 140);
-      if (pos) map.savedEnemies.push({ type: 'imp', x: pos.x, y: pos.y });
-    }
+    if (validMonsters.length > 0) {
+      const bossList = validMonsters.filter(m => m.is_boss || m.key === 'boss' || m.key === 'bosspreat' || m.key === 'preta');
+      const normalList = validMonsters.filter(m => !m.is_boss && m.key !== 'boss' && m.key !== 'bosspreat' && m.key !== 'preta');
+      const spawnPool = normalList.length > 0 ? normalList : validMonsters;
 
-    // 7.4 เสือสมิง (Tiger Shaman) patrolling Wilderness Trails
-    const tigerBases = [
-      { c: 14, r: rows - 14 },
-      { c: cols - 14, r: rows - 12 },
-      { c: Math.floor(cols * 0.45), r: 14 }
-    ];
-    for (const b of tigerBases) {
-      const pos = safeMonsterSpawn(b.c * tileSize, b.r * tileSize, 150);
-      if (pos) map.savedEnemies.push({ type: 'tiger', x: pos.x, y: pos.y });
-    }
+      let poolIndex = 0;
+      const getNextMonsterKey = () => {
+        const mon = spawnPool[poolIndex % spawnPool.length];
+        poolIndex++;
+        const k = mon.key || mon.id;
+        return (k === 'bosspreat' || k === 'preta') ? 'boss' : k;
+      };
 
-    // 7.5 วิญญาณนักรบดาบ (Swordsman) guarding Sanctuary Approaches
-    const swordsmanBases = [
-      { c: sanctuaryC - 6, r: sanctuaryR + plazaBottom + 3 },
-      { c: sanctuaryC + 6, r: sanctuaryR + plazaBottom + 3 },
-      { c: b1Center, r: bridgeRows[0] - 2 },
-      { c: b2Center, r: bridgeRows[1] + 2 }
-    ];
-    for (const b of swordsmanBases) {
-      const pos = safeMonsterSpawn(b.c * tileSize, b.r * tileSize, 120);
-      if (pos) map.savedEnemies.push({ type: 'swordsman', x: pos.x, y: pos.y });
-    }
+      // 7.1 Highland Pine & Deep Woods
+      const monkeyBases = [
+        { c: cols - 12, r: 14 },
+        { c: 10, r: 12 },
+        { c: Math.floor(cols * 0.35), r: rows - 14 }
+      ];
+      for (const b of monkeyBases) {
+        for (let k = 0; k < 2; k++) {
+          const pos = safeMonsterSpawn(b.c * tileSize, b.r * tileSize, 160);
+          if (pos) map.savedEnemies.push({ type: getNextMonsterKey(), x: pos.x, y: pos.y });
+        }
+      }
 
-    // 7.6 Grand Boss: ท้าวอสูรทมิฬ / ผีกระสือ (Demon Overlord Boss)
-    // Guarding the Southern Ancient Ceremonial Grounds
-    const bossPos = safeMonsterSpawn(southClearingC * tileSize, southClearingR * tileSize, 100);
-    if (bossPos) {
-      map.savedEnemies.push({ type: 'boss', x: bossPos.x, y: bossPos.y });
+      // 7.2 Riverbank Sands & Waters
+      for (let i = 0; i < 5; i++) {
+        const riverR = Math.floor(rows * (0.2 + (i / 5) * 0.65));
+        const riverC = Math.round(riverCenterX(riverR));
+        const side = (i % 2 === 0) ? 1 : -1;
+        const targetC = riverC + side * Math.round(riverHalfWidth(riverR) + 1.2);
+        const pos = safeMonsterSpawn(targetC * tileSize, riverR * tileSize, 120);
+        if (pos) map.savedEnemies.push({ type: getNextMonsterKey(), x: pos.x, y: pos.y });
+      }
+
+      // 7.3 Ancient Stupa Ruins & Shadows
+      const impBases = [
+        { c: 8, r: 24 },
+        { c: cols - 8, r: 24 },
+        { c: southClearingC, r: southClearingR - 6 }
+      ];
+      for (const b of impBases) {
+        const pos = safeMonsterSpawn(b.c * tileSize, b.r * tileSize, 140);
+        if (pos) map.savedEnemies.push({ type: getNextMonsterKey(), x: pos.x, y: pos.y });
+      }
+
+      // 7.4 Wilderness Trails
+      const tigerBases = [
+        { c: 14, r: rows - 14 },
+        { c: cols - 14, r: rows - 12 },
+        { c: Math.floor(cols * 0.45), r: 14 }
+      ];
+      for (const b of tigerBases) {
+        const pos = safeMonsterSpawn(b.c * tileSize, b.r * tileSize, 150);
+        if (pos) map.savedEnemies.push({ type: getNextMonsterKey(), x: pos.x, y: pos.y });
+      }
+
+      // 7.5 Sanctuary Approaches
+      const swordsmanBases = [
+        { c: sanctuaryC - 6, r: sanctuaryR + plazaBottom + 3 },
+        { c: sanctuaryC + 6, r: sanctuaryR + plazaBottom + 3 },
+        { c: b1Center, r: bridgeRows[0] - 2 },
+        { c: b2Center, r: bridgeRows[1] + 2 }
+      ];
+      for (const b of swordsmanBases) {
+        const pos = safeMonsterSpawn(b.c * tileSize, b.r * tileSize, 120);
+        if (pos) map.savedEnemies.push({ type: getNextMonsterKey(), x: pos.x, y: pos.y });
+      }
+
+      // 7.6 Grand Boss: Guarding the Southern Ancient Ceremonial Grounds
+      if (bossList.length > 0) {
+        const bossMon = bossList[Math.floor(Math.random() * bossList.length)];
+        const bKey = (bossMon.key || bossMon.id);
+        const actualKey = (bKey === 'bosspreat' || bKey === 'preta') ? 'boss' : bKey;
+        const bossPos = safeMonsterSpawn(southClearingC * tileSize, southClearingR * tileSize, 100);
+        if (bossPos) {
+          map.savedEnemies.push({ type: actualKey, x: bossPos.x, y: bossPos.y, isBoss: true });
+        }
+      }
+    } else {
+      console.log('[ProceduralMapGenerator] No active monsters in database. Generated clean natural map without monsters.');
     }
 
     console.log(`[ProceduralMapGenerator] Himavanta World generated with ${map.props.length} props, ${map.colliders.length} colliders, and ${map.savedEnemies.length} zone-balanced monsters.`);

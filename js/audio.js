@@ -456,6 +456,78 @@ class SoundSystem {
     osc.stop(t + 0.25);
   }
 
+  // UI Button Click sound
+  playClick() {
+    if (this.isMuted) return;
+    this.resume();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.exponentialRampToValueAtTime(400, t + 0.04);
+
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.05);
+  }
+
+  // Chest / Save sound
+  playChest() {
+    if (this.isMuted) return;
+    this.resume();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, t + i * 0.06);
+
+      gain.gain.setValueAtTime(0.25, t + i * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.005, t + i * 0.06 + 0.22);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(t + i * 0.06);
+      osc.stop(t + i * 0.06 + 0.25);
+    });
+  }
+
+  // Power Up / Stat allocate sound
+  playPowerUp() {
+    if (this.isMuted) return;
+    this.resume();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    [440, 554.37, 659.25, 880].forEach((f, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, t + i * 0.05);
+
+      gain.gain.setValueAtTime(0.22, t + i * 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.005, t + i * 0.05 + 0.2);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+
+      osc.start(t + i * 0.05);
+      osc.stop(t + i * 0.05 + 0.22);
+    });
+  }
+
   // Coin / Item pickup
   playCoin() {
     if (this.isMuted) return;
@@ -480,31 +552,104 @@ class SoundSystem {
     });
   }
 
-  // Level Up Fanfare
+  // Level Up Fanfare: Angelic Celestial Harp, Choir Pad & Crystal Dust Chimes
   playLevelUp() {
     if (this.isMuted) return;
     this.resume();
     if (!this.ctx) return;
 
     const t = this.ctx.currentTime;
-    const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99]; // C, E, G, C, E, G
-    notes.forEach((freq, idx) => {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      const startT = t + idx * 0.09;
 
-      osc.frequency.setValueAtTime(freq, startT);
-      gain.gain.setValueAtTime(0.01, startT);
-      gain.gain.linearRampToValueAtTime(0.3, startT + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.01, startT + (idx === notes.length - 1 ? 0.6 : 0.25));
+    // 1. Heavenly Choir Pad (Warm Ambient Cmaj9 chord resonance)
+    const padNotes = [130.81, 196.00, 246.94, 329.63, 392.00]; // C3, G3, B3, E4, G4
+    padNotes.forEach(freq => {
+      try {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
 
-      osc.connect(gain);
-      gain.connect(this.sfxGain);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, t);
 
-      osc.start(startT);
-      osc.stop(startT + 0.7);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(450, t);
+        filter.frequency.linearRampToValueAtTime(800, t + 0.8);
+        filter.frequency.exponentialRampToValueAtTime(250, t + 2.5);
+
+        gain.gain.setValueAtTime(0.001, t);
+        gain.gain.linearRampToValueAtTime(0.04, t + 0.3);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 2.8);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.sfxGain);
+
+        osc.start(t);
+        osc.stop(t + 2.9);
+      } catch (_) {}
     });
+
+    // 2. Angelic Celestial Harp Arpeggio (Sparkling Pentatonic Glissando)
+    const harpNotes = [
+      523.25, // C5
+      659.25, // E5
+      783.99, // G5
+      987.77, // B5
+      1046.50, // C6
+      1318.51, // E6
+      1567.98, // G6
+      2093.00  // C7
+    ];
+    harpNotes.forEach((freq, idx) => {
+      try {
+        const startT = t + idx * 0.075;
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc1.type = 'sine';
+        osc2.type = 'triangle';
+        osc1.frequency.setValueAtTime(freq, startT);
+        osc2.frequency.setValueAtTime(freq * 2, startT); // 1st Harmonic overtone
+
+        gain.gain.setValueAtTime(0.001, startT);
+        gain.gain.linearRampToValueAtTime(0.22, startT + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.001, startT + (idx === harpNotes.length - 1 ? 1.4 : 0.65));
+
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.sfxGain);
+
+        osc1.start(startT);
+        osc2.start(startT);
+        osc1.stop(startT + 1.5);
+        osc2.stop(startT + 1.5);
+      } catch (_) {}
+    });
+
+    // 3. Fairy Crystal Dust Chimes (High sparkle pings)
+    for (let i = 0; i < 7; i++) {
+      try {
+        const chimeT = t + 0.35 + i * 0.12 + Math.random() * 0.05;
+        const freq = 2200 + Math.random() * 1400;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, chimeT);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.08, chimeT + 0.25);
+
+        gain.gain.setValueAtTime(0.001, chimeT);
+        gain.gain.linearRampToValueAtTime(0.08, chimeT + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.001, chimeT + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.sfxGain);
+
+        osc.start(chimeT);
+        osc.stop(chimeT + 0.4);
+      } catch (_) {}
+    }
   }
 
   // Enemy Defeated

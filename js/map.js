@@ -17,6 +17,7 @@ class GameMap {
     this.chests = [];        // Treasure chests [{ x, y, opened: false }]
     this.shrines = [];       // Sacred Shrines [{ x, y, active: true, cooldown: 0 }]
     this.pickups = [];       // Floating items/drops on the ground
+    this.spawnPoint = { x: 1600, y: 1600 }; // Player hero starting location
 
     this.initMap();
   }
@@ -35,8 +36,27 @@ class GameMap {
           this.collisionGrid = data.collisionGrid;
           this.props = data.props;
           this.colliders = data.colliders || [];
-          this.savedEnemies = Array.isArray(data.enemies) ? data.enemies : [];
-          console.log(`[GameMap] Loaded custom map from localStorage with ${this.savedEnemies.length} enemies.`);
+          if (Array.isArray(data.chests)) this.chests = data.chests;
+          if (Array.isArray(data.shrines)) this.shrines = data.shrines;
+          if (Array.isArray(data.pickups)) this.pickups = data.pickups;
+          if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
+            this.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
+          }
+          if (Array.isArray(data.enemies)) {
+            const deletedSet = new Set(['preta', 'boss', 'bosspreat', 'buffalo', 'krasue', 'imp', 'tiger', 'swordsman', 'monkey', 'serpent']);
+            this.savedEnemies = data.enemies.filter(e => {
+              if (!e || !e.type) return false;
+              const t = String(e.type).toLowerCase();
+              if (deletedSet.has(t)) return false;
+              return (window.ENTITY_REGISTRY && window.ENTITY_REGISTRY[t]) || (window.customMonsters && window.customMonsters[t]);
+            });
+            // Update localStorage with sanitized enemies
+            data.enemies = this.savedEnemies;
+            try { localStorage.setItem('yaksha_rpg_custom_map', JSON.stringify(data)); } catch (_) {}
+          } else {
+            this.savedEnemies = [];
+          }
+          console.log(`[GameMap] Loaded custom map from localStorage with ${this.savedEnemies.length} active enemies.`);
           return;
         } else {
           console.log('[GameMap] Generating fresh procedural Himavanta map with Wat Phra Kaew.');
@@ -955,27 +975,11 @@ class GameMap {
 
     // 7. Regular Enemies (Distinct Threat Indicators)
     for (const e of enemies) {
-      if (e.isDead) continue;
+      if (e.isDead || e.isPhantom) continue;
       const ex = e.x * scale;
       const ey = e.y * scale;
 
-      if (e.type === 'krasue') {
-        ctx.fillStyle = '#34d399'; // Emerald ghost
-      } else if (e.type === 'tiger') {
-        ctx.fillStyle = '#f97316'; // Fiery tiger
-      } else if (e.type === 'swordsman') {
-        ctx.fillStyle = '#60a5fa'; // Blue swordsman
-      } else if (e.type === 'monkey') {
-        ctx.fillStyle = '#fbbf24'; // Amber monkey
-      } else if (e.type === 'serpent') {
-        ctx.fillStyle = '#10b981'; // Naga serpent
-      } else if (e.type === 'imp') {
-        ctx.fillStyle = '#c084fc'; // Shadow imp
-      } else if (e.type === 'buffalo') {
-        ctx.fillStyle = '#dc2626'; // Demonic buffalo
-      } else {
-        ctx.fillStyle = '#ef4444'; // Red threat
-      }
+      ctx.fillStyle = window.getMonsterColor(e.type);
 
       ctx.beginPath();
       ctx.arc(ex, ey, 3.2, 0, Math.PI * 2);
@@ -1120,7 +1124,8 @@ class GameMap {
       colliders: this.colliders,
       chests: this.chests || [],
       shrines: this.shrines || [],
-      pickups: this.pickups || []
+      pickups: this.pickups || [],
+      spawnPoint: this.spawnPoint || { x: 1600, y: 1600 }
     };
   }
 
@@ -1133,6 +1138,9 @@ class GameMap {
     if (Array.isArray(data.chests)) this.chests = data.chests;
     if (Array.isArray(data.shrines)) this.shrines = data.shrines;
     if (Array.isArray(data.pickups)) this.pickups = data.pickups;
+    if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
+      this.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
+    }
   }
 }
 
@@ -1180,3 +1188,54 @@ class Camera {
 
 window.GameMap = GameMap;
 window.Camera = Camera;
+
+// Monster Color & Display Name Helpers for Minimap and Legend
+window.getMonsterColor = function(type) {
+  if (!type) return '#ef4444';
+  const t = String(type).toLowerCase();
+  const known = {
+    krasue: '#34d399',      // Emerald green
+    tiger: '#f97316',       // Orange
+    swordsman: '#60a5fa',   // Azure blue
+    monkey: '#fbbf24',      // Amber
+    serpent: '#10b981',     // Naga green
+    imp: '#c084fc',         // Violet
+    buffalo: '#dc2626',     // Crimson
+    yakthai: '#f43f5e',     // Rose red
+    kobheen: '#eab308',     // Gold / Stone amber
+    phutpeesad: '#a855f7',  // Deep purple
+    deadthongkhom: '#06b6d4', // Cyan
+    thaiger: '#f97316'      // Tiger orange
+  };
+  if (known[t]) return known[t];
+
+  // Dynamic palette for any custom monster from Monster Studio
+  const palette = ['#ec4899', '#8b5cf6', '#14b8a6', '#f59e0b', '#3b82f6', '#10b981', '#f43f5e', '#6366f1', '#84cc16'];
+  let hash = 0;
+  for (let i = 0; i < t.length; i++) hash = (hash * 31 + t.charCodeAt(i)) & 0xffffffff;
+  return palette[Math.abs(hash) % palette.length];
+};
+
+window.getMonsterDisplayName = function(type) {
+  if (!type) return 'มอนสเตอร์';
+  const t = String(type).toLowerCase();
+  // Check customMonsters from SQLite DB first!
+  if (window.customMonsters && window.customMonsters[t] && window.customMonsters[t].name) {
+    return window.customMonsters[t].name;
+  }
+  // Check ENTITY_REGISTRY
+  if (window.ENTITY_REGISTRY && window.ENTITY_REGISTRY[t] && window.ENTITY_REGISTRY[t].name) {
+    return window.ENTITY_REGISTRY[t].name;
+  }
+  const defaults = {
+    krasue: 'ผีกระสือ (Krasue)',
+    tiger: 'สมิงพราย (Tiger)',
+    swordsman: 'นักดาบอาคม (Swordsman)',
+    monkey: 'วานรปีศาจ (Monkey)',
+    serpent: 'พญางูอสูร (Naga Serpent)',
+    imp: 'ภูตเงา (Shadow Imp)',
+    buffalo: 'พญาควายธนู (Buffalo)'
+  };
+  return defaults[t] || type;
+};
+

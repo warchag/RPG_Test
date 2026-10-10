@@ -13,6 +13,7 @@ class EffectsManager {
     this.playerVfx = [];
     this.moveMarkers = [];
     this.attackMarkers = [];
+    this.angelicLevelUps = [];
     this.screenShakeTime = 0;
     this.screenShakeIntensity = 0;
     this.ambientParticles = [];
@@ -265,6 +266,13 @@ class EffectsManager {
     });
   }
 
+  // Angelic Celestial Level Up Effect (อภิมหาเอฟเฟกต์เลเวลอัปนางฟ้าทิพย์)
+  addAngelicLevelUp(x, y, level = 1, targetEntity = null) {
+    const effect = new AngelicLevelUpEffect(x, y, level, targetEntity);
+    this.angelicLevelUps.push(effect);
+    return effect;
+  }
+
   update(dt, mapWidth = 3200, mapHeight = 3200, player = null) {
     // Screen shake update
     if (this.screenShakeTime > 0) {
@@ -404,6 +412,15 @@ class EffectsManager {
       pv.life -= dt;
       if (pv.life <= 0) {
         this.playerVfx.splice(i, 1);
+      }
+    }
+
+    // Angelic Level Up VFX updates
+    for (let i = this.angelicLevelUps.length - 1; i >= 0; i--) {
+      const al = this.angelicLevelUps[i];
+      al.update(dt);
+      if (al.isFinished) {
+        this.angelicLevelUps.splice(i, 1);
       }
     }
 
@@ -921,6 +938,11 @@ class EffectsManager {
       ctx.restore();
     }
 
+    // Angelic Celestial Level Up VFX
+    for (const al of this.angelicLevelUps) {
+      al.render(ctx, camera);
+    }
+
     // Damage texts
     ctx.font = 'bold 18px "Kanit", "Sarabun", sans-serif';
     ctx.textAlign = 'center';
@@ -1295,4 +1317,690 @@ class EffectsManager {
   }
 }
 
+/**
+ * AngelicLevelUpEffect - อภิมหาเอฟเฟกต์เลเวลอัปนางฟ้าทิพย์หิมพานต์ (Pure Vector Canvas 2D)
+ * ออกแบบด้วยคณิตศาสตร์เวกเตอร์ล้วน 100% (No external AI image assets)
+ * ประกอบด้วย:
+ * 1. เสาแสงสวรรค์ทะลุฟากฟ้า (Towering Celestial Light Pillar)
+ * 2. ปีกนางฟ้าทิพย์แสงสีทองส่องประกายกระพือพลิ้วไหว (Dual Luminous Angelic Wings)
+ * 3. วงแหวน Halo ศักดิ์สิทธิ์ลอยเหนือศีรษะพร้อมเพชรดาราดาวประกาย (Sacred Golden Halo)
+ * 4. มณฑลอาคมดอกบัวทองคำหมุนที่พื้น (Sacred Ground Lotus Mandala)
+ * 5. ละอองดาวระยิบระยับและกลีบบัวสวรรค์ล่องลอย (Twinkling Stardust & Sacred Lotus Petals)
+ * 6. ป้ายศิลาทองคำคำว่า '✦ LEVEL UP ✦' พร้อมป้ายเลเวลใหม่ (Celestial Level Up Plaque)
+ */
+class AngelicLevelUpEffect {
+  constructor(x, y, level = 1, targetEntity = null) {
+    this.x = x;
+    this.y = y;
+    this.level = level;
+    this.targetEntity = targetEntity;
+    this.duration = 3.2; // 3.2 วินาที เต็มอิ่ม อลังการ
+    this.life = this.duration;
+    this.isFinished = false;
+
+    this.time = 0;
+    this.mandalaRot = 0;
+    this.haloOrbit = 0;
+
+    // ระบบอนุภาคละอองดาวและกลีบบัวสวรรค์
+    this.particles = [];
+    this.initParticles();
+  }
+
+  initParticles() {
+    // 40 ละอองดาวประกาย 4 แฉก & 8 แฉก (Diamond Twinkling Stars)
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = Math.random() * 60;
+      this.particles.push({
+        type: 'star',
+        x: Math.cos(angle) * dist,
+        y: Math.sin(angle) * dist * 0.42 + 8,
+        vx: (Math.random() - 0.5) * 36,
+        vy: -55 - Math.random() * 95,
+        size: 3.0 + Math.random() * 4.8,
+        points: Math.random() > 0.45 ? 4 : 8,
+        color: ['#ffffff', '#fde047', '#67e8f9', '#f472b6', '#fef08a'][Math.floor(Math.random() * 5)],
+        rot: Math.random() * Math.PI,
+        rotSpeed: (Math.random() - 0.5) * 6,
+        life: 0.8 + Math.random() * 2.3,
+        maxLife: 2.7,
+        spiralPhase: Math.random() * Math.PI * 2,
+        twinkleSpeed: 8 + Math.random() * 9
+      });
+    }
+
+    // 24 กลีบบัวสวรรค์ล่องลอยปลิวพลิ้วไหว (Sacred Floating Lotus Petals)
+    for (let i = 0; i < 24; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist = 12 + Math.random() * 70;
+      this.particles.push({
+        type: 'petal',
+        x: Math.cos(angle) * dist,
+        y: Math.sin(angle) * dist * 0.4 + 10,
+        vx: (Math.random() - 0.5) * 28,
+        vy: -32 - Math.random() * 60,
+        size: 8.5 + Math.random() * 7,
+        aspect: 0.45 + Math.random() * 0.25,
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 4.0,
+        tumbleSpeed: 3.5 + Math.random() * 4.5,
+        color: Math.random() > 0.35 ? '#f472b6' : '#fde047',
+        life: 1.1 + Math.random() * 2.0,
+        maxLife: 2.9,
+        driftPhase: Math.random() * Math.PI * 2
+      });
+    }
+
+    // 14 เส้นไอแสงทะยานขึ้นฟ้า (Rising Light Shafts)
+    for (let i = 0; i < 14; i++) {
+      this.particles.push({
+        type: 'shaft',
+        x: (Math.random() - 0.5) * 55,
+        y: 15 - Math.random() * 30,
+        vy: -220 - Math.random() * 180,
+        height: 25 + Math.random() * 45,
+        width: 1.5 + Math.random() * 2.2,
+        color: Math.random() > 0.4 ? '#ffffff' : '#67e8f9',
+        life: 0.7 + Math.random() * 2.1,
+        maxLife: 2.6
+      });
+    }
+  }
+
+  update(dt) {
+    this.life -= dt;
+    this.time += dt;
+    if (this.life <= 0) {
+      this.isFinished = true;
+      return;
+    }
+
+    // ล็อคตำแหน่งตามตัวละครแบบเรียลไทม์
+    if (this.targetEntity) {
+      this.x = this.targetEntity.x;
+      this.y = this.targetEntity.y;
+    }
+
+    this.mandalaRot += dt * 0.85;
+    this.haloOrbit += dt * 2.4;
+
+    // อัปเดตอนุภาค
+    for (const p of this.particles) {
+      p.life -= dt;
+      if (p.type === 'star') {
+        p.x += p.vx * dt + Math.sin(this.time * 3.2 + p.spiralPhase) * 16 * dt;
+        p.y += p.vy * dt;
+        p.rot += p.rotSpeed * dt;
+      } else if (p.type === 'petal') {
+        p.x += p.vx * dt + Math.sin(this.time * 2.4 + p.driftPhase) * 25 * dt;
+        p.y += p.vy * dt;
+        p.rot += p.rotSpeed * dt;
+      } else if (p.type === 'shaft') {
+        p.y += p.vy * dt;
+      }
+    }
+  }
+
+  render(ctx, camera) {
+    if (camera && !camera.isVisible(this.x, this.y, 480)) return;
+
+    const progress = 1 - Math.max(0, this.life / this.duration);
+    const cx = camera ? this.x - camera.x : this.x;
+    const cy = camera ? this.y - camera.y : this.y;
+
+    ctx.save();
+
+    // ซองคลื่นความโปร่งใสหลัก (Ease-in, Sustain, Graceful Dissolve)
+    let masterAlpha = 1.0;
+    if (progress < 0.12) {
+      masterAlpha = progress / 0.12;
+    } else if (progress > 0.74) {
+      masterAlpha = (1 - progress) / 0.26;
+    }
+    masterAlpha = Math.max(0, Math.min(1, masterAlpha));
+
+    // 1. เสาแสงสวรรค์ทะลุฟากฟ้า (Towering Light Pillar)
+    this.renderLightPillar(ctx, cx, cy, progress, masterAlpha);
+
+    // 2. มณฑลอาคมดอกบัวทองคำหมุนที่พื้น (Sacred Ground Lotus Mandala)
+    this.renderGroundMandala(ctx, cx, cy, progress, masterAlpha);
+
+    // 3. ปีกนางฟ้าทิพย์แสงสีทองส่องประกาย (Dual Luminous Angelic Wings)
+    this.renderAngelicWings(ctx, cx, cy, progress, masterAlpha);
+
+    // 4. วงแหวน Halo ศักดิ์สิทธิ์ลอยเหนือศีรษะ (Angelic Golden Halo)
+    this.renderAngelicHalo(ctx, cx, cy, progress, masterAlpha);
+
+    // 5. ละอองดาวและกลีบบัวสวรรค์ล่องลอย (Twinkling Stardust & Lotus Petals)
+    this.renderParticles(ctx, cx, cy, progress, masterAlpha);
+
+    // 6. ป้ายทองคำ "✦ LEVEL UP ✦" ลอยวิบวับ (Celestial Plaque Banner)
+    this.renderLevelUpBanner(ctx, cx, cy, progress, masterAlpha);
+
+    ctx.restore();
+  }
+
+  // --- 1. เสาแสงสวรรค์ทะลุฟากฟ้า (Pillar of Heavenly Light) ---
+  renderLightPillar(ctx, cx, cy, progress, masterAlpha) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    const beamW = (70 + Math.sin(this.time * 6) * 10) * (progress < 0.18 ? progress / 0.18 : 1.0);
+    const topY = cy - 720;
+    const botY = cy + 18;
+
+    // กราเดียนต์เสาแสงชั้นนอก (ฟ้าครามสวรรค์ ผสม ชมพูอัปสรา)
+    const outGrad = ctx.createLinearGradient(cx - beamW * 1.8, 0, cx + beamW * 1.8, 0);
+    outGrad.addColorStop(0, 'rgba(103, 232, 249, 0)');
+    outGrad.addColorStop(0.25, `rgba(103, 232, 249, ${0.28 * masterAlpha})`);
+    outGrad.addColorStop(0.42, `rgba(254, 240, 138, ${0.55 * masterAlpha})`);
+    outGrad.addColorStop(0.5, `rgba(255, 255, 255, ${0.85 * masterAlpha})`);
+    outGrad.addColorStop(0.58, `rgba(254, 240, 138, ${0.55 * masterAlpha})`);
+    outGrad.addColorStop(0.75, `rgba(244, 114, 182, ${0.28 * masterAlpha})`);
+    outGrad.addColorStop(1, 'rgba(244, 114, 182, 0)');
+
+    ctx.fillStyle = outGrad;
+    ctx.fillRect(cx - beamW * 1.8, topY, beamW * 3.6, botY - topY);
+
+    // แกนแสงสว่างจ้าตรงกลาง (White-Hot Inner Core Beam)
+    const coreGrad = ctx.createLinearGradient(cx - beamW * 0.35, 0, cx + beamW * 0.35, 0);
+    coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0)');
+    coreGrad.addColorStop(0.5, `rgba(255, 255, 255, ${0.92 * masterAlpha})`);
+    coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+    ctx.fillStyle = coreGrad;
+    ctx.fillRect(cx - beamW * 0.35, topY, beamW * 0.7, botY - topY);
+
+    // คลื่นวงแหวนแสงกระทบพื้น (Ground Light Burst Shockwave)
+    if (progress < 0.35) {
+      const ringT = progress / 0.35;
+      const ringR = 25 + 95 * ringT;
+      const ringAlpha = (1 - ringT) * 0.75 * masterAlpha;
+      ctx.strokeStyle = `rgba(254, 240, 138, ${ringAlpha})`;
+      ctx.lineWidth = 4 * (1 - ringT);
+      ctx.save();
+      ctx.translate(cx, cy + 12);
+      ctx.scale(1.0, 0.38);
+      ctx.beginPath();
+      ctx.arc(0, 0, ringR, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.restore();
+  }
+
+  // --- 2. มณฑลอาคมดอกบัวทองคำหมุนที่พื้น (Sacred Ground Lotus Mandala) ---
+  renderGroundMandala(ctx, cx, cy, progress, masterAlpha) {
+    ctx.save();
+    ctx.translate(cx, cy + 12);
+    ctx.scale(1.0, 0.40); // ทัศนมิติเอียง 3 มิติตามระนาบพื้นดิน
+
+    const mScale = Math.min(1.0, progress * 4.5);
+    const mRadius = 78 * mScale;
+    const rot = this.mandalaRot;
+
+    // รัศมีแสงสีทองฟุ้งรอบมณฑล
+    const glowGrad = ctx.createRadialGradient(0, 0, 5, 0, 0, mRadius * 1.25);
+    glowGrad.addColorStop(0, `rgba(254, 240, 138, ${0.65 * masterAlpha})`);
+    glowGrad.addColorStop(0.6, `rgba(245, 158, 11, ${0.28 * masterAlpha})`);
+    glowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, mRadius * 1.25, 0, Math.PI * 2);
+    ctx.fill();
+
+    // วงแหวนนอกหมุนทวนเข็มนาฬิกา
+    ctx.save();
+    ctx.rotate(-rot * 0.6);
+    ctx.strokeStyle = `rgba(253, 224, 71, ${0.85 * masterAlpha})`;
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, mRadius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // จุดอักขระและสัญลักษณ์ 16 จุดบนวงแหวนนอก
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const px = Math.cos(a) * mRadius;
+      const py = Math.sin(a) * mRadius;
+      ctx.fillStyle = i % 2 === 0 ? `rgba(255, 255, 255, ${0.9 * masterAlpha})` : `rgba(244, 114, 182, ${0.8 * masterAlpha})`;
+      ctx.beginPath();
+      ctx.arc(px, py, i % 2 === 0 ? 3.0 : 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // กลีบบัวสวรรค์ 8 กลีบหมุนตามเข็มนาฬิกา (8-Petaled Lotus Sacred Mandala)
+    ctx.save();
+    ctx.rotate(rot);
+    const petalLen = mRadius * 0.75;
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      ctx.save();
+      ctx.rotate(a);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(petalLen * 0.38, -petalLen * 0.35, petalLen, 0);
+      ctx.quadraticCurveTo(petalLen * 0.38, petalLen * 0.35, 0, 0);
+
+      // ไล่เฉดสีกลีบบัว: ขาวแกนกลาง สู่ ทองอร่าม และปลายกลีบชมพูบัวสวรรค์
+      ctx.fillStyle = `rgba(254, 240, 138, ${0.22 * masterAlpha})`;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(253, 224, 71, ${0.9 * masterAlpha})`;
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // ดาวแปดแฉกมงคลด้านใน (Inner 8-Pointed Celestial Star)
+    ctx.beginPath();
+    for (let i = 0; i < 16; i++) {
+      const a = (i / 16) * Math.PI * 2;
+      const r = i % 2 === 0 ? mRadius * 0.42 : mRadius * 0.18;
+      const px = Math.cos(a) * r;
+      const py = Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.55 * masterAlpha})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(254, 240, 138, ${0.95 * masterAlpha})`;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  // --- 3. ปีกนางฟ้าทิพย์แสงสีทองส่องประกายกระพือพลิ้วไหว (Dual Luminous Angelic Wings) ---
+  renderAngelicWings(ctx, cx, cy, progress, masterAlpha) {
+    ctx.save();
+
+    // ตำแหน่งฐานปีก: กึ่งกลางหลังและไหล่ของตัวละคร (เหนือจุดศูนย์กลางเล็กน้อย)
+    const wingBaseX = cx;
+    const wingBaseY = cy - 22;
+
+    // การคลี่สยายปีก (Unfurl Ease-Out) และการกระพือพลิ้วไหวอย่างสง่างาม (Harmonic Flapping)
+    const unfurlT = Math.min(1.0, progress / 0.24);
+    // เด้งสยายออกอย่างทรงพลัง (Elastic Wing Spread)
+    const unfurlBounce = unfurlT < 1.0
+      ? Math.sin(unfurlT * Math.PI * 0.5) * (1 + 0.18 * Math.sin(unfurlT * Math.PI * 2))
+      : 1.0;
+
+    const flapSway = Math.sin(this.time * 4.4) * 0.12;
+    const flapScaleX = (1.0 + Math.sin(this.time * 4.4) * 0.06) * unfurlBounce;
+    const flapScaleY = (1.0 - Math.sin(this.time * 4.4) * 0.04) * unfurlBounce;
+
+    ctx.translate(wingBaseX, wingBaseY);
+
+    // เรืองแสงออร่ารวมหลังปีกแบบ GPU Gradient (เร็วขึ้น 100 เท่า แทน shadowBlur)
+    const wingGlow = ctx.createRadialGradient(0, -10, 5, 0, -10, 115);
+    wingGlow.addColorStop(0, `rgba(103, 232, 249, ${0.35 * masterAlpha})`);
+    wingGlow.addColorStop(0.5, `rgba(254, 240, 138, ${0.20 * masterAlpha})`);
+    wingGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = wingGlow;
+    ctx.beginPath();
+    ctx.arc(0, -10, 115, 0, Math.PI * 2);
+    ctx.fill();
+
+    // วาดปีกขวา (Right Wing)
+    ctx.save();
+    ctx.scale(flapScaleX, flapScaleY);
+    ctx.rotate(flapSway);
+    this.drawSingleAngelicWing(ctx, masterAlpha, progress);
+    ctx.restore();
+
+    // วาดปีกซ้าย (Left Wing สะท้อนภาพตามแนวนอน)
+    ctx.save();
+    ctx.scale(-flapScaleX, flapScaleY);
+    ctx.rotate(flapSway);
+    this.drawSingleAngelicWing(ctx, masterAlpha, progress);
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  // วาดโครงสร้างปีกเดี่ยวด้วยเส้นเบซิเยร์ 4 ชั้นขนปีกทิพย์ (Optimized 60 FPS)
+  drawSingleAngelicWing(ctx, alpha, progress) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    // 4 ขนนกหลักชั้นยาวสุด (Primary Flight Feathers)
+    const primaryFeathers = [
+      { start: [10, -5], cp1: [38, -48], tip: [92, -62], cp2: [48, -25], w: 1.0, color: '#fde047' },
+      { start: [14, 0], cp1: [48, -32], tip: [108, -36], cp2: [52, -8], w: 1.0, color: '#fef08a' },
+      { start: [16, 5], cp1: [48, -10], tip: [102, -5], cp2: [46, 12], w: 0.95, color: '#67e8f9' },
+      { start: [14, 12], cp1: [42, 12], tip: [82, 22], cp2: [35, 24], w: 0.9, color: '#f472b6' }
+    ];
+
+    for (const f of primaryFeathers) {
+      ctx.beginPath();
+      ctx.moveTo(f.start[0], f.start[1]);
+      ctx.bezierCurveTo(f.cp1[0], f.cp1[1], f.tip[0] - 15, f.tip[1] - 5, f.tip[0], f.tip[1]);
+      ctx.bezierCurveTo(f.tip[0] - 8, f.tip[1] + 12, f.cp2[0], f.cp2[1], f.start[0], f.start[1]);
+
+      // ไล่เฉดสีขนปีก: ขาวแกนกลาง สู่ ทองคำสว่าง และปลายขนนกสีฟ้าคราม/ชมพูดอกบัว
+      const fGrad = ctx.createLinearGradient(f.start[0], f.start[1], f.tip[0], f.tip[1]);
+      fGrad.addColorStop(0, `rgba(255, 255, 255, ${0.95 * alpha})`);
+      fGrad.addColorStop(0.4, `rgba(253, 224, 71, ${0.85 * alpha})`);
+      fGrad.addColorStop(0.8, `rgba(103, 232, 249, ${0.72 * alpha})`);
+      fGrad.addColorStop(1, `rgba(244, 114, 182, ${0.60 * alpha})`);
+
+      ctx.fillStyle = fGrad;
+      ctx.fill();
+
+      // เส้นกระดูกสันขนนกสีขาวสว่างประกาย (Feather Quill Spine)
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.9 * alpha})`;
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(f.start[0], f.start[1]);
+      ctx.quadraticCurveTo(f.cp1[0] * 0.9, f.cp1[1] * 0.9, f.tip[0], f.tip[1]);
+      ctx.stroke();
+
+      // ประกายดาวที่ปลายขนนกแต่ละเส้น
+      ctx.fillStyle = `rgba(255, 255, 255, ${1.0 * alpha})`;
+      ctx.beginPath();
+      ctx.arc(f.tip[0], f.tip[1], 2.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 3 ขนนกชั้นกลาง (Secondary Covert Feathers)
+    const secondaryFeathers = [
+      { start: [8, -8], cp1: [32, -32], tip: [72, -40], cp2: [38, -18] },
+      { start: [10, -3], cp1: [36, -20], tip: [78, -20], cp2: [38, -4] },
+      { start: [10, 4], cp1: [32, -4], tip: [68, 5], cp2: [30, 14] }
+    ];
+
+    for (const f of secondaryFeathers) {
+      ctx.beginPath();
+      ctx.moveTo(f.start[0], f.start[1]);
+      ctx.bezierCurveTo(f.cp1[0], f.cp1[1], f.tip[0] - 10, f.tip[1] - 4, f.tip[0], f.tip[1]);
+      ctx.bezierCurveTo(f.tip[0] - 6, f.tip[1] + 8, f.cp2[0], f.cp2[1], f.start[0], f.start[1]);
+
+      const sGrad = ctx.createLinearGradient(f.start[0], f.start[1], f.tip[0], f.tip[1]);
+      sGrad.addColorStop(0, `rgba(255, 255, 255, ${0.98 * alpha})`);
+      sGrad.addColorStop(0.6, `rgba(254, 240, 138, ${0.85 * alpha})`);
+      sGrad.addColorStop(1, `rgba(250, 204, 21, ${0.70 * alpha})`);
+
+      ctx.fillStyle = sGrad;
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255, 255, 255, ${0.8 * alpha})`;
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+    }
+
+    // ฐานโค้งกระดูกปีกด้านบน (Wing Scapular Shoulder Arch)
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(24, -38, 58, -44);
+    ctx.quadraticCurveTo(28, -22, 0, 0);
+    ctx.fillStyle = `rgba(255, 255, 255, ${0.95 * alpha})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(254, 240, 138, ${0.9 * alpha})`;
+    ctx.lineWidth = 2.0;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // --- 4. วงแหวน Halo ศักดิ์สิทธิ์ลอยเหนือศีรษะ (Angelic Golden Halo) ---
+  renderAngelicHalo(ctx, cx, cy, progress, masterAlpha) {
+    ctx.save();
+
+    const haloBob = Math.sin(this.time * 3.6) * 3.2;
+    const haloY = cy - 66 + haloBob;
+    const haloScale = Math.min(1.0, progress * 4.8);
+    const orbit = this.haloOrbit;
+
+    ctx.translate(cx, haloY);
+    ctx.scale(haloScale, haloScale * 0.36); // วงแหวน 3D เอียงโค้งเหนือศีรษะ
+
+    // รัศมีแสงสีทองรอบวงแหวน Halo ด้วย Radial Gradient (ไร้ shadowBlur)
+    const hGlow = ctx.createRadialGradient(0, 0, 8, 0, 0, 36);
+    hGlow.addColorStop(0, `rgba(254, 240, 138, ${0.45 * masterAlpha})`);
+    hGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = hGlow;
+    ctx.beginPath();
+    ctx.arc(0, 0, 36, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ลูปวงแหวนทองคำ (Golden Ring Torus)
+    ctx.strokeStyle = `rgba(254, 240, 138, ${0.95 * masterAlpha})`;
+    ctx.lineWidth = 4.2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 27, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // วงแหวนเส้นในสีขาวบริสุทธิ์ (Pure White Inner Core)
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.98 * masterAlpha})`;
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(0, 0, 27, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 4 เพชรดาราดาวประกายหมุนรอบวงแหวน Halo (4 Rotating Cardinal Gems)
+    for (let i = 0; i < 4; i++) {
+      const a = orbit + (i * Math.PI) / 2;
+      const gx = Math.cos(a) * 27;
+      const gy = Math.sin(a) * 27;
+
+      ctx.save();
+      ctx.translate(gx, gy);
+      ctx.fillStyle = `rgba(255, 255, 255, ${1.0 * masterAlpha})`;
+      this.drawCrossStar(ctx, 0, 0, 4.2, 4);
+      ctx.restore();
+    }
+
+    // ละอองแสงนางฟ้าลอยวนรอบ Halo (Orbiting Fairy Particle)
+    const fairyX = Math.cos(-orbit * 1.5) * 29;
+    const fairyY = Math.sin(-orbit * 1.5) * 29;
+    ctx.fillStyle = `rgba(103, 232, 249, ${0.95 * masterAlpha})`;
+    ctx.beginPath();
+    ctx.arc(fairyX, fairyY, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // --- 5. ละอองดาวและกลีบบัวสวรรค์ล่องลอย (Twinkling Stardust & Lotus Petals - 60 FPS) ---
+  renderParticles(ctx, cx, cy, progress, masterAlpha) {
+    ctx.save();
+
+    for (const p of this.particles) {
+      const pAlpha = Math.max(0, p.life / p.maxLife) * masterAlpha;
+      if (pAlpha <= 0.01) continue;
+
+      const px = cx + p.x;
+      const py = cy + p.y;
+
+      if (p.type === 'star') {
+        // ละอองดาวประกายระยิบระยับ (Twinkling Star - Pure Vector)
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(p.rot);
+        const twinkle = 0.5 + 0.5 * Math.sin(this.time * p.twinkleSpeed);
+        const curSize = p.size * (0.7 + 0.5 * twinkle);
+
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = pAlpha;
+        this.drawCrossStar(ctx, 0, 0, curSize, p.points);
+
+        // จุดแสงขาวตรงกลางดาว
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(0, 0, curSize * 0.32, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+      } else if (p.type === 'petal') {
+        // กลีบบัวสวรรค์ปลิวพลิ้วไหวในกระแสลม (Floating Lotus Petal 3D Tumble)
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(p.rot);
+        ctx.scale(Math.cos(this.time * p.tumbleSpeed), 1.0);
+
+        ctx.globalAlpha = pAlpha * 0.85;
+        ctx.fillStyle = p.color;
+
+        ctx.beginPath();
+        ctx.moveTo(0, -p.size);
+        ctx.quadraticCurveTo(p.size * p.aspect * 1.6, 0, 0, p.size);
+        ctx.quadraticCurveTo(-p.size * p.aspect * 1.6, 0, 0, -p.size);
+        ctx.fill();
+
+        ctx.strokeStyle = `rgba(255, 255, 255, ${pAlpha * 0.6})`;
+        ctx.lineWidth = 1.0;
+        ctx.beginPath();
+        ctx.moveTo(0, -p.size * 0.8);
+        ctx.lineTo(0, p.size * 0.8);
+        ctx.stroke();
+
+        ctx.restore();
+
+      } else if (p.type === 'shaft') {
+        // เส้นไอแสงพุ่งขึ้น (Light Filament)
+        ctx.save();
+        ctx.globalAlpha = pAlpha * 0.6;
+        ctx.fillStyle = p.color;
+        ctx.fillRect(px, py, p.width, p.height);
+        ctx.restore();
+      }
+    }
+
+    ctx.restore();
+  }
+
+  // ตัวช่วยวาดดาวประกาย 4 แฉก หรือ 8 แฉก
+  drawCrossStar(ctx, x, y, size, points = 4) {
+    ctx.beginPath();
+    const count = points * 2;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2;
+      const r = i % 2 === 0 ? size : size * 0.28;
+      const sx = x + Math.cos(a) * r;
+      const sy = y + Math.sin(a) * r;
+      if (i === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // --- 6. ป้ายทองคำ "✦ LEVEL UP ✦" ลอยวิบวับ (Celestial Plaque Banner) ---
+  renderLevelUpBanner(ctx, cx, cy, progress, masterAlpha) {
+    ctx.save();
+
+    // แอนิเมชันลอยนุ่มนวลและการเปิดตัวอย่างอลังการ
+    const popIn = Math.min(1.0, progress / 0.22);
+    const bounceScale = popIn < 1.0
+      ? Math.sin(popIn * Math.PI * 0.5) * (1 + 0.25 * Math.sin(popIn * Math.PI))
+      : 1.0;
+
+    const floatY = Math.sin(this.time * 2.8) * 4.0;
+    const bannerY = cy - 105 + floatY;
+
+    ctx.translate(cx, bannerY);
+    ctx.scale(bounceScale, bounceScale);
+    ctx.globalAlpha = masterAlpha;
+
+    // รัศมีแสงสีทองเบื้องหลังป้าย
+    const auraGrad = ctx.createRadialGradient(0, 0, 10, 0, 0, 110);
+    auraGrad.addColorStop(0, `rgba(254, 240, 138, ${0.75 * masterAlpha})`);
+    auraGrad.addColorStop(0.5, `rgba(245, 158, 11, ${0.30 * masterAlpha})`);
+    auraGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = auraGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 110, 0, Math.PI * 2);
+    ctx.fill();
+
+    // กนกลายไทยขนาบข้างป้ายซ้าย-ขวา (Thai Kanok Wing Ornaments)
+    this.drawKanokWingBrackets(ctx, masterAlpha);
+
+    // ข้อความหลัก "✦ LEVEL UP ✦"
+    ctx.font = '900 24px "Kanit", "Cinzel", "Sarabun", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // เงาดำลึกเพื่อให้อ่านง่ายบนทุกสภาพแสง
+    ctx.lineWidth = 5.5;
+    ctx.strokeStyle = '#0f172a';
+    ctx.strokeText('✦ LEVEL UP ✦', 0, -4);
+
+    // สีทองคำประกายเปลว (Metallic Gold Gradient)
+    const textGrad = ctx.createLinearGradient(0, -18, 0, 10);
+    textGrad.addColorStop(0, '#ffffff');
+    textGrad.addColorStop(0.3, '#fef08a');
+    textGrad.addColorStop(0.65, '#facc15');
+    textGrad.addColorStop(1, '#b45309');
+
+    ctx.fillStyle = textGrad;
+    ctx.fillText('✦ LEVEL UP ✦', 0, -4);
+
+    // แถบแสงสะท้อนเลื่อนผ่านตัวอักษร (Shine Sweep Glint)
+    const shinePos = ((this.time * 1.8) % 2.5) - 1.25;
+    if (shinePos > -0.8 && shinePos < 0.8) {
+      const glintX = shinePos * 90;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(glintX, -4, 12, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.5 * masterAlpha})`;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // ป้ายเข็มกลัดเลเวลใหม่ด้านล่าง (New Level Pill Badge: LV. X)
+    const pillW = 86;
+    const pillH = 22;
+    const pillY = 16;
+
+    // กรอบป้ายเข็มกลัด
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2.0;
+
+    ctx.beginPath();
+    ctx.roundRect(-pillW / 2, pillY - pillH / 2, pillW, pillH, 11);
+    ctx.fill();
+    ctx.stroke();
+
+    // ข้อความในเข็มกลัด
+    ctx.font = 'bold 12px "Kanit", sans-serif';
+    ctx.fillStyle = '#34d399';
+    ctx.fillText(`LV. ${this.level}`, 0, pillY);
+
+    ctx.restore();
+  }
+
+  // วาดกนกปีกทองคำประดับหัวป้าย
+  drawKanokWingBrackets(ctx, alpha) {
+    ctx.save();
+    ctx.strokeStyle = `rgba(253, 224, 71, ${0.9 * alpha})`;
+    ctx.lineWidth = 2.2;
+    ctx.fillStyle = `rgba(254, 240, 138, ${0.35 * alpha})`;
+
+    // กนกปีกซ้าย
+    ctx.beginPath();
+    ctx.moveTo(-75, -4);
+    ctx.quadraticCurveTo(-95, -18, -118, -8);
+    ctx.quadraticCurveTo(-98, 4, -75, -4);
+    ctx.fill();
+    ctx.stroke();
+
+    // กนกปีกขวา
+    ctx.beginPath();
+    ctx.moveTo(75, -4);
+    ctx.quadraticCurveTo(95, -18, 118, -8);
+    ctx.quadraticCurveTo(98, 4, 75, -4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+window.AngelicLevelUpEffect = AngelicLevelUpEffect;
 window.effectsManager = new EffectsManager();
+

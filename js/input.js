@@ -57,6 +57,11 @@ class InputManager {
           window.characterStatsController.toggleModal();
         }
       }
+      if (e.code === 'KeyU' || e.key === 'u' || e.key === 'U') {
+        if (typeof window.testLevelUp === 'function') {
+          window.testLevelUp();
+        }
+      }
       if (e.code === 'KeyM' || e.key === 'm' || e.key === 'M') {
         if (window.game && typeof window.game.toggleWorldMap === 'function') {
           window.game.toggleWorldMap();

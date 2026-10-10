@@ -6,11 +6,12 @@
 class MapEditor {
   constructor(game) {
     this.game = game;
-    this.isActive = false;
+    this.isActive = (game && game.isAdminMode) || false;
     this.currentTool = 'tile'; // 'tile', 'prop', 'monster', 'collision'
     this.selectedTile = 0; // 0: Grass, 1: Dirt, 2: Water Deep, 4: Water Shallow, 5: Sand, 6: Bridge H, 7: Bridge V, 3: Stone
     this.selectedProp = 'prop_tree_bodhi';
-    this.selectedMonster = 'krasue'; // 'krasue', 'tiger', 'swordsman', 'monkey', 'serpent', 'imp', 'boss'
+    this.selectedMonster = null; // Dynamically set to first available monster, or null if empty
+    this.selectedMonsterName = '';
     this.selectedCollision = 1; // 1: Blocked (Red), 0: Walkable (Green)
     this.showCollisionOverlay = true;
     this.showGrid = true;
@@ -29,7 +30,7 @@ class MapEditor {
     const panel = document.createElement('div');
     panel.id = 'mapEditorPanel';
     panel.className = 'map-editor-panel';
-    panel.style.display = 'none';
+    panel.style.display = (this.game && this.game.isAdminMode) ? 'flex' : 'none';
 
     panel.innerHTML = `
       <div class="editor-header">
@@ -45,6 +46,7 @@ class MapEditor {
         <button class="editor-tab active" data-tab="terrain">🎨 พื้นผิว</button>
         <button class="editor-tab" data-tab="props">🌲 พร็อพ</button>
         <button class="editor-tab" data-tab="monsters">👾 มอนสเตอร์</button>
+        <button class="editor-tab" data-tab="spawn">🚩 จุดเกิด</button>
         <button class="editor-tab" data-tab="collision">🚫 จุดเดินได้</button>
         <button class="editor-tab" data-tab="weather">🌦️ สภาพอากาศ</button>
       </div>
@@ -133,31 +135,10 @@ class MapEditor {
       <!-- Tab Content: Monsters -->
       <div id="tabMonsters" class="editor-tab-content">
         <div class="editor-section-title">เลือกมอนสเตอร์เพื่อวางบนแมพ:</div>
-        <div class="editor-palette-grid">
-          <button class="palette-item active" data-monster="krasue" title="ผีกระสือ บินลอยวนเวียน">
-            👻 ผีกระสือ
-          </button>
-          <button class="palette-item" data-monster="tiger" title="เสือสมิง พลังโจมตีกายภาพสูง">
-            🐯 เสือสมิง
-          </button>
-          <button class="palette-item" data-monster="swordsman" title="วิญญาณนักรบดาบอาคม">
-            ⚔️ นักรบดาบ
-          </button>
-          <button class="palette-item" data-monster="monkey" title="วานรปีศาจ คล่องแคล่วว่องไว">
-            🐒 วานรปีศาจ
-          </button>
-          <button class="palette-item" data-monster="serpent" title="พญางูอสูร เลือดเยอะ">
-            🐍 พญางูอสูร
-          </button>
-          <button class="palette-item" data-monster="imp" title="ภูตเงา ตัวเล็กว่องไว">
-            👿 ภูตเงา
-          </button>
-          <button class="palette-item" data-monster="buffalo" title="พญาควายธนูทมิฬ ตัวใหญ่ อึด ถึก โหด">
-            🐂 พญาควายธนู
-          </button>
-          <button class="palette-item" data-monster="boss" title="พญาเปรตวัดสุทัศน์ (บอสใหญ่ร่างยักษ์ แขนขายาว 4 ทิศทาง)" style="border-color:#eab308; color:#fde047;">
-            👑 พญาเปรตวัดสุทัศน์ (บอส)
-          </button>
+        <div class="editor-palette-grid" id="editorMonsterPaletteGrid">
+          <div style="grid-column: 1 / -1; padding: 12px; text-align: center; color: #94a3b8; font-size: 12px;">
+            ⏳ กำลังโหลดรายการมอนสเตอร์...
+          </div>
         </div>
         <div style="margin-top:10px; display:flex; flex-direction:column; gap:8px;">
           <button id="btnOpenMonsterStudioFromEditor" class="btn-action" style="width:100%; background:linear-gradient(135deg, #1e293b, #ca8a04); border-color:#fde047; color:#fef08a; font-weight:700;">
@@ -170,6 +151,35 @@ class MapEditor {
         <div style="margin-top:8px; font-size:11px; color:#94a3b8; line-height: 1.4;">
           * คลิกซ้ายบนแผ่นแมพเพื่อวางจุดเกิดมอนสเตอร์<br>
           * คลิกขวาบนตัวมอนสเตอร์เพื่อลบออก
+        </div>
+      </div>
+
+      <!-- Tab Content: Spawn Point -->
+      <div id="tabSpawn" class="editor-tab-content">
+        <div class="editor-section-title">🚩 กำหนดจุดเกิดผู้เล่น (Player Spawn Point):</div>
+        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:#94a3b8; font-size:12px;">พิกัดจุดเกิด:</span>
+            <span id="txtSpawnCoordDisplay" style="color:#4ade80; font-weight:700; font-size:13px; font-family:monospace;">X: 1600, Y: 1600</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span style="color:#94a3b8; font-size:12px;">ช่องตาราง (Tile):</span>
+            <span id="txtSpawnTileDisplay" style="color:#38bdf8; font-weight:600; font-size:12px; font-family:monospace;">Col: 25, Row: 25</span>
+          </div>
+          <div style="font-size:11px; color:#cbd5e1; line-height:1.4;">
+            * เมื่อเลือกแท็บนี้ ให้<strong>คลิกซ้ายบนแผ่นแมพ</strong> ณ ตำแหน่งที่ต้องการให้ผู้เล่นเกิดเมื่อเริ่มเกม
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button id="btnToolSetSpawn" class="btn-action btn-gold" style="width:100%; font-weight:700;">
+            🚩 เปิดใช้เครื่องมือวางจุดเกิด (คลิกบนแมพ)
+          </button>
+          <button id="btnEditorJumpSpawn" class="btn-action" style="width:100%; background:#1e293b; border-color:#38bdf8; color:#38bdf8;">
+            🎯 เลื่อนมุมกล้องไปที่จุดเกิดผู้เล่น
+          </button>
+          <button id="btnResetSpawnCenter" class="btn-action" style="width:100%; background:#1e293b; border-color:#64748b; color:#cbd5e1;">
+            🔄 รีเซ็ตจุดเกิดเป็นกึ่งกลางแมพ (1600, 1600)
+          </button>
         </div>
       </div>
 
@@ -262,7 +272,37 @@ class MapEditor {
     const editorContainer = document.getElementById('viewMapEditor') || document.body || document.documentElement;
     editorContainer.appendChild(panel);
 
-    // 2. Add Editor Open Button in top right HUD
+    // 2. Add Floating Live Coordinates HUD
+    if (!document.getElementById('editorCoordsHUD')) {
+      const hud = document.createElement('div');
+      hud.id = 'editorCoordsHUD';
+      hud.className = 'editor-coords-hud';
+      hud.style.display = (this.game && this.game.isAdminMode) ? 'flex' : 'none';
+      hud.innerHTML = `
+        <div class="hud-coord-item" title="พิกัดของเคอร์เซอร์เมาส์บนโลก">
+          <span class="hud-coord-icon">📍</span>
+          <span class="hud-coord-label">เมาส์:</span>
+          <span id="hudCoordMouse" class="hud-coord-val">X: 1600, Y: 1600</span>
+        </div>
+        <div class="hud-coord-item" title="ช่องตาราง (Col 0-49, Row 0-49)">
+          <span class="hud-coord-icon">🔲</span>
+          <span class="hud-coord-label">ตาราง:</span>
+          <span id="hudCoordTile" class="hud-coord-val">[Col: 25, Row: 25]</span>
+        </div>
+        <div class="hud-coord-item" title="พิกัดจุดเกิดของผู้เล่น">
+          <span class="hud-coord-icon">🚩</span>
+          <span class="hud-coord-label">จุดเกิดผู้เล่น:</span>
+          <span id="hudCoordSpawn" class="hud-coord-val" style="color: #4ade80;">X: 1600, Y: 1600</span>
+        </div>
+        <div class="hud-coord-actions">
+          <button id="btnHudJumpSpawn" class="hud-coord-btn" title="เลื่อนกล้องไปยังจุดเกิดผู้เล่น">🎯 ไปจุดเกิด</button>
+          <button id="btnHudJumpCenter" class="hud-coord-btn btn-gold" title="เลื่อนกล้องไปกึ่งกลางแผนที่ (1600, 1600)">🗺️ กึ่งกลาง</button>
+        </div>
+      `;
+      editorContainer.appendChild(hud);
+    }
+
+    // 3. Add Editor Open Button in top right HUD
     const utilGroup = document.querySelector('.utility-buttons');
     if (utilGroup && !document.getElementById('btnOpenMapEditor')) {
       const btnEditor = document.createElement('button');
@@ -322,6 +362,11 @@ class MapEditor {
         } else if (tabKey === 'monsters') {
           document.getElementById('tabMonsters').classList.add('active');
           this.currentTool = 'monster';
+          this.refreshMonsterPalette();
+        } else if (tabKey === 'spawn') {
+          document.getElementById('tabSpawn').classList.add('active');
+          this.currentTool = 'spawn';
+          this.updateSpawnDisplay();
         } else if (tabKey === 'collision') {
           document.getElementById('tabCollision').classList.add('active');
           this.currentTool = 'collision';
@@ -353,16 +398,6 @@ class MapEditor {
       });
     });
 
-    // Monster Palette Selection
-    panel.querySelectorAll('#tabMonsters .palette-item').forEach(btn => {
-      btn.addEventListener('click', () => {
-        panel.querySelectorAll('#tabMonsters .palette-item').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.selectedMonster = btn.dataset.monster;
-        this.currentTool = 'monster';
-      });
-    });
-
     // Open Monster Studio from Map Editor
     const btnOpenStudio = document.getElementById('btnOpenMonsterStudioFromEditor');
     if (btnOpenStudio) {
@@ -381,6 +416,45 @@ class MapEditor {
           window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 50, 'ล้างมอนสเตอร์ทั้งหมดแล้ว!', 'crit');
         }
       });
+    }
+
+    // Spawn Tool Actions
+    const btnSetSpawn = document.getElementById('btnToolSetSpawn');
+    if (btnSetSpawn) {
+      btnSetSpawn.addEventListener('click', () => {
+        this.currentTool = 'spawn';
+        window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 40, '🚩 คลิกซ้ายบนแผ่นแมพเพื่อวางจุดเกิด', 'crit');
+      });
+    }
+
+    const btnJumpSpawn = document.getElementById('btnEditorJumpSpawn');
+    if (btnJumpSpawn) {
+      btnJumpSpawn.addEventListener('click', () => this.jumpToSpawn());
+    }
+
+    const btnHudJump = document.getElementById('btnHudJumpSpawn');
+    if (btnHudJump) {
+      btnHudJump.addEventListener('click', () => this.jumpToSpawn());
+    }
+
+    const btnResetSpawn = document.getElementById('btnResetSpawnCenter');
+    if (btnResetSpawn) {
+      btnResetSpawn.addEventListener('click', () => {
+        this.game.map.spawnPoint = { x: 1600, y: 1600 };
+        if (this.game.player) {
+          this.game.player.x = 1600;
+          this.game.player.y = 1600;
+        }
+        this.updateSpawnDisplay();
+        this.jumpToSpawn();
+        window.effectsManager.addAuraBurst(1600, 1600, '#fde047', 25);
+        window.effectsManager.addDamageText(1600, 1550, '🔄 รีเซ็ตจุดเกิดเป็นกึ่งกลางแมพ (1600, 1600)', 'crit');
+      });
+    }
+
+    const btnHudCenter = document.getElementById('btnHudJumpCenter');
+    if (btnHudCenter) {
+      btnHudCenter.addEventListener('click', () => this.jumpToCenter());
     }
 
     // Collision Palette Selection
@@ -444,15 +518,28 @@ class MapEditor {
     // Action Buttons
     const btnRegen = document.getElementById('btnRegenerateMap');
     if (btnRegen) {
-      btnRegen.addEventListener('click', () => {
-        if (confirm('ต้องการสุ่มสร้างแมพธรรมชาติใหม่ทั้งหมดใช่หรือไม่? (ระบบจะสุ่มแม่น้ำ ป่าหิมพานต์ วัดพระแก้ว และมอนสเตอร์ใหม่ทั้งหมด)')) {
-          this.game.proceduralGenerator.generate(this.game.map);
+      btnRegen.addEventListener('click', async () => {
+        if (confirm('ต้องการสุ่มสร้างแมพธรรมชาติใหม่ทั้งหมดใช่หรือไม่? (ระบบจะสุ่มแม่น้ำ ป่าหิมพานต์ วัดพระแก้ว และมอนสเตอร์ที่มีอยู่ในฐานข้อมูลใหม่ทั้งหมด)')) {
+          let activeMonsters = [];
+          try {
+            const res = await fetch('/api/monsters');
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.monsters) {
+                activeMonsters = data.monsters.filter(m => m.can_enter_game && m.key !== 'yak' && !m.is_player);
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to fetch active monsters for map regen:', e);
+          }
+
+          this.game.proceduralGenerator.generate(this.game.map, { activeMonsters });
           // Clear stale custom map from localStorage so newly generated map takes effect
           try { localStorage.removeItem('yaksha_rpg_custom_map'); } catch (e) {}
 
           // Reload newly balanced ecosystem monsters
-          if (this.game.enemyManager && this.game.map.savedEnemies) {
-            this.game.enemyManager.loadEnemyData(this.game.map.savedEnemies);
+          if (this.game.enemyManager) {
+            this.game.enemyManager.loadEnemyData(this.game.map.savedEnemies || []);
           }
 
           // Ensure player is standing on safe ground
@@ -504,28 +591,63 @@ class MapEditor {
       this.mouseWorld.y = screenY + this.game.camera.y;
       this.mouseWorld.col = Math.floor(this.mouseWorld.x / this.game.map.tileSize);
       this.mouseWorld.row = Math.floor(this.mouseWorld.y / this.game.map.tileSize);
+
+      const mElem = document.getElementById('hudCoordMouse');
+      if (mElem) {
+        mElem.innerText = `X: ${Math.round(this.mouseWorld.x)}, Y: ${Math.round(this.mouseWorld.y)}`;
+      }
+      const tElem = document.getElementById('hudCoordTile');
+      if (tElem) {
+        tElem.innerText = `[Col: ${this.mouseWorld.col}, Row: ${this.mouseWorld.row}]`;
+      }
     };
 
     // Canvas Interaction inside Editor
     const canvas = this.game.canvas;
+    this.isPanningCamera = false;
+    this.panStartX = 0;
+    this.panStartY = 0;
+    this.camStartX = 0;
+    this.camStartY = 0;
+
     canvas.addEventListener('mousedown', (e) => {
       if (!this.isActive) return;
       this.updateMouseWorld(e);
+
+      // Middle click (button 1) or Left click + Space key: Pan camera freely
+      if (e.button === 1 || (e.button === 0 && this.game.input && this.game.input.keys['Space'])) {
+        this.isPanningCamera = true;
+        this.panStartX = e.clientX;
+        this.panStartY = e.clientY;
+        this.camStartX = this.game.camera.x;
+        this.camStartY = this.game.camera.y;
+        e.preventDefault();
+        return;
+      }
+
       if (e.button === 0) {
         this.isMouseDown = true;
         this.applyToolAtMouse();
       } else if (e.button === 2) {
-        // Right click deletes prop
+        // Right click deletes prop or monster
         e.preventDefault();
         this.removePropAtMouse();
       }
     });
 
     window.addEventListener('mouseup', (e) => {
+      if (e.button === 1 || this.isPanningCamera) this.isPanningCamera = false;
       if (e.button === 0) this.isMouseDown = false;
     });
 
-    canvas.addEventListener('mousemove', (e) => {
+    window.addEventListener('mousemove', (e) => {
+      if (this.isPanningCamera) {
+        const dx = e.clientX - this.panStartX;
+        const dy = e.clientY - this.panStartY;
+        this.game.camera.x = Math.max(0, Math.min(this.game.map.width - this.game.camera.width, this.camStartX - dx));
+        this.game.camera.y = Math.max(0, Math.min(this.game.map.height - this.game.camera.height, this.camStartY - dy));
+        return;
+      }
       if (!this.isActive) return;
       this.updateMouseWorld(e);
 
@@ -546,6 +668,36 @@ class MapEditor {
 
   open() {
     this.isActive = true;
+    this.refreshMonsterPalette();
+
+    // Prune any deleted or phantom monsters that have no assets or were removed from DB
+    if (this.game && this.game.enemyManager) {
+      fetch('/api/monsters')
+        .then(r => r.json())
+        .then(data => {
+          if (!data || !data.monsters) return;
+          const activeKeys = new Set(data.monsters.map(m => m.key.toLowerCase()));
+          activeKeys.add('boss');
+          activeKeys.add('bosspreat');
+          if (activeKeys.has('swordsman')) activeKeys.add('mainchar');
+
+          if (Array.isArray(this.game.enemyManager.enemies)) {
+            this.game.enemyManager.enemies = this.game.enemyManager.enemies.filter(e => {
+              if (!e || e.isPhantom) return false;
+              const t = String(e.type).toLowerCase();
+              return activeKeys.has(t);
+            });
+          }
+          if (this.game.enemyManager.boss) {
+            const bt = String(this.game.enemyManager.boss.type).toLowerCase();
+            if (!activeKeys.has(bt)) {
+              this.game.enemyManager.boss = null;
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
     const panel = document.getElementById('mapEditorPanel');
     if (panel) {
       panel.classList.remove('hidden');
@@ -555,9 +707,16 @@ class MapEditor {
     if (reopenBtn) {
       reopenBtn.style.setProperty('display', 'none', 'important');
     }
+    const hud = document.getElementById('editorCoordsHUD');
+    if (hud) {
+      hud.style.setProperty('display', 'flex', 'important');
+    }
+    this.updateSpawnDisplay();
     this.syncWeatherUI();
-    if (this.game && this.game.player) {
-      window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 50, 'เปิดโหมดสร้างแมพ [Map Editor]', 'crit');
+
+    // Center camera on player spawn point if camera is sitting at (0, 0)
+    if (this.game && this.game.camera && this.game.camera.x === 0 && this.game.camera.y === 0) {
+      this.jumpToSpawn();
     }
   }
 
@@ -588,9 +747,14 @@ class MapEditor {
       reopenBtn.style.setProperty('display', 'flex', 'important');
     }
 
-    // In Admin Mode, keep editor mode active so player gameplay stays disabled and camera pan works
+    // In Admin Mode, keep editor mode and coordinates HUD active
     if (this.game && this.game.isAdminMode) {
       return;
+    }
+
+    const hud = document.getElementById('editorCoordsHUD');
+    if (hud) {
+      hud.style.setProperty('display', 'none', 'important');
     }
 
     this.isActive = false;
@@ -685,6 +849,11 @@ class MapEditor {
       const px = this.mouseWorld.x;
       const py = this.mouseWorld.y;
 
+      if (!this.selectedMonster) {
+        window.effectsManager.addDamageText(px, py - 30, '⚠️ ไม่มีมอนสเตอร์ที่เลือก', 'crit');
+        return;
+      }
+
       // Don't place on water or inside impassable solid walls
       if (map.checkCollision(px, py, 14)) {
         window.effectsManager.addDamageText(px, py - 30, 'จุดนี้เดินไม่ได้!', 'normal');
@@ -700,8 +869,23 @@ class MapEditor {
       const enemy = this.game.enemyManager.addEnemy(px, py, this.selectedMonster);
       if (enemy) {
         window.effectsManager.addAuraBurst(px, py, '#a855f7', 18);
-        window.effectsManager.addDamageText(px, py - 35, `วาง ${enemy.name || this.selectedMonster}`, 'crit');
+        window.effectsManager.addDamageText(px, py - 35, `วาง ${enemy.name || this.selectedMonsterName || this.selectedMonster}`, 'crit');
       }
+    } else if (this.currentTool === 'spawn') {
+      const px = Math.round(this.mouseWorld.x);
+      const py = Math.round(this.mouseWorld.y);
+      if (map.checkCollision(px, py, 14)) {
+        window.effectsManager.addDamageText(px, py - 30, '⚠️ จุดนี้เดินไม่ได้ กรุณาเลือกจุดพื้นดิน!', 'crit');
+        return;
+      }
+      map.spawnPoint = { x: px, y: py };
+      if (this.game.player) {
+        this.game.player.x = px;
+        this.game.player.y = py;
+      }
+      this.updateSpawnDisplay();
+      window.effectsManager.addAuraBurst(px, py, '#fde047', 28);
+      window.effectsManager.addDamageText(px, py - 45, `🚩 กำหนดจุดเกิดผู้เล่นแล้ว! (X: ${px}, Y: ${py})`, 'crit');
     }
   }
 
@@ -818,6 +1002,42 @@ class MapEditor {
       ctx.strokeRect(hx, hy, bw, bh);
       ctx.setLineDash([]);
 
+      // Real-time hover coordinate tooltip beside the brush
+      const coordText = `X: ${Math.round(this.mouseWorld.x)} Y: ${Math.round(this.mouseWorld.y)} [${hCol}, ${hRow}]`;
+      ctx.save();
+      ctx.font = 'bold 11px monospace';
+      const tw = ctx.measureText(coordText).width;
+      const bx = hx + bw + 6;
+      const by = hy + 18;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.7)';
+      ctx.lineWidth = 1;
+      ctx.fillRect(bx, by - 14, tw + 10, 18);
+      ctx.strokeRect(bx, by - 14, tw + 10, 18);
+      ctx.fillStyle = '#fde047';
+      ctx.fillText(coordText, bx + 5, by);
+      ctx.restore();
+
+      // Spawn Tool Preview
+      if (this.currentTool === 'spawn') {
+        const mx = this.mouseWorld.x - camera.x;
+        const my = this.mouseWorld.y - camera.y;
+        ctx.save();
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.3)';
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(mx, my, 24, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.font = 'bold 13px "Kanit", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde047';
+        ctx.fillText(`🚩 ตั้งจุดเกิด (${Math.round(this.mouseWorld.x)}, ${Math.round(this.mouseWorld.y)})`, mx, my - 32);
+        ctx.restore();
+      }
+
       // Prop Placement Preview
       if (this.currentTool === 'prop') {
         const img = window.assetManager.getImage(this.selectedProp);
@@ -832,57 +1052,103 @@ class MapEditor {
       if (this.currentTool === 'monster') {
         const mx = this.mouseWorld.x - camera.x;
         const my = this.mouseWorld.y - camera.y;
-        const isBoss = this.selectedMonster === 'boss';
-        const previewAggro = isBoss ? 400 : 250;
-        const color = isBoss ? '#eab308' : '#c084fc';
 
-        if (this.showAggroRadius) {
+        if (!this.selectedMonster) {
           ctx.save();
-          ctx.strokeStyle = color;
-          ctx.setLineDash([5, 5]);
+          ctx.font = 'bold 12px "Kanit", sans-serif';
+          ctx.fillStyle = '#ef4444';
+          ctx.textAlign = 'center';
+          ctx.fillText('⚠️ ไม่มีมอนสเตอร์ในระบบ', mx, my - 20);
+          ctx.restore();
+        } else {
+          const isBoss = this.selectedMonster === 'boss';
+          const previewAggro = isBoss ? 400 : 250;
+          const color = isBoss ? '#eab308' : '#c084fc';
+
+          if (this.showAggroRadius) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.arc(mx, my, previewAggro, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
+
+          // Real Monster Sprite Preview under brush
+          let previewSprite = null;
+          if (this.selectedMonster === 'krasue') previewSprite = window.assetManager.getImage('krasue_idle_south');
+          else if (this.selectedMonster === 'tiger') previewSprite = window.assetManager.getImage('tiger_idle_south');
+          else if (this.selectedMonster === 'swordsman') previewSprite = window.assetManager.getImage('mainchar_idle_south');
+          else if (this.selectedMonster === 'monkey') previewSprite = window.assetManager.getImage('monkey_idle_south');
+          else if (this.selectedMonster === 'serpent') previewSprite = window.assetManager.getImage('serpent_idle_south');
+          else if (this.selectedMonster === 'imp') previewSprite = window.assetManager.getImage('imp_idle_south');
+          else if (this.selectedMonster === 'buffalo') previewSprite = window.assetManager.getImage('buffalo_idle_south');
+          else if (this.selectedMonster === 'boss') previewSprite = window.assetManager.getImage('bosspreat_idle_south');
+          else if (window.assetManager) {
+            previewSprite = window.assetManager.getImage(`${this.selectedMonster}_idle_south`);
+          }
+
+          if (previewSprite) {
+            ctx.save();
+            ctx.globalAlpha = 0.75;
+            ctx.imageSmoothingEnabled = false;
+            ctx.drawImage(previewSprite, mx - 34, my - 50, 68, 68);
+            ctx.restore();
+          }
+
+          ctx.save();
+          ctx.fillStyle = isBoss ? 'rgba(234, 179, 8, 0.3)' : 'rgba(168, 85, 247, 0.35)';
           ctx.beginPath();
-          ctx.arc(mx, my, previewAggro, 0, Math.PI * 2);
+          ctx.arc(mx, my, isBoss ? 32 : 20, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 2;
           ctx.stroke();
+
+          ctx.font = 'bold 12px "Kanit", sans-serif';
+          ctx.fillStyle = '#fef08a';
+          ctx.textAlign = 'center';
+          const label = this.selectedMonsterName ? `+ วาง ${this.selectedMonsterName}` : `+ วาง ${this.selectedMonster}`;
+          ctx.fillText(label, mx, my - 28);
           ctx.restore();
         }
-
-        // Real Monster Sprite Preview under brush
-        let previewSprite = null;
-        if (this.selectedMonster === 'krasue') previewSprite = window.assetManager.getImage('krasue_idle_south');
-        else if (this.selectedMonster === 'tiger') previewSprite = window.assetManager.getImage('tiger_idle_south');
-        else if (this.selectedMonster === 'swordsman') previewSprite = window.assetManager.getImage('mainchar_idle_south');
-        else if (this.selectedMonster === 'monkey') previewSprite = window.assetManager.getImage('monkey_idle_south');
-        else if (this.selectedMonster === 'serpent') previewSprite = window.assetManager.getImage('serpent_idle_south');
-        else if (this.selectedMonster === 'imp') previewSprite = window.assetManager.getImage('imp_idle_south');
-        else if (this.selectedMonster === 'buffalo') previewSprite = window.assetManager.getImage('buffalo_idle_south');
-        else if (this.selectedMonster === 'boss') previewSprite = window.assetManager.getImage('bosspreat_idle_south');
-        else if (window.assetManager) {
-          previewSprite = window.assetManager.getImage(`${this.selectedMonster}_idle_south`);
-        }
-
-        if (previewSprite) {
-          ctx.save();
-          ctx.globalAlpha = 0.75;
-          ctx.imageSmoothingEnabled = false;
-          ctx.drawImage(previewSprite, mx - 34, my - 50, 68, 68);
-          ctx.restore();
-        }
-
-        ctx.save();
-        ctx.fillStyle = isBoss ? 'rgba(234, 179, 8, 0.3)' : 'rgba(168, 85, 247, 0.35)';
-        ctx.beginPath();
-        ctx.arc(mx, my, isBoss ? 32 : 20, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.font = 'bold 12px "Kanit", sans-serif';
-        ctx.fillStyle = '#fef08a';
-        ctx.textAlign = 'center';
-        ctx.fillText(`+ วาง ${this.selectedMonster}`, mx, my - 28);
-        ctx.restore();
       }
+      ctx.restore();
+    }
+
+    // 3.5. Render Player Spawn Point Flag Beacon
+    if (map.spawnPoint && camera.isVisible(map.spawnPoint.x, map.spawnPoint.y, 80)) {
+      const spx = map.spawnPoint.x - camera.x;
+      const spy = map.spawnPoint.y - camera.y;
+      ctx.save();
+      // Outer pulse ring
+      ctx.strokeStyle = '#fde047';
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.25)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(spx, spy, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner beacon dot
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(spx, spy, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Overhead badge
+      ctx.font = 'bold 12px "Kanit", sans-serif';
+      ctx.textAlign = 'center';
+      const label = `🚩 จุดเกิดผู้เล่น (X: ${map.spawnPoint.x}, Y: ${map.spawnPoint.y})`;
+      const w = ctx.measureText(label).width + 16;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.fillRect(spx - w / 2, spy - 42, w, 22);
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(spx - w / 2, spy - 42, w, 22);
+      ctx.fillStyle = '#fde047';
+      ctx.fillText(label, spx, spy - 26);
       ctx.restore();
     }
 
@@ -892,6 +1158,20 @@ class MapEditor {
       if (this.game.enemyManager.boss) enemies.push(this.game.enemyManager.boss);
 
       for (const e of enemies) {
+        if (!e || e.isPhantom || e.isDead) continue;
+        const t = String(e.type).toLowerCase();
+        const hasAsset = window.assetManager && (
+          t === 'boss' ? (window.assetManager.getImage('bosspreat_idle_south') || window.assetManager.getImage('boss_idle_south')) :
+          t === 'swordsman' ? (window.assetManager.getImage('mainchar_idle_south') || window.assetManager.getImage('mainchar_idle')) :
+          (window.assetManager.getImage(`${t}_idle_south`) || window.assetManager.getImage(`${t}_idle`) || window.assetManager.getImage(t))
+        );
+        const isRegistered = (window.ENTITY_REGISTRY && window.ENTITY_REGISTRY[t]) || (window.customMonsters && window.customMonsters[t]);
+        if (!hasAsset && !isRegistered) {
+          e.isDead = true;
+          e.isPhantom = true;
+          continue;
+        }
+
         const ex = e.x - camera.x;
         const ey = e.y - camera.y;
         if (!camera.isVisible(e.x, e.y, (e.aggroRange || 240) + 40)) continue;
@@ -941,10 +1221,6 @@ class MapEditor {
   // --- Save / Load & Export / Import ---
   async saveToDatabase() {
     try {
-      if (this.game && this.game.saveFullWorldState) {
-        this.game.saveFullWorldState();
-      }
-
       const data = {
         version: 'himavanta_v3',
         tiles: this.game.map.tiles,
@@ -954,6 +1230,7 @@ class MapEditor {
         chests: this.game.map.chests || [],
         shrines: this.game.map.shrines || [],
         pickups: this.game.map.pickups || [],
+        spawnPoint: this.game.map.spawnPoint || { x: 1600, y: 1600 },
         enemies: this.game.enemyManager ? this.game.enemyManager.getEnemyData() : [],
         weather: {
           timeMode: this.game.weather ? this.game.weather.timeMode : 'auto',
@@ -961,44 +1238,47 @@ class MapEditor {
         }
       };
 
+      // Always save to LocalStorage as instant local cache/backup
+      this.saveToLocalStorage(data);
+
       if (window.gameDatabase) {
         const res = await window.gameDatabase.saveMap(data, 'default');
-        if (res.success) {
+        if (res && res.success) {
           const note = res.fallback ? ' (สำรองลงเครื่อง)' : ' (ฐานข้อมูล SQLite: game_data.db)';
-          window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 50, `บันทึกโลก & Asset ทั้งหมดสำเร็จ!${note}`, 'crit');
+          window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 50, `บันทึกโลก & แมพสำเร็จ!${note}`, 'crit');
           window.effectsManager.addAuraBurst(this.game.player.x, this.game.player.y, '#38bdf8', 25);
           return;
+        } else {
+          throw new Error(res.error || 'บันทึกลงฐานข้อมูลไม่สำเร็จ');
         }
       }
-
-      this.saveToLocalStorage();
     } catch (e) {
+      console.error('[MapEditor] Save error:', e);
       alert('บันทึกไม่สำเร็จ: ' + e.message);
     }
   }
 
   async loadFromDatabase() {
     try {
-      if (this.game && this.game.loadFullWorldState) {
-        const loaded = await this.game.loadFullWorldState();
-        if (loaded) {
-          window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 50, 'โหลดโลก & Asset ทั้งหมดสำเร็จ! (SQLite)', 'crit');
-          window.effectsManager.addAuraBurst(this.game.player.x, this.game.player.y, '#22c55e', 25);
-          return;
-        }
-      }
-
       if (window.gameDatabase) {
         const res = await window.gameDatabase.loadMap('default');
-        if (res.success && res.data) {
+        if (res && res.success && res.data) {
           if (this.game.loadMapData) {
             this.game.loadMapData(res.data);
           }
+          if (res.data.spawnPoint && typeof res.data.spawnPoint.x === 'number') {
+            this.game.map.spawnPoint = { x: res.data.spawnPoint.x, y: res.data.spawnPoint.y };
+            if (this.game.player) {
+              this.game.player.x = res.data.spawnPoint.x;
+              this.game.player.y = res.data.spawnPoint.y;
+            }
+          }
+          this.updateSpawnDisplay();
           const note = res.fallback ? ' (จากเครื่องสำรอง)' : ' (จากฐานข้อมูล SQLite: game_data.db)';
           window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 50, `โหลดแมพสำเร็จ!${note}`, 'crit');
           window.effectsManager.addAuraBurst(this.game.player.x, this.game.player.y, '#22c55e', 25);
           return;
-        } else if (res.notFound) {
+        } else if (res && res.notFound) {
           alert('ยังไม่มีข้อมูลแมพที่บันทึกไว้ในฐานข้อมูล');
           return;
         }
@@ -1006,26 +1286,75 @@ class MapEditor {
 
       this.loadFromLocalStorage();
     } catch (e) {
+      console.error('[MapEditor] Load error:', e);
       alert('โหลดไม่สำเร็จ: ' + e.message);
     }
   }
 
-  saveToLocalStorage() {
+  saveToLocalStorage(customData = null) {
     try {
-      const data = {
+      const data = customData || {
         version: 'himavanta_v3',
         tiles: this.game.map.tiles,
         collisionGrid: this.game.map.collisionGrid,
         props: this.game.map.props,
         colliders: this.game.map.colliders,
-        enemies: this.game.enemyManager.getEnemyData(),
+        chests: this.game.map.chests || [],
+        shrines: this.game.map.shrines || [],
+        pickups: this.game.map.pickups || [],
+        spawnPoint: this.game.map.spawnPoint || { x: 1600, y: 1600 },
+        enemies: this.game.enemyManager ? this.game.enemyManager.getEnemyData() : [],
         weather: {
           timeMode: this.game.weather ? this.game.weather.timeMode : 'auto',
           rainMode: this.game.weather ? this.game.weather.rainMode : 'auto'
         }
       };
       localStorage.setItem('yaksha_rpg_custom_map', JSON.stringify(data));
-      window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 50, `บันทึกแมพสำเร็จ! (มอนสเตอร์ ${data.enemies.length} ตัว)`, 'crit');
+      // Also sync into localStorage world save slots if present
+      ['slot1', 'slot2', 'slot3', 'default'].forEach(slot => {
+        try {
+          const raw = localStorage.getItem(`yaksha_world_save_${slot}`);
+          if (raw) {
+            const w = JSON.parse(raw);
+            w.map = {
+              tiles: data.tiles,
+              collisionGrid: data.collisionGrid,
+              props: data.props,
+              colliders: data.colliders,
+              chests: data.chests,
+              shrines: data.shrines,
+              pickups: data.pickups,
+              spawnPoint: data.spawnPoint
+            };
+            w.enemies = data.enemies;
+            w.weather = data.weather;
+            if (w.player && data.spawnPoint) {
+              w.player.x = data.spawnPoint.x;
+              w.player.y = data.spawnPoint.y;
+            }
+            localStorage.setItem(`yaksha_world_save_${slot}`, JSON.stringify(w));
+          }
+        } catch (_) {}
+        try {
+          const pRaw = localStorage.getItem(`yaksha_player_state_${slot}`);
+          if (pRaw) {
+            const pObj = JSON.parse(pRaw);
+            if (data.spawnPoint) {
+              if (pObj.player) {
+                pObj.player.x = data.spawnPoint.x;
+                pObj.player.y = data.spawnPoint.y;
+              } else {
+                pObj.x = data.spawnPoint.x;
+                pObj.y = data.spawnPoint.y;
+              }
+              localStorage.setItem(`yaksha_player_state_${slot}`, JSON.stringify(pObj));
+            }
+          }
+        } catch (_) {}
+      });
+      if (!customData) {
+        window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 50, `บันทึกแมพสำเร็จ! (มอนสเตอร์ ${data.enemies.length} ตัว)`, 'crit');
+      }
     } catch (e) {
       alert('บันทึกไม่สำเร็จ: ' + e.message);
     }
@@ -1043,6 +1372,14 @@ class MapEditor {
       if (data.collisionGrid) this.game.map.collisionGrid = data.collisionGrid;
       if (data.props) this.game.map.props = data.props;
       if (data.colliders) this.game.map.colliders = data.colliders;
+      if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
+        this.game.map.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
+        if (this.game.player) {
+          this.game.player.x = data.spawnPoint.x;
+          this.game.player.y = data.spawnPoint.y;
+        }
+      }
+      this.updateSpawnDisplay();
       if (data.enemies && this.game.enemyManager) {
         this.game.enemyManager.loadEnemyData(data.enemies);
       }
@@ -1062,41 +1399,89 @@ class MapEditor {
       const res = await fetch('/api/monsters');
       if (!res.ok) return;
       const data = await res.json();
-      if (!data || !data.monsters) return;
-
       const grid = document.querySelector('#tabMonsters .editor-palette-grid');
       if (!grid) return;
 
-      grid.innerHTML = '';
-      data.monsters.forEach(m => {
-        // Gatekeeper check: Only monsters with 100% complete 8 directions are allowed in Map Editor!
-        if (m.can_enter_game) {
-          const btn = document.createElement('button');
-          const isAct = (this.selectedMonster === m.key) || (m.key === 'bosspreat' && this.selectedMonster === 'boss');
-          btn.className = `palette-item ${isAct ? 'active' : ''}`;
-          btn.setAttribute('data-monster', m.key === 'bosspreat' ? 'boss' : m.key);
-          btn.title = `${m.name} (${m.role || 'มอนสเตอร์'}) - ผ่านการตรวจ 8 ทิศทาง 100%`;
-          
-          let icon = '👾';
-          if (m.is_boss) icon = '👑';
-          else if (m.is_flying) icon = '🪽';
-          else if (m.key === 'tiger') icon = '🐯';
-          else if (m.key === 'monkey') icon = '🐒';
-          else if (m.key === 'serpent') icon = '🐍';
-          else if (m.key === 'imp') icon = '👿';
-          else if (m.key === 'buffalo') icon = '🐂';
-          else if (m.key === 'swordsman') icon = '⚔️';
-          else if (m.key === 'krasue') icon = '👻';
+      const availableMonsters = (data && data.monsters ? data.monsters : []).filter(m => m.can_enter_game && m.key !== 'yak' && !m.is_player);
 
-          btn.innerHTML = `${icon} ${m.name}`;
-          btn.addEventListener('click', () => {
-            grid.querySelectorAll('.palette-item').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            this.selectedMonster = m.key === 'bosspreat' ? 'boss' : m.key;
-            this.currentTool = 'monster';
+      grid.innerHTML = '';
+
+      if (availableMonsters.length === 0) {
+        this.selectedMonster = null;
+        this.selectedMonsterName = '';
+        grid.innerHTML = `
+          <div style="grid-column: 1 / -1; padding: 14px 10px; background: rgba(239, 68, 68, 0.12); border: 1px dashed #ef4444; border-radius: 8px; text-align: center; color: #fca5a5; font-size: 12px; line-height: 1.5;">
+            ⚠️ ไม่มีมอนสเตอร์ในระบบ<br>
+            <span style="font-size: 11px; color: #cbd5e1;">(คุณลบมอนสเตอร์ออกหมดแล้ว หรือยังไม่มีมอนสเตอร์ที่ตรวจผ่าน 100%)</span>
+            <div style="margin-top: 8px;">
+              <button id="btnRestoreFromEditor" style="background: #2563eb; color: #fff; border: 1px solid #60a5fa; border-radius: 6px; padding: 5px 12px; font-size: 11px; cursor: pointer; font-family: inherit; font-weight: 600;">
+                ⏪ คืนค่ามอนสเตอร์เริ่มต้น
+              </button>
+            </div>
+          </div>
+        `;
+        const btnRestore = document.getElementById('btnRestoreFromEditor');
+        if (btnRestore) {
+          btnRestore.addEventListener('click', async () => {
+            if (confirm('ต้องการกู้คืนมอนสเตอร์เริ่มต้นทั้งหมดใช่หรือไม่?')) {
+              try {
+                const r = await fetch('/api/monsters/restore_builtins', { method: 'POST' });
+                const resJson = await r.json();
+                if (resJson.status === 'success') {
+                  alert('กู้คืนมอนสเตอร์เริ่มต้นเรียบร้อยแล้ว!');
+                  await this.refreshMonsterPalette();
+                  if (window.bossSettingsController && typeof window.bossSettingsController.refreshMonsters === 'function') {
+                    window.bossSettingsController.refreshMonsters();
+                  }
+                  if (window.monsterStudioController && typeof window.monsterStudioController.loadMonsters === 'function') {
+                    window.monsterStudioController.loadMonsters();
+                  }
+                }
+              } catch (err) {
+                alert('เกิดข้อผิดพลาด: ' + err.message);
+              }
+            }
           });
-          grid.appendChild(btn);
         }
+        return;
+      }
+
+      // Check if current this.selectedMonster is still valid
+      const validMonsterKeys = availableMonsters.map(m => m.key === 'bosspreat' ? 'boss' : m.key);
+      if (!this.selectedMonster || !validMonsterKeys.includes(this.selectedMonster)) {
+        this.selectedMonster = validMonsterKeys[0];
+        const match = availableMonsters.find(m => (m.key === 'bosspreat' ? 'boss' : m.key) === this.selectedMonster);
+        this.selectedMonsterName = match ? match.name : this.selectedMonster;
+      }
+
+      availableMonsters.forEach(m => {
+        const monKey = m.key === 'bosspreat' ? 'boss' : m.key;
+        const btn = document.createElement('button');
+        const isAct = (this.selectedMonster === monKey);
+        btn.className = `palette-item ${isAct ? 'active' : ''}`;
+        btn.setAttribute('data-monster', monKey);
+        btn.title = `${m.name} (${m.role || 'มอนสเตอร์'}) - ผ่านการตรวจ 8 ทิศทาง 100%`;
+
+        let icon = '👾';
+        if (m.is_boss) icon = '👑';
+        else if (m.is_flying) icon = '🪽';
+        else if (m.key === 'tiger') icon = '🐯';
+        else if (m.key === 'monkey') icon = '🐒';
+        else if (m.key === 'serpent') icon = '🐍';
+        else if (m.key === 'imp') icon = '👿';
+        else if (m.key === 'buffalo') icon = '🐂';
+        else if (m.key === 'swordsman') icon = '⚔️';
+        else if (m.key === 'krasue') icon = '👻';
+
+        btn.innerHTML = `${icon} ${m.name}`;
+        btn.addEventListener('click', () => {
+          grid.querySelectorAll('.palette-item').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          this.selectedMonster = monKey;
+          this.selectedMonsterName = m.name;
+          this.currentTool = 'monster';
+        });
+        grid.appendChild(btn);
       });
     } catch (e) {
       console.warn('Failed to refresh monster palette:', e);
@@ -1110,6 +1495,7 @@ class MapEditor {
       collisionGrid: this.game.map.collisionGrid,
       props: this.game.map.props,
       colliders: this.game.map.colliders,
+      spawnPoint: this.game.map.spawnPoint || { x: 1600, y: 1600 },
       enemies: this.game.enemyManager.getEnemyData(),
       weather: {
         timeMode: this.game.weather ? this.game.weather.timeMode : 'auto',
@@ -1141,6 +1527,14 @@ class MapEditor {
           if (data.collisionGrid) this.game.map.collisionGrid = data.collisionGrid;
           if (data.props) this.game.map.props = data.props;
           if (data.colliders) this.game.map.colliders = data.colliders;
+          if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
+            this.game.map.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
+            if (this.game.player) {
+              this.game.player.x = data.spawnPoint.x;
+              this.game.player.y = data.spawnPoint.y;
+            }
+          }
+          this.updateSpawnDisplay();
           if (data.enemies && this.game.enemyManager) {
             this.game.enemyManager.loadEnemyData(data.enemies);
           }
@@ -1157,6 +1551,47 @@ class MapEditor {
       reader.readAsText(file);
     };
     input.click();
+  }
+
+  jumpToSpawn() {
+    if (!this.game || !this.game.map || !this.game.camera) return;
+    const sp = this.game.map.spawnPoint || { x: 1600, y: 1600 };
+    this.game.camera.x = Math.max(0, Math.min(this.game.map.width - this.game.camera.width, sp.x - this.game.camera.width / 2));
+    this.game.camera.y = Math.max(0, Math.min(this.game.map.height - this.game.camera.height, sp.y - this.game.camera.height / 2));
+    if (this.game.player) {
+      this.game.player.x = sp.x;
+      this.game.player.y = sp.y;
+    }
+    if (window.effectsManager) {
+      window.effectsManager.addAuraBurst(sp.x, sp.y, '#fde047', 25);
+      window.effectsManager.addDamageText(sp.x, sp.y - 40, `🎯 กล้องเลื่อนมายังจุดเกิดผู้เล่น (${sp.x}, ${sp.y})`, 'crit');
+    }
+  }
+
+  jumpToCenter() {
+    if (!this.game || !this.game.map || !this.game.camera) return;
+    const cx = this.game.map.width * 0.5;
+    const cy = this.game.map.height * 0.5;
+    this.game.camera.x = Math.max(0, Math.min(this.game.map.width - this.game.camera.width, cx - this.game.camera.width / 2));
+    this.game.camera.y = Math.max(0, Math.min(this.game.map.height - this.game.camera.height, cy - this.game.camera.height / 2));
+    if (window.effectsManager) {
+      window.effectsManager.addDamageText(cx, cy - 40, '🗺️ กล้องเลื่อนมากึ่งกลางแผนที่ (1600, 1600)', 'normal');
+    }
+  }
+
+  updateSpawnDisplay() {
+    const sp = (this.game && this.game.map && this.game.map.spawnPoint) ? this.game.map.spawnPoint : { x: 1600, y: 1600 };
+    const col = Math.floor(sp.x / 64);
+    const row = Math.floor(sp.y / 64);
+
+    const hudSpawn = document.getElementById('hudCoordSpawn');
+    if (hudSpawn) hudSpawn.innerText = `X: ${sp.x}, Y: ${sp.y}`;
+
+    const txtCoord = document.getElementById('txtSpawnCoordDisplay');
+    if (txtCoord) txtCoord.innerText = `X: ${sp.x}, Y: ${sp.y}`;
+
+    const txtTile = document.getElementById('txtSpawnTileDisplay');
+    if (txtTile) txtTile.innerText = `Col: ${col}, Row: ${row}`;
   }
 }
 

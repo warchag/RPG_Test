@@ -934,9 +934,9 @@
   </div>
 
   <script>
-    // --- Monster Definitions & Data Registry ---
-    const MONSTERS = [
-      {
+    // --- Monster Definitions & Template Registry ---
+    const MONSTER_TEMPLATES = {
+      buffalo: {
         id: 'buffalo',
         name: 'พญาควายธนู',
         tag: 'ELITE',
@@ -954,7 +954,7 @@
         },
         framesCount: { walking: 8, idle: 1 }
       },
-      {
+      bosspreat: {
         id: 'bosspreat',
         name: 'พญาเปรตวัดสุทัศน์',
         tag: 'BOSS',
@@ -973,7 +973,7 @@
         },
         framesCount: { walking: 8, idle: 1 }
       },
-      {
+      tiger: {
         id: 'tiger',
         name: 'เสือสมิง',
         tag: 'ELITE',
@@ -993,7 +993,7 @@
         },
         framesCount: { walking: 8, idle: 1, attack: 4 }
       },
-      {
+      krasue: {
         id: 'krasue',
         name: 'ผีกระสือ',
         tag: 'MOB',
@@ -1012,7 +1012,7 @@
         },
         framesCount: { walking: 8, idle: 1 }
       },
-      {
+      monkey: {
         id: 'monkey',
         name: 'วานรปีศาจ',
         tag: 'MOB',
@@ -1031,7 +1031,7 @@
         },
         framesCount: { walking: 8, idle: 1, attack: 4 }
       },
-      {
+      serpent: {
         id: 'serpent',
         name: 'พญางูอสูร',
         tag: 'MOB',
@@ -1050,7 +1050,7 @@
         },
         framesCount: { walking: 8, idle: 1, attack: 4 }
       },
-      {
+      imp: {
         id: 'imp',
         name: 'ภูตเงา',
         tag: 'MOB',
@@ -1069,7 +1069,10 @@
         },
         framesCount: { walking: 8, idle: 1, attack: 4 }
       }
-    ];
+    };
+
+    // Active Monsters (populated dynamically from /api/monsters)
+    const MONSTERS = [];
 
     const DIRECTIONS = [
       'north', 'north-east', 'east', 'south-east',
@@ -1077,7 +1080,7 @@
     ];
 
     // --- State Management ---
-    let currentMonster = MONSTERS[0];
+    let currentMonster = null;
     let currentAction = 'walking';
     let currentDir = 'south';
     let currentFrame = 0;
@@ -1088,9 +1091,9 @@
     let turntableTimer = 0;
 
     // Alignment & Anchors
-    let customScale = currentMonster.defaultScale;
-    let customAnchorX = currentMonster.defaultAnchorX;
-    let customAnchorY = currentMonster.defaultAnchorY;
+    let customScale = 1.35;
+    let customAnchorX = 34;
+    let customAnchorY = 57;
 
     // View Options
     let showGround = true;
@@ -1117,7 +1120,100 @@
       const img = new Image();
       img.src = src;
       imgCache.set(src, img);
+      img.onerror = () => {
+        if (src.includes('Assets/monsters/') && !img._triedLegacy) {
+          img._triedLegacy = true;
+          const fallback = src.replace('Assets/monsters/', 'Assets/');
+          img.src = fallback;
+        }
+      };
       return img;
+    }
+
+    function calibrateMonsterAnchor(m, img) {
+      if (!m || !img || !img.complete || img.naturalWidth <= 0) return;
+      const nw = img.naturalWidth;
+      const nh = img.naturalHeight;
+      m.size = nw;
+
+      const maxRange = Math.max(128, nw * 2, nh * 2);
+      const rangeX = document.getElementById('rangeAnchorX');
+      const rangeY = document.getElementById('rangeAnchorY');
+      if (rangeX) rangeX.max = maxRange;
+      if (rangeY) rangeY.max = maxRange;
+
+      if (!m._userAnchorSet) {
+        // Horizontally center the sprite anchor at width / 2
+        m.defaultAnchorX = Math.round(nw / 2);
+        // By 2D pixel-art convention, ground contact / feet is ~88% of height
+        m.defaultAnchorY = Math.max(Math.round(nh * 0.88), nh - 6);
+        customAnchorX = m.defaultAnchorX;
+        customAnchorY = m.defaultAnchorY;
+        if (rangeX) rangeX.value = customAnchorX;
+        if (rangeY) rangeY.value = customAnchorY;
+        const valX = document.getElementById('valAnchorX');
+        const valY = document.getElementById('valAnchorY');
+        if (valX) valX.textContent = `${customAnchorX} px`;
+        if (valY) valY.textContent = `${customAnchorY} px`;
+      }
+      const dimEl = document.getElementById('infoDimensions');
+      if (dimEl) dimEl.textContent = `${nw} × ${nh} px`;
+    }
+
+    async function loadCustomMonstersIntoStudio() {
+      try {
+        const res = await fetch('/api/monsters');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data || !Array.isArray(data.monsters)) return;
+
+        MONSTERS.length = 0; // Clear array
+
+        for (const m of data.monsters) {
+          if (m.key === 'yak' || m.is_player || (m.role && m.role.includes('ผู้เล่น'))) continue;
+          if (!m.can_enter_game) continue;
+
+          const folder = m.sprite_dir || `monsters/${m.key}`;
+          const version = m.updated_at ? encodeURIComponent(m.updated_at) : '1';
+
+          if (MONSTER_TEMPLATES[m.key] && !folder.startsWith('monsters/')) {
+            const tmpl = Object.assign({}, MONSTER_TEMPLATES[m.key]);
+            if (m.name) tmpl.name = m.name;
+            MONSTERS.push(tmpl);
+          } else {
+            MONSTERS.push({
+              id: m.key,
+              name: m.name || m.key,
+              tag: m.is_boss ? 'BOSS' : (m.is_flying ? 'FLYING' : 'CUSTOM'),
+              tagClass: m.is_boss ? 'tag-boss' : 'tag-mob',
+              icon: m.is_boss ? '👑' : (m.is_flying ? '🦇' : '👾'),
+              size: m.size || 64,
+              defaultScale: m.scale || 1.35,
+              defaultAnchorX: m.anchor_x || 32,
+              defaultAnchorY: m.anchor_y || 56,
+              hasAttack: true,
+              actions: ['walking', 'idle', 'attack'],
+              pathResolver: (action, dir, frame) => {
+                if (action === 'idle') return `Assets/${folder}/idle_${dir}.png?v=${version}`;
+                if (action === 'attack') return `Assets/${folder}/attack_${dir}_${frame % 4}.png?v=${version}`;
+                return `Assets/${folder}/walk_${dir}_${frame % 8}.png?v=${version}`;
+              },
+              framesCount: { walking: 8, idle: 1, attack: 4 }
+            });
+          }
+        }
+
+        if (MONSTERS.length > 0) {
+          currentMonster = MONSTERS[0];
+          customScale = currentMonster.defaultScale;
+          customAnchorX = currentMonster.defaultAnchorX;
+          customAnchorY = currentMonster.defaultAnchorY;
+        } else {
+          currentMonster = null;
+        }
+      } catch (e) {
+        console.warn('[Studio] Failed to load custom monsters:', e);
+      }
     }
 
     // --- Elements ---
@@ -1130,19 +1226,30 @@
       // 1. Build Monster List
       const monsterListContainer = document.getElementById('monsterListContainer');
       monsterListContainer.innerHTML = '';
-      MONSTERS.forEach(m => {
-        const item = document.createElement('div');
-        item.className = `monster-item ${m.id === currentMonster.id ? 'active' : ''}`;
-        item.innerHTML = `
-          <div class="monster-info">
-            <span class="monster-icon">${m.icon}</span>
-            <span class="monster-name">${m.name}</span>
+      if (MONSTERS.length === 0) {
+        monsterListContainer.innerHTML = `
+          <div style="text-align:center;padding:32px 14px;color:#94a3b8;font-size:12.5px;line-height:1.6;background:rgba(15,23,42,0.6);border:1px dashed #334155;border-radius:8px;">
+            <div style="font-size:24px;margin-bottom:6px;">📭</div>
+            ยังไม่มีมอนสเตอร์ในระบบ<br>
+            <a href="admin.html" style="display:inline-block;margin-top:10px;padding:6px 12px;background:#ca8a04;color:#000;text-decoration:none;border-radius:6px;font-weight:700;font-size:12px;">🛠️ ไปที่หน้าจัดการมอนสเตอร์</a>
           </div>
-          <span class="monster-tag ${m.tagClass}">${m.tag}</span>
         `;
-        item.addEventListener('click', () => selectMonster(m));
-        monsterListContainer.appendChild(item);
-      });
+      } else {
+        MONSTERS.forEach(m => {
+          const item = document.createElement('div');
+          item.className = `monster-item ${(currentMonster && m.id === currentMonster.id) ? 'active' : ''}`;
+          item.dataset.id = m.id;
+          item.innerHTML = `
+            <div class="monster-info">
+              <span class="monster-icon">${m.icon}</span>
+              <span class="monster-name">${m.name}</span>
+            </div>
+            <span class="monster-tag ${m.tagClass}">${m.tag}</span>
+          `;
+          item.addEventListener('click', () => selectMonster(m));
+          monsterListContainer.appendChild(item);
+        });
+      }
 
       // 2. Action Buttons
       document.querySelectorAll('.action-btn').forEach(btn => {
@@ -1239,24 +1346,36 @@
 
       rangeAnchorX.addEventListener('input', (e) => {
         customAnchorX = parseInt(e.target.value);
+        if (currentMonster) currentMonster._userAnchorSet = true;
         document.getElementById('valAnchorX').textContent = `${customAnchorX} px`;
       });
 
       rangeAnchorY.addEventListener('input', (e) => {
         customAnchorY = parseInt(e.target.value);
+        if (currentMonster) currentMonster._userAnchorSet = true;
         document.getElementById('valAnchorY').textContent = `${customAnchorY} px`;
       });
 
       document.getElementById('btnResetAnchor').addEventListener('click', () => {
-        customScale = currentMonster.defaultScale;
-        customAnchorX = currentMonster.defaultAnchorX;
-        customAnchorY = currentMonster.defaultAnchorY;
-        rangeScale.value = customScale;
-        rangeAnchorX.value = customAnchorX;
-        rangeAnchorY.value = customAnchorY;
-        document.getElementById('valScale').textContent = `${customScale.toFixed(2)}x`;
-        document.getElementById('valAnchorX').textContent = `${customAnchorX} px`;
-        document.getElementById('valAnchorY').textContent = `${customAnchorY} px`;
+        if (!currentMonster) return;
+        currentMonster._userAnchorSet = false;
+        panX = 0;
+        panY = 0;
+        const curSrc = currentMonster.pathResolver(currentAction, currentDir, currentFrame);
+        const img = getImage(curSrc);
+        if (img.complete && img.naturalWidth > 0) {
+          calibrateMonsterAnchor(currentMonster, img);
+        } else {
+          customScale = currentMonster.defaultScale || 1.35;
+          customAnchorX = currentMonster.defaultAnchorX || 32;
+          customAnchorY = currentMonster.defaultAnchorY || 56;
+          rangeScale.value = customScale;
+          rangeAnchorX.value = customAnchorX;
+          rangeAnchorY.value = customAnchorY;
+          document.getElementById('valScale').textContent = `${customScale.toFixed(2)}x`;
+          document.getElementById('valAnchorX').textContent = `${customAnchorX} px`;
+          document.getElementById('valAnchorY').textContent = `${customAnchorY} px`;
+        }
       });
 
       // 11. Canvas Dragging
@@ -1301,9 +1420,20 @@
     }
 
     function selectMonster(m) {
+      if (!m) {
+        currentMonster = null;
+        updateFilmstrip();
+        updateInspectorInfo();
+        return;
+      }
       currentMonster = m;
+
+      // Always reset pan offsets so newly selected monster is centered on screen
+      panX = 0;
+      panY = 0;
+
       document.querySelectorAll('.monster-item').forEach(el => {
-        el.classList.toggle('active', el.querySelector('.monster-name').textContent === m.name);
+        el.classList.toggle('active', el.dataset.id === m.id || el.querySelector('.monster-name')?.textContent === m.name);
       });
 
       // Set attack button visibility
@@ -1321,15 +1451,26 @@
       });
 
       // Reset sliders to monster defaults
-      customScale = m.defaultScale;
-      customAnchorX = m.defaultAnchorX;
-      customAnchorY = m.defaultAnchorY;
+      customScale = m.defaultScale || 1.35;
+      customAnchorX = m.defaultAnchorX || 32;
+      customAnchorY = m.defaultAnchorY || 56;
       document.getElementById('rangeScale').value = customScale;
       document.getElementById('rangeAnchorX').value = customAnchorX;
       document.getElementById('rangeAnchorY').value = customAnchorY;
       document.getElementById('valScale').textContent = `${customScale.toFixed(2)}x`;
       document.getElementById('valAnchorX').textContent = `${customAnchorX} px`;
       document.getElementById('valAnchorY').textContent = `${customAnchorY} px`;
+
+      // Check image and calibrate anchor immediately or on load
+      const curSrc = m.pathResolver(currentAction, currentDir, currentFrame);
+      const img = getImage(curSrc);
+      if (img.complete && img.naturalWidth > 0) {
+        calibrateMonsterAnchor(m, img);
+      } else {
+        img.addEventListener('load', () => {
+          if (currentMonster === m) calibrateMonsterAnchor(m, img);
+        }, { once: true });
+      }
 
       currentFrame = 0;
       updateFilmstrip();
@@ -1348,6 +1489,7 @@
     }
 
     function stepFrame(step) {
+      if (!currentMonster) return;
       isPlaying = false;
       document.getElementById('btnPlayPause').innerHTML = '▶';
       const maxF = getMaxFrames();
@@ -1357,13 +1499,18 @@
     }
 
     function getMaxFrames() {
+      if (!currentMonster) return 0;
       if (currentAction === 'idle') return 1;
-      return currentMonster.framesCount[currentAction] || 8;
+      return (currentMonster.framesCount && currentMonster.framesCount[currentAction]) || 8;
     }
 
     function updateFilmstrip() {
       const container = document.getElementById('filmstripContainer');
       container.innerHTML = '';
+      if (!currentMonster) {
+        container.innerHTML = '<div style="color:#64748b;font-size:12px;padding:14px;text-align:center;">ไม่มีแอนิเมชันที่จะแสดง (ยังไม่มีมอนสเตอร์ในระบบ)</div>';
+        return;
+      }
       const total = getMaxFrames();
 
       for (let f = 0; f < total; f++) {
@@ -1373,7 +1520,7 @@
 
         const src = currentMonster.pathResolver(currentAction, currentDir, f);
         frameDiv.innerHTML = `
-          <img src="${src}" alt="Frame ${f}" onerror="this.style.opacity=0.3;">
+          <img src="${src}" alt="Frame ${f}" onerror="if(!this._triedLegacy && this.src.includes('/monsters/')){this._triedLegacy=true;this.src=this.src.replace('/monsters/','/');}else{this.style.opacity=0.3;}">
           <span class="filmstrip-num">#${f}</span>
         `;
 
@@ -1390,6 +1537,10 @@
     }
 
     function updateFilmstripActive() {
+      if (!currentMonster) {
+        document.getElementById('frameCounter').textContent = 'Frame 0 / 0';
+        return;
+      }
       document.querySelectorAll('.filmstrip-frame').forEach(el => {
         el.classList.toggle('active', parseInt(el.dataset.frame) === currentFrame);
       });
@@ -1397,6 +1548,21 @@
     }
 
     function updateInspectorInfo() {
+      if (!currentMonster) {
+        document.getElementById('infoMonsterName').textContent = 'ไม่มีมอนสเตอร์ในระบบ';
+        document.getElementById('infoActionName').textContent = '-';
+        document.getElementById('infoDirName').textContent = '-';
+        document.getElementById('infoFilePath').textContent = '-';
+        document.getElementById('infoDimensions').textContent = '-';
+        document.getElementById('infoTotalFrames').textContent = '0 เฟรม';
+        const statusEl = document.getElementById('infoStatus');
+        if (statusEl) {
+          statusEl.innerHTML = 'ไม่มีข้อมูล';
+          statusEl.style.color = '#94a3b8';
+        }
+        return;
+      }
+
       document.getElementById('infoMonsterName').textContent = currentMonster.name;
       
       const actNames = { walking: 'เดิน (Walking)', idle: 'ยืนนิ่ง (Idle)', attack: 'โจมตี (Attack)' };
@@ -1469,7 +1635,7 @@
       lastTime = now;
 
       // Animation stepping
-      if (isPlaying) {
+      if (isPlaying && getMaxFrames() > 0) {
         animAccumulator += dt;
         const frameTime = 1.0 / currentFps;
         if (animAccumulator >= frameTime) {
@@ -1482,7 +1648,7 @@
       }
 
       // Auto Turntable rotating
-      if (isTurntableActive) {
+      if (isTurntableActive && currentMonster) {
         turntableTimer += dt;
         if (turntableTimer >= 0.75) {
           turntableTimer = 0;
@@ -1533,6 +1699,21 @@
         ctx.restore();
       }
 
+      // If no monsters exist in the system, render friendly placeholder without 404s
+      if (!currentMonster) {
+        ctx.save();
+        ctx.fillStyle = '#64748b';
+        ctx.font = '16px Kanit, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('📭 ยังไม่มีมอนสเตอร์ในระบบ', cx, cy - 25);
+        ctx.font = '12px Kanit, sans-serif';
+        ctx.fillStyle = '#475569';
+        ctx.fillText('สามารถสร้างมอนสเตอร์ใหม่และตรวจสอบสไปรท์ได้ที่หน้าแอดมิน', cx, cy - 2);
+        ctx.restore();
+        requestAnimationFrame(render);
+        return;
+      }
+
       if (showShadow) {
         ctx.save();
         const isBuffalo = currentMonster.id === 'buffalo';
@@ -1561,6 +1742,11 @@
       const img = getImage(src);
 
       if (img && img.complete && img.naturalWidth > 0) {
+        if (!currentMonster._calibrated && !currentMonster._userAnchorSet) {
+          currentMonster._calibrated = true;
+          calibrateMonsterAnchor(currentMonster, img);
+        }
+
         const renderScale = (currentZoom / 3) * customScale;
         const w = img.naturalWidth * renderScale;
         const h = img.naturalHeight * renderScale;
@@ -1604,14 +1790,52 @@
           ctx.stroke();
           ctx.restore();
         }
+      } else if (!img || !img.complete) {
+        ctx.save();
+        ctx.fillStyle = '#fde047';
+        ctx.font = '13px Kanit, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⏳ กำลังโหลดสไปรท์...', cx, cy - 20);
+        ctx.restore();
+      } else if (img.naturalWidth === 0) {
+        ctx.save();
+        ctx.fillStyle = '#ef4444';
+        ctx.font = '13px Kanit, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('⚠️ ไม่พบไฟล์ภาพ (404)', cx, cy - 20);
+        ctx.font = '11px Kanit, sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(src, cx, cy);
+        ctx.restore();
       }
 
       requestAnimationFrame(render);
     }
 
     // Launch
-    window.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadCustomMonstersIntoStudio();
+
+      // Check URL query parameter: ?monster=key
+      const urlParams = new URLSearchParams(window.location.search);
+      const targetKey = urlParams.get('monster');
+      if (targetKey && MONSTERS.length > 0) {
+        const found = MONSTERS.find(m => m.id === targetKey);
+        if (found) {
+          currentMonster = found;
+          customScale = found.defaultScale;
+          customAnchorX = found.defaultAnchorX;
+          customAnchorY = found.defaultAnchorY;
+        }
+      }
+
       initUI();
+      if (currentMonster) {
+        selectMonster(currentMonster);
+      } else {
+        updateFilmstrip();
+        updateInspectorInfo();
+      }
       requestAnimationFrame(render);
     });
   </script>

@@ -561,11 +561,48 @@ class WeatherSystem {
     }
   }
 
+  // Calculate dynamic farming bonus (EXP boost at night, Gold boost at day, Potion boost during rain)
+  getFarmingBonus() {
+    const phase = this.getDayNightPhase();
+    const isNight = phase.name === 'night';
+    const isDusk = phase.name === 'dusk';
+    const isDay = phase.name === 'day';
+    const isRaining = this.rainIntensity > 0.35;
+
+    let expMult = 1.0;
+    let goldMult = 1.0;
+    let potionMult = 1;
+    let bonusLabel = '';
+
+    if (isNight) {
+      expMult = 1.5; // +50% EXP bonus during night
+      bonusLabel = '✨ EXP x1.5';
+    } else if (isDusk) {
+      expMult = 1.2; // +20% EXP bonus during sunset
+      bonusLabel = '✨ EXP x1.2';
+    } else if (isDay) {
+      goldMult = 1.25; // +25% Gold bonus during daytime
+      bonusLabel = '💰 เงิน x1.25';
+    }
+
+    if (isRaining) {
+      potionMult = 2; // Double potion drop chance during rain
+      bonusLabel += (bonusLabel ? ' • ' : '') + '🧪 ยา x2';
+    }
+
+    return {
+      expMultiplier: expMult,
+      goldMultiplier: goldMult,
+      potionMultiplier: potionMult,
+      label: bonusLabel || 'ฟาร์มปกติ'
+    };
+  }
+
   // Get current weather status label for UI
   getStatusText() {
     const phase = this.getDayNightPhase();
-    const weatherLabel = (this.rainIntensity > 0.4) ? '🌧️ ฝนตกโปรยปราย' : (this.rainIntensity > 0.1 ? '🌦️ ฝนปรอยๆ' : '☀️ แจ่มใส');
-    return `${phase.title} • ${weatherLabel}`;
+    const bonus = this.getFarmingBonus();
+    return `${phase.title} • ${bonus.label}`;
   }
 }
 

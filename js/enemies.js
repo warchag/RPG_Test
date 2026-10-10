@@ -60,6 +60,7 @@ class Enemy {
       this.animTimer = 0;
       this.animFrame = 0;
       this.isFlying = true;
+      this.isNocturnal = true; // Stalks faster at night
       this.isAttacking = false;
       this.attackTime = 0;
       this.attackDuration = 0.38;
@@ -73,8 +74,8 @@ class Enemy {
       this.attackRange = 48;
       this.aggroRange = 280;
       this.attackCooldownMax = 1.3;
-      this.expReward = 55;
-      this.goldReward = 35;
+      this.expReward = 48;
+      this.goldReward = 30;
       this.name = 'วานรปีศาจ';
       this.dir = 'south';
       this.animTimer = 0;
@@ -92,8 +93,8 @@ class Enemy {
       this.attackRange = 56;
       this.aggroRange = 320;
       this.attackCooldownMax = 1.5;
-      this.expReward = 90;
-      this.goldReward = 60;
+      this.expReward = 115;
+      this.goldReward = 65;
       this.name = 'พญางูอสูร';
       this.dir = 'south';
       this.animTimer = 0;
@@ -104,35 +105,37 @@ class Enemy {
       this.hasDealtDamage = false;
     } else if (this.type === 'krasue') {
       this.radius = 17;
-      this.maxHp = 110;
+      this.maxHp = 130;
       this.hp = this.maxHp;
       this.attack = 22;
       this.speed = 145;
       this.attackRange = 48;
       this.aggroRange = 340;
-      this.expReward = 50;
-      this.goldReward = 30;
+      this.expReward = 72;
+      this.goldReward = 45;
       this.name = 'ผีกระสือ';
       this.dir = 'south';
       this.animTimer = 0;
       this.animFrame = 0;
       this.isFlying = true;
+      this.isNocturnal = true; // Stalks faster at night
       this.wispTimer = 0;
     } else if (this.type === 'tiger') {
       this.radius = 22;
-      this.maxHp = 300;
+      this.maxHp = 340;
       this.hp = this.maxHp;
       this.attack = 18; // per claw swipe (2 swipes per attack)
       this.speed = 160;
       this.attackRange = 50;
       this.aggroRange = 320;
       this.attackCooldownMax = 1.3;
-      this.expReward = 100;
-      this.goldReward = 60;
+      this.expReward = 180;
+      this.goldReward = 110;
       this.name = 'เสือสมิง';
       this.dir = 'south';
       this.animTimer = 0;
       this.animFrame = 0;
+      this.isNocturnal = true; // Stalks faster at night
       this.isAttacking = false;
       this.attackTime = 0;
       this.attackDuration = 0.45;
@@ -146,8 +149,8 @@ class Enemy {
       this.attackRange = 52;
       this.aggroRange = 320;
       this.attackCooldownMax = 1.4;
-      this.expReward = 85;
-      this.goldReward = 50;
+      this.expReward = 95;
+      this.goldReward = 55;
       this.name = 'วิญญาณนักรบดาบอาคม';
       this.dir = 'south';
       this.animTimer = 0;
@@ -165,8 +168,8 @@ class Enemy {
       this.attackRange = 65;
       this.aggroRange = 380;
       this.attackCooldownMax = 1.6;
-      this.expReward = 280;
-      this.goldReward = 200;
+      this.expReward = 320;
+      this.goldReward = 220;
       this.name = 'พญาควายธนูทมิฬ';
       this.dir = 'south';
       this.animTimer = 0;
@@ -200,29 +203,53 @@ class Enemy {
       this.isBoss = !!cm.is_boss;
       this.scale = cm.scale || 1.35;
     } else if (!this.spriteKey && !this.name && this.type !== 'boss') {
-      // Unknown type (custom monster whose metadata hasn't loaded yet) -> treat as custom sprite folder Assets/<type>/
-      this.radius = 20;
-      this.maxHp = 200;
-      this.hp = this.maxHp;
-      this.attack = 25;
-      this.speed = 120;
-      this.attackRange = 50;
-      this.aggroRange = 300;
-      this.attackCooldownMax = 1.4;
-      this.expReward = 60;
-      this.goldReward = 40;
-      this.name = this.type;
-      this.dir = 'south';
-      this.animTimer = 0;
-      this.animFrame = 0;
-      this.isAttacking = false;
-      this.attackTime = 0;
-      this.attackDuration = 0.45;
-      this.hasDealtDamage = false;
-      this.isCustom = true;
-      this.scale = 1.35;
-      if (window.assetManager && window.assetManager.registerMonsterAssets && !window.assetManager.images[`${this.type}_idle_south`]) {
-        window.assetManager.registerMonsterAssets(this.type);
+      // Check if custom monster actually exists in database and is allowed to enter game
+      const cm = window.customMonsters && window.customMonsters[this.type];
+      if (cm && cm.can_enter_game) {
+        this.radius = 20;
+        this.maxHp = cm.hp || 200;
+        this.hp = this.maxHp;
+        this.attack = cm.attack || 25;
+        this.speed = cm.speed || 120;
+        this.attackRange = 50;
+        this.aggroRange = 300;
+        this.attackCooldownMax = 1.4;
+        this.expReward = 60;
+        this.goldReward = 40;
+        this.name = cm.name || this.type;
+        this.dir = 'south';
+        this.animTimer = 0;
+        this.animFrame = 0;
+        this.isAttacking = false;
+        this.attackTime = 0;
+        this.attackDuration = 0.45;
+        this.hasDealtDamage = false;
+        this.isCustom = true;
+        this.scale = cm.scale || 1.35;
+        if (window.assetManager && window.assetManager.registerMonsterAssets && !window.assetManager.images[`${this.type}_idle_south`]) {
+          window.assetManager.registerMonsterAssets(this.type);
+        }
+      } else {
+        // Fallback procedural canvas sprite - NEVER fire 404 network requests for missing/deleted assets
+        this.radius = 20;
+        this.maxHp = 100;
+        this.hp = 100;
+        this.attack = 10;
+        this.speed = 100;
+        this.attackRange = 40;
+        this.aggroRange = 250;
+        this.attackCooldownMax = 1.5;
+        this.expReward = 30;
+        this.goldReward = 20;
+        this.name = this.type;
+        this.dir = 'south';
+        this.animTimer = 0;
+        this.animFrame = 0;
+        this.isAttacking = false;
+        this.attackTime = 0;
+        this.attackDuration = 0.45;
+        this.hasDealtDamage = false;
+        this.spriteKey = 'enemy_imp';
       }
     }
 
@@ -241,8 +268,12 @@ class Enemy {
 
   applyConfig(cfg) {
     if (!cfg) return;
-    if (cfg.maxHp != null) { this.maxHp = Number(cfg.maxHp); this.hp = this.maxHp; }
-    else if (cfg.hp != null) { this.maxHp = Number(cfg.hp); this.hp = this.maxHp; }
+    const oldMax = this.maxHp || 60;
+    if (cfg.maxHp != null) this.maxHp = Number(cfg.maxHp);
+    else if (cfg.hp != null) this.maxHp = Number(cfg.hp);
+    if (this.hp == null || this.hp >= oldMax || this.hp > this.maxHp) {
+      this.hp = this.maxHp;
+    }
     if (cfg.attack != null) this.attack = Number(cfg.attack);
     if (cfg.speed != null) this.speed = Number(cfg.speed);
     if (cfg.attackCooldownMax != null) this.attackCooldownMax = Number(cfg.attackCooldownMax);
@@ -297,40 +328,81 @@ class Enemy {
     if (this.hp <= 0) {
       this.hp = 0;
       this.die(player);
+    } else {
+      if (window.game && window.game.scheduleSave) {
+        window.game.scheduleSave(400);
+      }
     }
   }
 
   die(player) {
     this.isDead = true;
     this.state = 'dead';
+    this.deadAt = Date.now();
+    this.respawnAt = Date.now() + (this.isBoss ? 120000 : 45000); // 45s for normal monsters, 120s for boss
     window.soundSystem.playEnemyDeath();
     window.effectsManager.addAuraBurst(this.x, this.y, '#9333ea', 20);
 
-    // Give player rewards
-    player.addExp(this.expReward);
+    // --- Dynamic Game Balancing & Farming Mechanics ---
+    const weather = window.game ? window.game.weather : null;
+    const bonus = (weather && typeof weather.getFarmingBonus === 'function')
+      ? weather.getFarmingBonus()
+      : { expMultiplier: 1.0, goldMultiplier: 1.0, potionMultiplier: 1 };
 
-    // Drop loot
+    let expMult = bonus.expMultiplier || 1.0;
+    let goldMult = bonus.goldMultiplier || 1.0;
+    let bonusNote = '';
+    let isOverleveled = false;
+
+    // Level Penalty System สำหรับ Map 1 (Himavanta Forest - เลเวลเป้าหมาย Lv. 1-10)
+    // หากเลเวลผู้เล่นเกิน 12 และเป็นมอนสเตอร์ทั่วไป (ไม่ใช่มินิบอส/บอส) จะลดทอน EXP ลง 80% ป้องกันการปั๊มเลเวลข้ามแมพ
+    if (player && player.level > 12 && !this.isBoss && this.type !== 'buffalo') {
+      expMult *= 0.20; // ลดเหลือ 20%
+      isOverleveled = true;
+    } else if (expMult > 1.0) {
+      bonusNote = expMult >= 1.5 ? '🌙 กลางคืน x1.5' : '🌇 สนธยา x1.2';
+    }
+
+    const finalExp = Math.max(1, Math.round((this.expReward || 30) * expMult));
+    const finalGold = Math.max(1, Math.round((this.goldReward || 20) * goldMult));
+
+    // มอบ EXP ให้ผู้เล่น
+    player.addExp(finalExp);
+
+    // แสดงแจ้งเตือน EXP และโบนัส
+    if (window.effectsManager) {
+      if (bonusNote) {
+        window.effectsManager.addDamageText(this.x, this.y - 45, `+${finalExp} EXP (${bonusNote})`, 'heal_mp');
+      } else if (isOverleveled) {
+        window.effectsManager.addDamageText(this.x, this.y - 45, `+${finalExp} EXP (เลเวลเกินแมพนี้)`, 'normal');
+      }
+    }
+
+    // Drop loot: เหรียญเงินพดด้วง
     window.gameMap.spawnPickup({
       type: 'coin',
       x: this.x,
       y: this.y,
-      value: this.goldReward
+      value: finalGold
     });
 
-    // Chance for potions
-    const rnd = Math.random();
-    if (rnd < 0.28) {
-      window.gameMap.spawnPickup({
-        type: 'hp_potion',
-        x: this.x + (Math.random() - 0.5) * 20,
-        y: this.y + (Math.random() - 0.5) * 20
-      });
-    } else if (rnd < 0.45) {
-      window.gameMap.spawnPickup({
-        type: 'mp_potion',
-        x: this.x + (Math.random() - 0.5) * 20,
-        y: this.y + (Math.random() - 0.5) * 20
-      });
+    // Chance for potions (คูณ 2 ช่วงฝนตก)
+    const dropRounds = bonus.potionMultiplier || 1;
+    for (let r = 0; r < dropRounds; r++) {
+      const rnd = Math.random();
+      if (rnd < 0.28) {
+        window.gameMap.spawnPickup({
+          type: 'hp_potion',
+          x: this.x + (Math.random() - 0.5) * 25,
+          y: this.y + (Math.random() - 0.5) * 25
+        });
+      } else if (rnd < 0.45) {
+        window.gameMap.spawnPickup({
+          type: 'mp_potion',
+          x: this.x + (Math.random() - 0.5) * 25,
+          y: this.y + (Math.random() - 0.5) * 25
+        });
+      }
     }
   }
 
@@ -506,16 +578,19 @@ class Enemy {
 
     const distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
 
-    // AI Decision Tree: Passive/Neutral by default - ONLY chase/attack if attacked first!
-    if (this.isProvoked && !player.isDead) {
-      if (distToPlayer > this.aggroRange * 2.2) {
+    // AI Decision Tree: Engage if provoked or damaged by player, within combat distance!
+    const isHostile = (this.isProvoked || this.hp < this.maxHp) && !player.isDead;
+    if (isHostile) {
+      if (distToPlayer <= this.aggroRange * 2.2) {
+        this.isProvoked = true;
+        this.state = 'chase';
+      } else {
         // Player fled far away -> monster calms down and returns to peaceful patrol
         this.isProvoked = false;
         this.state = 'patrol';
-      } else {
-        this.state = 'chase';
       }
     } else {
+      this.isProvoked = false;
       this.state = 'patrol';
     }
 
@@ -545,8 +620,11 @@ class Enemy {
           }
         }
 
-        const nx = this.x + cosA * this.speed * dt;
-        const ny = this.y + sinA * this.speed * dt;
+        const moveSpeed = (this.isNocturnal && window.game && window.game.weather && window.game.weather.isNightTime())
+          ? this.speed * 1.15
+          : this.speed;
+        const nx = this.x + cosA * moveSpeed * dt;
+        const ny = this.y + sinA * moveSpeed * dt;
 
         // Krasue is a floating spirit so she can glide across obstacles
         if (this.isFlying) {
@@ -644,6 +722,170 @@ class Enemy {
     }
   }
 
+  renderGroundShadow(ctx, sx, sy) {
+    ctx.save();
+    const now = performance.now() / 1000;
+    const isSide = (this.dir === 'east' || this.dir === 'west');
+    const isDiag = (this.dir === 'south-east' || this.dir === 'south-west' || this.dir === 'north-east' || this.dir === 'north-west');
+
+    if (this.type === 'buffalo') {
+      // Demonic Buffalo: Massive heavyweight 4-legged beast
+      const shadowRx = isSide ? 64 : (isDiag ? 55 : 46);
+      const shadowRy = isSide ? 24 : (isDiag ? 28 : 32);
+      const groundY = sy + 6;
+
+      // Layer 1: Soft Ambient Outer Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, shadowRx * 1.18, shadowRy * 1.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Deep Ground Occlusion Core
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.58)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, shadowRx, shadowRy, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (this.type === 'tiger') {
+      // Royal Tiger / Sming: Long sleek quadruped predator
+      const shadowRx = isSide ? 48 : (isDiag ? 40 : 30);
+      const shadowRy = isSide ? 18 : (isDiag ? 22 : 28);
+      const groundY = sy + 5;
+
+      // Layer 1: Soft Ambient Outer Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, shadowRx * 1.22, shadowRy * 1.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Inner Deep Contact Body Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.56)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, shadowRx, shadowRy, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (this.type === 'serpent') {
+      // Naga / Giant Serpent: Sinuous ground crawler
+      const shadowRx = isSide ? 44 : (isDiag ? 38 : 28);
+      const shadowRy = isSide ? 16 : (isDiag ? 20 : 28);
+      const groundY = sy + 4;
+
+      // Layer 1: Soft Ambient Outer Penumbra
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, shadowRx * 1.2, shadowRy * 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Core Body Occlusion
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.52)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, shadowRx, shadowRy, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (this.type === 'krasue') {
+      // Krasue: Floating detached spirit - dynamic hovering ground shadow
+      const hoverBob = Math.sin(now * 3.5);
+      const groundY = sy + 6;
+      const baseRx = 24 + hoverBob * 2.0;
+      const baseRy = 11 + hoverBob * 1.2;
+
+      // Layer 1: Occult Greenish-Dark Ambient Shadow
+      ctx.fillStyle = 'rgba(6, 78, 59, 0.24)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, baseRx * 1.35, baseRy * 1.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Middle Soft Ground Shadow
+      const midAlpha = Math.max(0.12, 0.22 - hoverBob * 0.04);
+      ctx.fillStyle = `rgba(0, 0, 0, ${midAlpha.toFixed(2)})`;
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, baseRx * 1.1, baseRy * 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 3: Central Ground Occlusion
+      const coreAlpha = Math.max(0.25, 0.44 - hoverBob * 0.08);
+      ctx.fillStyle = `rgba(0, 0, 0, ${coreAlpha.toFixed(2)})`;
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, baseRx * 0.75, baseRy * 0.75, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (this.type === 'swordsman') {
+      // Swordsman / Humanoid: Bipedal stance
+      const scale = this.scale || 1.45;
+      const rx = 18 * scale;
+      const ry = 8.5 * scale;
+      const groundY = sy + 3;
+
+      // Layer 1: Soft Ambient Outer Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, rx * 1.22, ry * 1.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Deep Feet Contact
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (this.type === 'monkey') {
+      // Agile Monkey: Crouching bipedal
+      const scale = this.scale || 1.35;
+      const rx = 17 * scale;
+      const ry = 8 * scale;
+      const groundY = sy + 3;
+
+      // Layer 1: Soft Ambient
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, rx * 1.2, ry * 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Deep Contact
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.54)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else if (this.type === 'imp') {
+      // Small Imp
+      const scale = this.scale || 1.25;
+      const rx = 14 * scale;
+      const ry = 6.5 * scale;
+      const groundY = sy + 3;
+
+      // Layer 1: Soft Ambient
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, rx * 1.2, ry * 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Deep Contact
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.52)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+    } else {
+      // General / Custom / Standard Monsters
+      const r = (this.radius || 20);
+      const groundY = sy + 3;
+
+      // Layer 1: Soft Ambient Outer Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, r * 1.2, r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Layer 2: Deep Ground Occlusion Core
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.54)';
+      ctx.beginPath();
+      ctx.ellipse(sx, groundY, r * 0.9, r * 0.40, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   render(ctx, camera) {
     if (this.isDead) return;
     if (!camera.isVisible(this.x, this.y, 40)) return;
@@ -651,38 +893,26 @@ class Enemy {
     const sx = this.x - camera.x;
     const sy = this.y - camera.y;
 
-    // Ground shadow
-    ctx.save();
-    if (this.type === 'krasue') {
-      ctx.fillStyle = 'rgba(5, 150, 105, 0.35)';
-      ctx.beginPath();
-      ctx.ellipse(sx, sy, this.radius * 0.75, this.radius * 0.35, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else if (this.type === 'buffalo') {
-      // Giant demonic buffalo shadow - large multi-layered shadow matching massive 4-legged beast
-      const isSide = (this.dir === 'east' || this.dir === 'west');
-      const isDiag = (this.dir === 'south-east' || this.dir === 'south-west' || this.dir === 'north-east' || this.dir === 'north-west');
-      const shadowRx = isSide ? 58 : (isDiag ? 50 : 44);
-      const shadowRy = isSide ? 22 : (isDiag ? 25 : 28);
-      
-      // Soft ambient outer shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.20)';
-      ctx.beginPath();
-      ctx.ellipse(sx, sy + 6, shadowRx * 1.15, shadowRy * 1.15, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Deep contact ground shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.48)';
-      ctx.beginPath();
-      ctx.ellipse(sx, sy + 6, shadowRx, shadowRy, 0, 0, Math.PI * 2);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-      ctx.beginPath();
-      ctx.ellipse(sx, sy, this.radius * 0.9, this.radius * 0.45, 0, 0, Math.PI * 2);
-      ctx.fill();
+    // Guard: If this monster's assets or registration do not exist (deleted/missing monster), do not render
+    let hasAsset = false;
+    if (window.assetManager) {
+      if (this.type === 'boss') {
+        hasAsset = !!(window.assetManager.getImage('bosspreat_idle_south') || window.assetManager.getImage('boss_idle_south'));
+      } else if (this.type === 'swordsman') {
+        hasAsset = !!(window.assetManager.getImage('mainchar_idle_south') || window.assetManager.getImage('mainchar_idle'));
+      } else {
+        hasAsset = !!(window.assetManager.getImage(`${this.type}_idle_south`) || window.assetManager.getImage(`${this.type}_idle`) || window.assetManager.getImage(this.type));
+      }
     }
-    ctx.restore();
+    const isKnown = (window.ENTITY_REGISTRY && window.ENTITY_REGISTRY[this.type]) || (window.customMonsters && window.customMonsters[this.type]);
+    if (!hasAsset && !isKnown) {
+      this.isDead = true;
+      this.isPhantom = true;
+      return;
+    }
+
+    // Ground shadow (2.5D Soft Multi-Layer)
+    this.renderGroundShadow(ctx, sx, sy);
 
     // Animated Sprite Enemies: Swordsman, Tiger, Monkey, Serpent, Imp, and Custom Monsters
     const isAnimatedSprite = this.type === 'swordsman' || this.type === 'tiger' || this.type === 'monkey' || this.type === 'serpent' || this.type === 'imp' || this.isCustom;
@@ -865,14 +1095,15 @@ class Enemy {
 
         // Emerald mystic flame glow around floating head
         const now = performance.now() / 1000;
+        const hoverBob = Math.sin(now * 3.5) * 4;
         const glowRad = 22 + Math.sin(now * 6) * 4;
-        const grad = ctx.createRadialGradient(sx, sy - 20, 3, sx, sy - 20, glowRad);
+        const grad = ctx.createRadialGradient(sx, sy - 20 - hoverBob, 3, sx, sy - 20 - hoverBob, glowRad);
         grad.addColorStop(0, 'rgba(52, 211, 153, 0.55)');
         grad.addColorStop(0.6, 'rgba(16, 185, 129, 0.2)');
         grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(sx, sy - 20, glowRad, 0, Math.PI * 2);
+        ctx.arc(sx, sy - 20 - hoverBob, glowRad, 0, Math.PI * 2);
         ctx.fill();
 
         // Consistent Anchor Point (Matches Yak's 48x48 vs 68x68 anchor)
@@ -890,7 +1121,7 @@ class Enemy {
           drawH = 48 * scale;
         }
 
-        ctx.drawImage(img, sx - anchorX, sy - anchorY, drawW, drawH);
+        ctx.drawImage(img, sx - anchorX, sy - anchorY - hoverBob, drawW, drawH);
         ctx.restore();
 
         // Overhead Krasue Name Label
@@ -899,9 +1130,9 @@ class Enemy {
         ctx.textAlign = 'center';
         ctx.lineWidth = 3;
         ctx.strokeStyle = '#022c22';
-        ctx.strokeText('ผีกระสือ', sx, sy - 48);
+        ctx.strokeText('ผีกระสือ', sx, sy - 48 - hoverBob);
         ctx.fillStyle = '#34d399';
-        ctx.fillText('ผีกระสือ', sx, sy - 48);
+        ctx.fillText('ผีกระสือ', sx, sy - 48 - hoverBob);
         ctx.restore();
       }
     } else {
@@ -987,8 +1218,8 @@ class PretaBoss extends Enemy {
     this.speed = this.baseSpeed;
     this.aggroRange = 460;
     this.attackRange = 140;
-    this.expReward = 950;
-    this.goldReward = 750;
+    this.expReward = 2000;
+    this.goldReward = 800;
 
     // Movement & 8-Direction Animation
     this.dir = 'south';
@@ -1116,15 +1347,20 @@ class PretaBoss extends Enemy {
 
     const distToPlayer = Math.hypot(player.x - this.x, player.y - this.y);
 
-    // AI State Tree
-    if (this.isProvoked && !player.isDead) {
-      if (distToPlayer > this.aggroRange * 2.5) {
+    // AI State Tree: Boss engages if provoked, damaged, awakened, or player enters boss arena (aggroRange)
+    const bossHostile = (this.isProvoked || this.hp < this.maxHp || this.hasAwakened || distToPlayer <= this.aggroRange) && !player.isDead;
+    if (bossHostile) {
+      if (distToPlayer <= this.aggroRange * 2.5) {
+        this.isProvoked = true;
+        this.hasAwakened = true;
+        this.state = 'chase';
+      } else {
+        // Player fled far away outside boss arena
         this.isProvoked = false;
         this.state = 'patrol';
-      } else {
-        this.state = 'chase';
       }
     } else {
+      this.isProvoked = false;
       this.state = 'patrol';
     }
 
@@ -1508,14 +1744,37 @@ class PretaBoss extends Enemy {
     if (this.isDead) return;
     if (!camera.isVisible(this.x, this.y, 160)) return;
 
+    // Guard: If boss assets are deleted/missing, do not render phantom shadows or auras
+    const hasAsset = window.assetManager && !!(window.assetManager.getImage('bosspreat_idle_south') || window.assetManager.getImage('boss_idle_south'));
+    const isRegistered = (window.ENTITY_REGISTRY && (window.ENTITY_REGISTRY['bosspreat'] || window.ENTITY_REGISTRY['preta'] || window.ENTITY_REGISTRY['boss']));
+    if (!hasAsset && !isRegistered) {
+      this.isDead = true;
+      this.isPhantom = true;
+      return;
+    }
+
     const sx = this.x - camera.x;
     const sy = this.y - camera.y;
 
-    // 1. Giant Oval Shadow on ground
+    // 1. Giant Multi-Layer 2.5D Soft Ground Shadow
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.52)';
+    const groundY = sy + 7;
+    // Layer 1: Massive Soft Ambient Penumbra
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
     ctx.beginPath();
-    ctx.ellipse(sx, sy + 6, 48, 18, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx, groundY, 68, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Layer 2: Main Body Ground Occlusion
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.46)';
+    ctx.beginPath();
+    ctx.ellipse(sx, groundY, 52, 19, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Layer 3: Deep Contact Core Under Colossal Feet
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.68)';
+    ctx.beginPath();
+    ctx.ellipse(sx, groundY, 36, 12, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -1616,11 +1875,27 @@ class EnemyManager {
     // Map starts clean - monsters are placed manually via Map Editor
   }
 
-  addEnemy(x, y, type = 'krasue') {
-    if (type === 'boss') {
+  addEnemy(x, y, type) {
+    if (!type) return null;
+    const t = String(type).toLowerCase();
+    if (t === 'boss' || t === 'bosspreat' || t === 'preta') {
+      const hasAsset = window.assetManager && !!(window.assetManager.getImage('bosspreat_idle_south') || window.assetManager.getImage('boss_idle_south'));
+      const isRegistered = (window.ENTITY_REGISTRY && (window.ENTITY_REGISTRY['bosspreat'] || window.ENTITY_REGISTRY['preta'] || window.ENTITY_REGISTRY['boss']));
+      if (!hasAsset && !isRegistered) {
+        return null;
+      }
       this.boss = new DemonOverlordBoss(x, y);
       return this.boss;
     }
+
+    // Verify entity is registered in ENTITY_REGISTRY or approved in customMonsters
+    const isKnown = (window.ENTITY_REGISTRY && window.ENTITY_REGISTRY[t]) ||
+                    (window.customMonsters && window.customMonsters[t] && window.customMonsters[t].can_enter_game);
+    if (!isKnown) {
+      console.warn(`[EnemyManager] Prevented spawn of unregistered/deleted monster: ${t}`);
+      return null;
+    }
+
     const enemy = new Enemy(x, y, type);
     this.enemies.push(enemy);
     return enemy;
@@ -1657,21 +1932,37 @@ class EnemyManager {
     for (const e of this.enemies) {
       list.push({
         type: e.type,
+        startX: (typeof e.startX === 'number') ? e.startX : e.x,
+        startY: (typeof e.startY === 'number') ? e.startY : e.y,
         x: Math.round(e.x),
         y: Math.round(e.y),
         hp: Math.round(e.hp),
         maxHp: e.maxHp,
-        isDead: !!e.isDead
+        isDead: !!e.isDead,
+        deadAt: e.deadAt || 0,
+        respawnAt: e.respawnAt || 0,
+        isProvoked: !!e.isProvoked,
+        state: e.state
       });
     }
     if (this.boss) {
       list.push({
         type: 'boss',
+        startX: (typeof this.boss.startX === 'number') ? this.boss.startX : this.boss.x,
+        startY: (typeof this.boss.startY === 'number') ? this.boss.startY : this.boss.y,
         x: Math.round(this.boss.x),
         y: Math.round(this.boss.y),
         hp: Math.round(this.boss.hp),
         maxHp: this.boss.maxHp,
-        isDead: !!this.boss.isDead
+        isDead: !!this.boss.isDead,
+        deadAt: this.boss.deadAt || 0,
+        respawnAt: this.boss.respawnAt || 0,
+        isProvoked: !!this.boss.isProvoked,
+        hasAwakened: !!this.boss.hasAwakened,
+        phase: this.boss.phase || 1,
+        isEnraged: !!this.boss.isEnraged,
+        isInfernal: !!this.boss.isInfernal,
+        state: this.boss.state
       });
     }
     return list;
@@ -1680,14 +1971,168 @@ class EnemyManager {
   loadEnemyData(list) {
     this.clearAll();
     if (!Array.isArray(list)) return;
+    const now = Date.now();
     for (const item of list) {
       if (item && item.type && typeof item.x === 'number' && typeof item.y === 'number') {
+        const t = String(item.type).toLowerCase();
+        let hasAsset = false;
+        if (window.assetManager) {
+          if (t === 'boss' || t === 'bosspreat') {
+            hasAsset = !!(window.assetManager.getImage('bosspreat_idle_south') || window.assetManager.getImage('boss_idle_south'));
+          } else if (t === 'swordsman') {
+            hasAsset = !!(window.assetManager.getImage('mainchar_idle_south') || window.assetManager.getImage('mainchar_idle'));
+          } else {
+            hasAsset = !!(window.assetManager.getImage(`${t}_idle_south`) || window.assetManager.getImage(`${t}_idle`) || window.assetManager.getImage(t));
+          }
+        }
+        const isRegistered = (window.ENTITY_REGISTRY && (window.ENTITY_REGISTRY[t] || (t === 'boss' && (window.ENTITY_REGISTRY['bosspreat'] || window.ENTITY_REGISTRY['preta'])))) || (window.customMonsters && window.customMonsters[t]);
+        if (!hasAsset && !isRegistered) {
+          console.warn(`[EnemyManager] Ignored deleted/phantom monster: ${t}`);
+          continue;
+        }
         const entity = this.addEnemy(item.x, item.y, item.type);
         if (entity) {
-          if (typeof item.hp === 'number') entity.hp = Math.min(entity.maxHp, item.hp);
-          if (item.isDead) entity.isDead = true;
+          entity.startX = (typeof item.startX === 'number') ? item.startX : item.x;
+          entity.startY = (typeof item.startY === 'number') ? item.startY : item.y;
+          if (item.isDead) {
+            const respawnAt = item.respawnAt || (item.deadAt ? item.deadAt + (entity.isBoss ? 120000 : 45000) : (now + 45000));
+            if (now < respawnAt) {
+              entity.isDead = true;
+              entity.hp = 0;
+              entity.state = 'dead';
+              entity.deadAt = item.deadAt || (respawnAt - 45000);
+              entity.respawnAt = respawnAt;
+            } else {
+              entity.isDead = false;
+              entity.hp = entity.maxHp;
+              entity.respawnAt = 0;
+            }
+          } else {
+            entity.isDead = false;
+            if (typeof item.hp === 'number') {
+              if (item.maxHp && item.hp >= item.maxHp) {
+                entity.hp = entity.maxHp;
+              } else {
+                entity.hp = Math.min(entity.maxHp, item.hp);
+              }
+            }
+            const wasAttacked = !!item.isProvoked || (typeof item.hp === 'number' && typeof item.maxHp === 'number' && item.hp < item.maxHp);
+            if (wasAttacked) {
+              entity.isProvoked = true;
+              entity.state = 'chase';
+            } else {
+              entity.isProvoked = false;
+              entity.state = 'patrol';
+            }
+            if (entity.isBoss) {
+              if (wasAttacked || item.hasAwakened) {
+                entity.hasAwakened = true;
+                entity.isProvoked = true;
+                entity.state = 'chase';
+              }
+              if (item.phase) entity.phase = item.phase;
+              if (item.isEnraged) entity.isEnraged = item.isEnraged;
+              if (item.isInfernal) entity.isInfernal = item.isInfernal;
+            }
+          }
         }
       }
+    }
+  }
+
+  syncSavedStates(savedList) {
+    if (!Array.isArray(savedList)) return;
+    const now = Date.now();
+    for (const s of savedList) {
+      if (!s) continue;
+
+      const sType = String(s.type).toLowerCase();
+      let matched = null;
+      if (sType === 'boss' && this.boss) {
+        matched = this.boss;
+      } else {
+        const sX = (typeof s.startX === 'number') ? s.startX : s.x;
+        const sY = (typeof s.startY === 'number') ? s.startY : s.y;
+        let minDist = 200;
+        for (const e of this.enemies) {
+          if (String(e.type).toLowerCase() === sType && !e._hasSynced) {
+            const eX = (typeof e.startX === 'number') ? e.startX : e.x;
+            const eY = (typeof e.startY === 'number') ? e.startY : e.y;
+            const d = Math.hypot(eX - sX, eY - sY);
+            if (d < minDist) {
+              minDist = d;
+              matched = e;
+            }
+          }
+        }
+      }
+
+      if (matched) {
+        matched._hasSynced = true;
+        if (s.isDead) {
+          const respawnAt = s.respawnAt || (s.deadAt ? s.deadAt + (matched.isBoss ? 120000 : 45000) : (now + 45000));
+          if (now < respawnAt) {
+            matched.isDead = true;
+            matched.hp = 0;
+            matched.state = 'dead';
+            matched.deadAt = s.deadAt || (respawnAt - 45000);
+            matched.respawnAt = respawnAt;
+            const remainSec = Math.max(1, Math.round((respawnAt - now) / 1000));
+            console.log(`[Respawn Timer] Monster '${matched.name || matched.type}' remains dead. Respawning in ${remainSec}s`);
+          } else {
+            // Respawn timer expired while away, monster is alive with full hp
+            matched.isDead = false;
+            matched.hp = matched.maxHp;
+            matched.respawnAt = 0;
+          }
+        } else {
+          // Monster is alive! Preserve damaged HP across page refresh!
+          matched.isDead = false;
+          if (typeof s.hp === 'number' && s.hp > 0) {
+            if (s.maxHp && s.hp >= s.maxHp) {
+              matched.hp = matched.maxHp;
+            } else {
+              matched.hp = Math.min(matched.maxHp, s.hp);
+            }
+          }
+          if (typeof s.x === 'number' && typeof s.y === 'number') {
+            matched.x = s.x;
+            matched.y = s.y;
+          }
+
+          // Restore combat pursuit for the monster that was attacked
+          const p = window.player || (window.game && window.game.player);
+          const distToPlayer = p ? Math.hypot(p.x - matched.x, p.y - matched.y) : 9999;
+          const wasAttacked = !!s.isProvoked || (typeof s.hp === 'number' && typeof s.maxHp === 'number' && s.hp < s.maxHp);
+          if (wasAttacked && distToPlayer <= matched.aggroRange * 2.2) {
+            matched.isProvoked = true;
+            matched.state = 'chase';
+          } else {
+            matched.isProvoked = false;
+            matched.state = 'patrol';
+          }
+
+          if (matched.isBoss) {
+            const bossWasAttacked = wasAttacked || !!s.hasAwakened || distToPlayer <= matched.aggroRange;
+            if (bossWasAttacked && distToPlayer <= matched.aggroRange * 2.5) {
+              matched.hasAwakened = true;
+              matched.isProvoked = true;
+              matched.state = 'chase';
+            } else {
+              matched.isProvoked = false;
+              matched.state = 'patrol';
+            }
+            if (s.phase) matched.phase = s.phase;
+            if (s.isEnraged) matched.isEnraged = s.isEnraged;
+            if (s.isInfernal) matched.isInfernal = s.isInfernal;
+          }
+        }
+      }
+    }
+
+    // Clean up temporary _hasSynced flag
+    for (const e of this.enemies) {
+      delete e._hasSynced;
     }
   }
 
@@ -1725,6 +2170,9 @@ class EnemyManager {
   update(dt, player, map) {
     this.validateSpawnPositions(map);
 
+    // Prune any phantom or deleted custom monsters
+    this.enemies = this.enemies.filter(e => !e.isPhantom);
+
     // Update normal enemies
     for (const e of this.enemies) {
       e.update(dt, player, map);
@@ -1735,20 +2183,48 @@ class EnemyManager {
       this.boss.update(dt, player, map);
     }
 
-    // Respawn timer: Check if any normal enemies died and respawn them after 12s
+    // Real-time Respawn Timer Check
     this.respawnTimer += dt;
-    if (this.respawnTimer >= 5.0) {
+    if (this.respawnTimer >= 1.0) {
       this.respawnTimer = 0;
+      const now = Date.now();
       for (const e of this.enemies) {
-        if (e.isDead && performance.now() / 1000 - e.lastDamageTime > 12.0) {
-          // Respawn at initial location
-          e.x = e.startX;
-          e.y = e.startY;
-          e.hp = e.maxHp;
-          e.isDead = false;
-          e.isProvoked = false;
-          e.state = 'patrol';
-          window.effectsManager.addAuraBurst(e.x, e.y, '#a855f7', 15);
+        if (e.isDead) {
+          if (!e.respawnAt) {
+            e.respawnAt = now + (e.isBoss ? 120000 : 45000);
+          }
+          if (now >= e.respawnAt) {
+            // Respawn!
+            e.x = (typeof e.startX === 'number') ? e.startX : e.x;
+            e.y = (typeof e.startY === 'number') ? e.startY : e.y;
+            e.hp = e.maxHp;
+            e.isDead = false;
+            e.isProvoked = false;
+            e.state = 'patrol';
+            e.respawnAt = 0;
+            if (window.effectsManager) {
+              window.effectsManager.addAuraBurst(e.x, e.y, '#a855f7', 22);
+              window.effectsManager.addDamageText(e.x, e.y - 35, '✨ เกิดใหม่!', 'crit');
+            }
+          }
+        }
+      }
+
+      if (this.boss && this.boss.isDead) {
+        if (!this.boss.respawnAt) {
+          this.boss.respawnAt = now + 120000;
+        }
+        if (now >= this.boss.respawnAt) {
+          this.boss.x = (typeof this.boss.startX === 'number') ? this.boss.startX : this.boss.x;
+          this.boss.y = (typeof this.boss.startY === 'number') ? this.boss.startY : this.boss.y;
+          this.boss.hp = this.boss.maxHp;
+          this.boss.isDead = false;
+          this.boss.respawnAt = 0;
+          this.boss.state = 'idle';
+          if (window.effectsManager) {
+            window.effectsManager.addAuraBurst(this.boss.x, this.boss.y, '#ef4444', 35);
+            window.effectsManager.addDamageText(this.boss.x, this.boss.y - 50, '💀 บอสคืนชีพ!', 'crit');
+          }
         }
       }
     }

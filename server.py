@@ -18,6 +18,8 @@ import subprocess
 import base64
 import zlib
 import struct
+import re
+import shutil
 try:
     from http.server import ThreadingHTTPServer as ServerClass, SimpleHTTPRequestHandler
 except ImportError:
@@ -81,6 +83,10 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS deleted_monsters (
+            monster_key TEXT PRIMARY KEY,
+            deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     ''')
     for col in ['chests', 'shrines', 'pickups']:
         try:
@@ -93,10 +99,14 @@ def init_db():
 
 class GameRequestHandler(SimpleHTTPRequestHandler):
     def end_headers(self):
-        # Enable CORS and disable aggressive caching for API/Assets
+        # Enable CORS and disable aggressive caching for API, JS, and HTML
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        if self.path.endswith('.js') or self.path.endswith('.html') or self.path.startswith('/api/') or '?' in self.path:
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -123,6 +133,27 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
         elif self.path.startswith('/api/health'):
             self.send_json_response({'status': 'ok', 'database': 'sqlite', 'time': datetime.datetime.now().isoformat()})
         else:
+            # Transparent fallback routing between Assets/ and Assets/monsters/
+            if self.path.startswith('/Assets/'):
+                clean_path = self.path.split('?')[0].lstrip('/')
+                base_dir = os.path.dirname(os.path.abspath(__file__))
+                full_path = os.path.join(base_dir, clean_path)
+                
+                # Case 1: Requested Assets/<key>/... but file lives in Assets/monsters/<key>/...
+                if not os.path.isfile(full_path) and not self.path.startswith('/Assets/monsters/'):
+                    rel_sub = clean_path[len('Assets/'):]
+                    candidate = os.path.join(base_dir, 'Assets', 'monsters', rel_sub)
+                    if os.path.isfile(candidate):
+                        query = ('?' + self.path.split('?')[1]) if '?' in self.path else ''
+                        self.path = f'/Assets/monsters/{rel_sub}{query}'
+                # Case 2: Requested Assets/monsters/<key>/... but file lives in legacy Assets/<key>/...
+                elif not os.path.isfile(full_path) and self.path.startswith('/Assets/monsters/'):
+                    rel_sub = clean_path[len('Assets/monsters/'):]
+                    candidate = os.path.join(base_dir, 'Assets', rel_sub)
+                    if os.path.isfile(candidate):
+                        query = ('?' + self.path.split('?')[1]) if '?' in self.path else ''
+                        self.path = f'/Assets/{rel_sub}{query}'
+
             # Serve game assets and HTML files
             super().do_GET()
 
@@ -141,6 +172,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             self.handle_create_monster()
         elif self.path.startswith('/api/monsters/delete'):
             self.handle_delete_monster()
+        elif self.path.startswith('/api/monsters/restore_builtins'):
+            self.handle_restore_builtins()
         else:
             self.send_error(404, "Endpoint not found")
 
@@ -164,12 +197,45 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             cur = conn.cursor()
             cur.execute('SELECT * FROM boss_config WHERE boss_key = ?', (boss_key,))
             row = cur.fetchone()
-            conn.close()
-
             if not row:
-                self.send_json_response({'status': 'not_found', 'message': f'No config for boss "{boss_key}"'}, code=404)
+                # Check if monster exists in custom_monsters table
+                cur.execute('SELECT * FROM custom_monsters WHERE monster_key = ?', (boss_key,))
+                crow = cur.fetchone()
+                if crow:
+                    now_iso = datetime.datetime.now().isoformat()
+                    default_cfg = {
+                        'name': crow['name'],
+                        'hp': crow['hp'],
+                        'maxHp': crow['hp'],
+                        'attack': crow['attack'],
+                        'speed': crow['speed'],
+                        'scale': crow['scale'],
+                        'isBoss': bool(crow['is_boss']),
+                        'isFlying': bool(crow['is_flying'])
+                    }
+                    try:
+                        cur.execute('''
+                            INSERT INTO boss_config (boss_key, config_data, updated_at)
+                            VALUES (?, ?, ?)
+                            ON CONFLICT(boss_key) DO UPDATE SET config_data = excluded.config_data
+                        ''', (boss_key, json.dumps(default_cfg, ensure_ascii=False), now_iso))
+                        conn.commit()
+                    except Exception:
+                        pass
+                    conn.close()
+                    self.send_json_response({
+                        'status': 'success',
+                        'boss_key': boss_key,
+                        'data': default_cfg,
+                        'updated_at': now_iso
+                    }, code=200)
+                    return
+
+                conn.close()
+                self.send_json_response({'status': 'not_found', 'boss_key': boss_key, 'data': None, 'message': f'No config for boss "{boss_key}"'}, code=200)
                 return
 
+            conn.close()
             config_data = json.loads(row['config_data'])
             self.send_json_response({
                 'status': 'success',
@@ -311,11 +377,24 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
             slot = payload.get('slot_name', 'default')
             world_data = payload.get('world_data', payload)
-            world_json = json.dumps(world_data)
-            now_iso = datetime.datetime.now().isoformat()
 
             conn = sqlite3.connect(DB_FILE)
             cur = conn.cursor()
+
+            # Filter out phantom/deleted monsters from enemies array
+            if isinstance(world_data, dict) and 'enemies' in world_data and isinstance(world_data['enemies'], list):
+                deleted_keys = set(r[0].lower() for r in cur.execute('SELECT monster_key FROM deleted_monsters').fetchall())
+                valid_keys = set(b['key'] for b in BUILTIN_LIST) | set(BUILTIN_NAMES.keys()) | {'boss', 'mainchar'}
+                for r in cur.execute('SELECT monster_key FROM custom_monsters').fetchall():
+                    valid_keys.add(str(r[0]).lower())
+                valid_keys = valid_keys - deleted_keys
+                world_data['enemies'] = [
+                    e for e in world_data['enemies']
+                    if isinstance(e, dict) and str(e.get('type', '')).lower() in valid_keys
+                ]
+
+            world_json = json.dumps(world_data)
+            now_iso = datetime.datetime.now().isoformat()
             cur.execute('''
                 INSERT INTO world_saves (slot_name, world_data, updated_at)
                 VALUES (?, ?, ?)
@@ -426,6 +505,10 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 'collisionGrid': json.loads(row['collision_grid']),
                 'props': json.loads(row['props']),
                 'colliders': json.loads(row['colliders']),
+                'chests': json.loads(row['chests']) if ('chests' in row.keys() and row['chests']) else [],
+                'shrines': json.loads(row['shrines']) if ('shrines' in row.keys() and row['shrines']) else [],
+                'pickups': json.loads(row['pickups']) if ('pickups' in row.keys() and row['pickups']) else [],
+                'spawnPoint': json.loads(row['spawn_point']) if ('spawn_point' in row.keys() and row['spawn_point'] and row['spawn_point'] != '{}') else {'x': 1600, 'y': 1600},
                 'enemies': json.loads(row['enemies']),
                 'weather': json.loads(row['weather']),
                 'updated_at': row['updated_at']
@@ -464,28 +547,100 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             collision_json = json.dumps(payload.get('collisionGrid', []))
             props_json = json.dumps(payload.get('props', []))
             colliders_json = json.dumps(payload.get('colliders', []))
-            enemies_json = json.dumps(payload.get('enemies', []))
-            weather_json = json.dumps(payload.get('weather', {'timeMode': 'auto', 'rainMode': 'auto'}))
-            now_iso = datetime.datetime.now().isoformat()
-
+            chests_json = json.dumps(payload.get('chests', []))
+            shrines_json = json.dumps(payload.get('shrines', []))
+            pickups_json = json.dumps(payload.get('pickups', []))
+            spawn_point_json = json.dumps(payload.get('spawnPoint', {'x': 1600, 'y': 1600}))
+            raw_enemies = payload.get('enemies', [])
             conn = sqlite3.connect(DB_FILE)
             cur = conn.cursor()
+
+            if isinstance(raw_enemies, list):
+                deleted_keys = set(r[0].lower() for r in cur.execute('SELECT monster_key FROM deleted_monsters').fetchall())
+                valid_keys = set(b['key'] for b in BUILTIN_LIST) | set(BUILTIN_NAMES.keys()) | {'boss', 'mainchar'}
+                for r in cur.execute('SELECT monster_key FROM custom_monsters').fetchall():
+                    valid_keys.add(str(r[0]).lower())
+                valid_keys = valid_keys - deleted_keys
+                raw_enemies = [
+                    e for e in raw_enemies
+                    if isinstance(e, dict) and str(e.get('type', '')).lower() in valid_keys
+                ]
+
+            enemies_json = json.dumps(raw_enemies)
+            weather_json = json.dumps(payload.get('weather', {'timeMode': 'auto', 'rainMode': 'auto'}))
+            now_iso = datetime.datetime.now().isoformat()
             cur.execute('''
-                INSERT INTO game_maps (slot_name, version, tiles, collision_grid, props, colliders, enemies, weather, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO game_maps (slot_name, version, tiles, collision_grid, props, colliders, chests, shrines, pickups, spawn_point, enemies, weather, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(slot_name) DO UPDATE SET
                     version = excluded.version,
                     tiles = excluded.tiles,
                     collision_grid = excluded.collision_grid,
                     props = excluded.props,
                     colliders = excluded.colliders,
+                    chests = excluded.chests,
+                    shrines = excluded.shrines,
+                    pickups = excluded.pickups,
+                    spawn_point = excluded.spawn_point,
                     enemies = excluded.enemies,
                     weather = excluded.weather,
                     updated_at = excluded.updated_at
-            ''', (slot, version, tiles_json, collision_json, props_json, colliders_json, enemies_json, weather_json, now_iso))
+            ''', (slot, version, tiles_json, collision_json, props_json, colliders_json, chests_json, shrines_json, pickups_json, spawn_point_json, enemies_json, weather_json, now_iso))
+
+            # Synchronize this newly updated master map and monsters into all world_saves so playing immediately reflects it
+            for wrow in cur.execute('SELECT slot_name, world_data FROM world_saves').fetchall():
+                w_slot, w_json = wrow[0], wrow[1]
+                try:
+                    wdata = json.loads(w_json or '{}')
+                    if not isinstance(wdata, dict):
+                        continue
+                    wdata['map'] = {
+                        'tiles': json.loads(tiles_json),
+                        'collisionGrid': json.loads(collision_json),
+                        'props': json.loads(props_json),
+                        'colliders': json.loads(colliders_json),
+                        'chests': json.loads(chests_json),
+                        'shrines': json.loads(shrines_json),
+                        'pickups': json.loads(pickups_json),
+                        'spawnPoint': json.loads(spawn_point_json)
+                    }
+                    wdata['enemies'] = json.loads(enemies_json)
+                    wdata['weather'] = json.loads(weather_json)
+
+                    # Update player spawn position in world_saves
+                    parsed_sp = json.loads(spawn_point_json)
+                    if isinstance(parsed_sp, dict) and 'x' in parsed_sp and 'y' in parsed_sp:
+                        if 'player' in wdata and isinstance(wdata['player'], dict):
+                            wdata['player']['x'] = parsed_sp['x']
+                            wdata['player']['y'] = parsed_sp['y']
+
+                    cur.execute('UPDATE world_saves SET world_data = ?, updated_at = ? WHERE slot_name = ?', (json.dumps(wdata), now_iso, w_slot))
+                except Exception as sync_e:
+                    print(f"[Map Sync to World Save Error] {sync_e}")
+
+            # Also sync new spawn point to player_states table
+            try:
+                parsed_sp = json.loads(spawn_point_json)
+                if isinstance(parsed_sp, dict) and 'x' in parsed_sp and 'y' in parsed_sp:
+                    for prow in cur.execute('SELECT slot_name, player_data FROM player_states').fetchall():
+                        p_slot, p_json = prow[0], prow[1]
+                        try:
+                            pdata = json.loads(p_json or '{}')
+                            if isinstance(pdata, dict):
+                                pdata['x'] = parsed_sp['x']
+                                pdata['y'] = parsed_sp['y']
+                                if 'player' in pdata and isinstance(pdata['player'], dict):
+                                    pdata['player']['x'] = parsed_sp['x']
+                                    pdata['player']['y'] = parsed_sp['y']
+                                cur.execute('UPDATE player_states SET player_data = ?, updated_at = ? WHERE slot_name = ?', (json.dumps(pdata), now_iso, p_slot))
+                        except Exception:
+                            pass
+            except Exception as pe:
+                print(f"[Player State Sync Error] {pe}")
+
             conn.commit()
             conn.close()
-            print(f"[Database] Saved map slot '{slot}' successfully into SQLite!")
+            print(f"[Database] Saved map slot '{slot}' successfully into SQLite and synced to world_saves!")
             self.send_json_response({
                 'status': 'success',
                 'message': f'Map saved into database slot "{slot}"',
@@ -498,19 +653,33 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
     def handle_scan_monsters(self):
         try:
+            conn = sqlite3.connect(DB_FILE)
+            cur = conn.cursor()
+            deleted_keys = set(r[0] for r in cur.execute('SELECT monster_key FROM deleted_monsters').fetchall())
+            conn.close()
+
             base_dir = os.path.dirname(os.path.abspath(__file__))
             assets_root = os.path.join(base_dir, 'Assets')
             results = []
             
-            # Known monsters to audit (characters like 'yak' are kept in Assets/characters/ and excluded from monster scans)
-            monster_keys = ['bosspreat', 'buffalo', 'tiger', 'krasue', 'monkey', 'serpent', 'imp', 'swordsman']
+            # Known monsters to audit (exclude deleted)
+            monster_keys = [b['key'] for b in BUILTIN_LIST if b['key'] not in deleted_keys]
             
-            # Also find any other folders in Assets/ (ignore characters, map_assets, sound, ui, yak, mainchar)
+            # Scan Assets/monsters/
+            monsters_root = os.path.join(assets_root, 'monsters')
+            if os.path.isdir(monsters_root):
+                for item in os.listdir(monsters_root):
+                    item_path = os.path.join(monsters_root, item)
+                    if os.path.isdir(item_path) and not item.startswith('.'):
+                        if item not in monster_keys and item not in deleted_keys:
+                            monster_keys.append(item)
+
+            # Also find any other folders in legacy Assets/ (ignore characters, map_assets, sound, ui, yak, mainchar, monsters)
             if os.path.isdir(assets_root):
                 for item in os.listdir(assets_root):
                     item_path = os.path.join(assets_root, item)
-                    if os.path.isdir(item_path) and not item.startswith('.') and item not in ['characters', 'yak', 'map_assets', 'sound', 'ui', 'mainchar']:
-                        if item not in monster_keys:
+                    if os.path.isdir(item_path) and not item.startswith('.') and item not in ['characters', 'yak', 'map_assets', 'sound', 'ui', 'mainchar', 'monsters']:
+                        if item not in monster_keys and item not in deleted_keys:
                             monster_keys.append(item)
                             
             for k in monster_keys:
@@ -519,6 +688,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 results.append({
                     'key': k,
                     'name': name,
+                    'sprite_dir': audit.get('sprite_dir', f'monsters/{k}'),
                     'audit': audit
                 })
                 
@@ -532,9 +702,16 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
     def handle_get_monsters(self):
         try:
-            # 1. Built-in registered monsters
+            conn = sqlite3.connect(DB_FILE)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            deleted_keys = set(r[0] for r in cur.execute('SELECT monster_key FROM deleted_monsters').fetchall())
+
+            # 1. Built-in registered monsters (exclude deleted)
             monsters = []
             for item in BUILTIN_LIST:
+                if item['key'] in deleted_keys:
+                    continue
                 audit = audit_monster_assets(item['key'])
                 monsters.append({
                     'key': item['key'],
@@ -544,20 +721,20 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     'is_boss': item.get('is_boss', False),
                     'is_flying': item.get('is_flying', False),
                     'scale': item.get('scale', 1.35),
+                    'sprite_dir': audit.get('sprite_dir', f'monsters/{item["key"]}'),
                     'audit': audit,
                     'can_enter_game': audit['can_enter_game']
                 })
                 
-            # 2. Custom monsters from SQLite
-            conn = sqlite3.connect(DB_FILE)
-            conn.row_factory = sqlite3.Row
-            cur = conn.cursor()
+            # 2. Custom monsters from SQLite (exclude deleted)
             cur.execute('SELECT * FROM custom_monsters ORDER BY id DESC')
             rows = cur.fetchall()
             conn.close()
             
             for r in rows:
                 k = r['monster_key']
+                if k in deleted_keys:
+                    continue
                 audit = audit_monster_assets(k)
                 monsters.append({
                     'id': r['id'],
@@ -570,6 +747,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     'is_boss': bool(r['is_boss']),
                     'is_flying': bool(r['is_flying']),
                     'is_builtin': False,
+                    'sprite_dir': audit.get('sprite_dir', f'monsters/{k}'),
                     'audit': audit,
                     'can_enter_game': audit['can_enter_game']
                 })
@@ -611,7 +789,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 return
                 
             base_dir = os.path.dirname(os.path.abspath(__file__))
-            out_dir = os.path.join(base_dir, 'Assets', key)
+            out_dir = os.path.join(base_dir, 'Assets', 'monsters', key)
             os.makedirs(out_dir, exist_ok=True)
             
             # Write any extra animation frames provided (e.g. walk_south_0, attack_south_0, etc.)
@@ -661,10 +839,11 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 }, code=400)
                 return
                 
-            # If 100% complete, persist to SQLite
+            # If 100% complete, persist to SQLite and remove from deleted_monsters if previously deleted
             now_iso = datetime.datetime.now().isoformat()
             conn = sqlite3.connect(DB_FILE)
             cur = conn.cursor()
+            cur.execute('DELETE FROM deleted_monsters WHERE monster_key = ?', (key,))
             cur.execute('''
                 INSERT INTO custom_monsters (monster_key, name, hp, attack, speed, scale, is_boss, is_flying, asset_status, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'complete', ?)
@@ -713,22 +892,32 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             if not key or not re.match(r'^[a-z0-9_-]+$', key):
                 self.send_json_response({'status': 'error', 'message': 'Missing monster_key'}, code=400)
                 return
-            if key in BUILTIN_NAMES or any(b['key'] == key for b in BUILTIN_LIST):
-                self.send_json_response({'status': 'error', 'message': 'ไม่สามารถลบมอนสเตอร์ระบบ (built-in) ได้'}, code=400)
+            if key in ['yak', 'hero']:
+                self.send_json_response({'status': 'error', 'message': 'ไม่สามารถลบตัวละครผู้เล่นหลัก (Yak Hero) ได้'}, code=400)
                 return
+
+            alias_keys = {key}
+            if key in ['bosspreat', 'boss', 'preta']:
+                alias_keys = {'bosspreat', 'boss', 'preta'}
+            elif key in ['swordsman', 'mainchar']:
+                alias_keys = {'swordsman', 'mainchar'}
 
             def strip_enemies(lst):
                 if not isinstance(lst, list):
                     return lst, 0
-                kept = [e for e in lst if not (isinstance(e, dict) and str(e.get('type', '')).lower() == key)]
+                kept = [e for e in lst if not (isinstance(e, dict) and str(e.get('type', '')).lower() in alias_keys)]
                 return kept, len(lst) - len(kept)
 
             removed_spawns = 0
             conn = sqlite3.connect(DB_FILE)
             cur = conn.cursor()
-            # 1. Registry row + per-monster config
-            cur.execute('DELETE FROM custom_monsters WHERE monster_key = ?', (key,))
-            cur.execute('DELETE FROM boss_config WHERE boss_key = ?', (key,))
+
+            # Record in deleted_monsters so it stays deleted even if built-in
+            now_iso = datetime.datetime.now().isoformat()
+            for k in alias_keys:
+                cur.execute('INSERT OR REPLACE INTO deleted_monsters (monster_key, deleted_at) VALUES (?, ?)', (k, now_iso))
+                cur.execute('DELETE FROM custom_monsters WHERE monster_key = ?', (k,))
+                cur.execute('DELETE FROM boss_config WHERE boss_key = ?', (k,))
 
             # 2. Remove its spawns from every saved map
             for row_id, enemies_json in cur.execute('SELECT id, enemies FROM game_maps').fetchall():
@@ -755,32 +944,38 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             conn.commit()
             conn.close()
 
-            # 4. Delete generated sprite files (keep any original export sub-folders such as Idle/ untouched)
+            # 4. Delete sprite folder Assets/monsters/<k> and legacy Assets/<k> completely
             removed_files = 0
-            out_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Assets', key)
-            if os.path.isdir(out_dir):
-                for fname in os.listdir(out_dir):
-                    if re.match(r'^(idle|walk|attack)_[a-z-]+(_\d+)?\.png$', fname):
-                        try:
-                            os.remove(os.path.join(out_dir, fname))
-                            removed_files += 1
-                        except OSError:
-                            pass
-                try:
-                    leftover = [f for f in os.listdir(out_dir) if f != '.DS_Store']
-                    if not leftover:
-                        import shutil
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            for k in alias_keys:
+                for parent_sub in ['monsters', '']:
+                    out_dir = os.path.join(base_dir, 'Assets', parent_sub, k) if parent_sub else os.path.join(base_dir, 'Assets', k)
+                    if os.path.isdir(out_dir):
+                        for _, _, files in os.walk(out_dir):
+                            removed_files += len(files)
                         shutil.rmtree(out_dir, ignore_errors=True)
-                except OSError:
-                    pass
 
-            print(f"[Database] Deleted monster '{key}': {removed_spawns} spawns, {removed_files} sprite files")
+            print(f"[Database] Deleted monster '{key}' (aliases: {alias_keys}): {removed_spawns} spawns, {removed_files} sprite files")
             self.send_json_response({
                 'status': 'success',
                 'monster_key': key,
                 'removed_spawns': removed_spawns,
                 'removed_files': removed_files,
                 'message': f'ลบมอนสเตอร์ {key} ออกจากระบบเรียบร้อย (ลบออกจากแผนที่/เซฟ {removed_spawns} ตัว, ไฟล์สไปรท์ {removed_files} ไฟล์)'
+            })
+        except Exception as e:
+            self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
+
+    def handle_restore_builtins(self):
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            cur = conn.cursor()
+            cur.execute('DELETE FROM deleted_monsters')
+            conn.commit()
+            conn.close()
+            self.send_json_response({
+                'status': 'success',
+                'message': '✅ คืนค่ามอนสเตอร์ดั้งเดิมของระบบทั้งหมดเรียบร้อยแล้ว'
             })
         except Exception as e:
             self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
@@ -815,9 +1010,18 @@ def audit_monster_assets(monster_key):
     
     # swordsman alias to mainchar
     folder_name = 'mainchar' if monster_key == 'swordsman' else monster_key
-    asset_dir = os.path.join(base_dir, 'Assets', folder_name)
     
-    if not os.path.isdir(asset_dir):
+    # Check Assets/monsters/<folder_name> first, then legacy Assets/<folder_name>
+    monsters_dir = os.path.join(base_dir, 'Assets', 'monsters', folder_name)
+    legacy_dir = os.path.join(base_dir, 'Assets', folder_name)
+    
+    if os.path.isdir(monsters_dir):
+        asset_dir = monsters_dir
+        rel_dir = f'monsters/{folder_name}'
+    elif os.path.isdir(legacy_dir):
+        asset_dir = legacy_dir
+        rel_dir = folder_name
+    else:
         return {
             'exists': False,
             'is_complete': False,
@@ -825,7 +1029,8 @@ def audit_monster_assets(monster_key):
             'found_directions': [],
             'missing_directions': REQUIRED_8_DIRS,
             'can_enter_game': False,
-            'error': f'ไม่พบโฟลเดอร์ Assets/{folder_name}'
+            'sprite_dir': f'monsters/{folder_name}',
+            'error': f'ไม่พบโฟลเดอร์ Assets/monsters/{folder_name} หรือ Assets/{folder_name}'
         }
         
     found_dirs = []
@@ -853,6 +1058,7 @@ def audit_monster_assets(monster_key):
         'found_directions': found_dirs,
         'missing_directions': missing_dirs,
         'can_enter_game': is_complete,
+        'sprite_dir': rel_dir,
         'error': None if is_complete else f"Asset ไม่ครบ 8 ทิศทาง (ขาด: {', '.join(missing_dirs)})"
     }
 
@@ -891,6 +1097,9 @@ def get_lan_ips():
 
 def run(port=PORT):
     init_db()
+    # Increase socket backlog from default 5 to 256 to handle massive simultaneous asset loads
+    ServerClass.request_queue_size = 256
+    ServerClass.daemon_threads = True
     # Try preferred port, fallback to port+1 if busy
     curr_port = port
     server = None

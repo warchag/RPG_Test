@@ -259,10 +259,16 @@ class Player {
     this.mp = this.maxMp;
 
     window.soundSystem.playLevelUp();
-    window.effectsManager.addAuraBurst(this.x, this.y, '#facc15', 40);
-    window.effectsManager.addDamageText(this.x, this.y - 60, `เลเวลอัป! LV.${this.level} (+5 แต้มสเตตัส)`, 'crit');
+    if (window.effectsManager && window.effectsManager.addAngelicLevelUp) {
+      window.effectsManager.addAngelicLevelUp(this.x, this.y, this.level, this);
+    } else {
+      window.effectsManager.addAuraBurst(this.x, this.y, '#facc15', 40);
+    }
+    window.effectsManager.addDamageText(this.x, this.y - 130, `+5 แต้มสเตตัส (กด C)`, 'crit');
 
-    if (window.game && window.game.savePlayerProgress) {
+    if (window.game && window.game.scheduleSave) {
+      window.game.scheduleSave(600);
+    } else if (window.game && window.game.savePlayerProgress) {
       window.game.savePlayerProgress();
     }
   }
@@ -306,6 +312,10 @@ class Player {
     if (this.hp <= 0) {
       this.hp = 0;
       this.isDead = true;
+    } else {
+      if (window.game && window.game.scheduleSave) {
+        window.game.scheduleSave(400);
+      }
     }
     return actualDamage;
   }
@@ -772,11 +782,19 @@ class Player {
     const sy = this.y - camera.y;
     const now = performance.now() / 1000;
 
-    // Character Ground Shadow
+    // Character Ground Shadow (2.5D Soft Multi-Layer)
     ctx.save();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    const groundY = sy + 3;
+    // Layer 1: Soft Ambient Outer Penumbra
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
     ctx.beginPath();
-    ctx.ellipse(sx, sy, 17, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(sx, groundY, 24, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Layer 2: Deep Contact Occlusion Core
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.56)';
+    ctx.beginPath();
+    ctx.ellipse(sx, groundY, 17, 7, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
@@ -972,7 +990,10 @@ class Player {
       defense: this.defense || this.baseDefense,
       gold: this.gold || 0,
       hpPotions: this.hpPotions !== undefined ? this.hpPotions : 3,
-      mpPotions: this.mpPotions !== undefined ? this.mpPotions : 3
+      mpPotions: this.mpPotions !== undefined ? this.mpPotions : 3,
+      charClass: this.charClass || 'yaksha',
+      className: this.className || 'มหายักษ์อสูร',
+      classTitle: this.classTitle || '"จอมพลังแห่งทศกัณฐ์ ผู้พิทักษ์ศิลาแลงและผืนพสุธาหิมพานต์"'
     };
   }
 
@@ -981,6 +1002,10 @@ class Player {
     if (typeof state.x === 'number') this.x = state.x;
     if (typeof state.y === 'number') this.y = state.y;
     if (state.dir) this.dir = state.dir;
+
+    if (state.charClass) this.charClass = state.charClass;
+    if (state.className) this.className = state.className;
+    if (state.classTitle) this.classTitle = state.classTitle;
 
     if (state.level) this.level = state.level;
     if (typeof state.exp === 'number') this.exp = state.exp;

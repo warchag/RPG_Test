@@ -54,6 +54,12 @@ class MonsterStudioController {
       btnScan.addEventListener('click', () => this.scanMonsters());
     }
 
+    // Hook Restore Built-in Monsters button
+    const btnRestore = document.getElementById('btnRestoreBuiltinMonsters');
+    if (btnRestore) {
+      btnRestore.addEventListener('click', () => this.restoreBuiltinMonsters());
+    }
+
     // Hook Add New Monster button
     const btnAdd = document.getElementById('btnOpenAddMonsterModal');
     if (btnAdd) {
@@ -1010,6 +1016,10 @@ class MonsterStudioController {
         if (window.game && window.game.mapEditor) {
           window.game.mapEditor.refreshMonsterPalette();
         }
+        // Refresh boss & monster balancing settings controller
+        if (window.bossSettingsController && typeof window.bossSettingsController.refreshMonsters === 'function') {
+          window.bossSettingsController.refreshMonsters();
+        }
       } else {
         alert(data.message || 'เกิดข้อผิดพลาดในการบันทึก');
       }
@@ -1060,8 +1070,33 @@ class MonsterStudioController {
     }
   }
 
+  async restoreBuiltinMonsters() {
+    if (!confirm('คุณต้องการกู้คืนมอนสเตอร์เริ่มต้นของระบบทั้งหมด (Restore Built-in Monsters) ใช่หรือไม่?')) return;
+    try {
+      const res = await fetch('/api/monsters/restore_builtins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'กู้คืนสำเร็จ');
+        await this.loadMonsters();
+        if (window.bossSettingsController && typeof window.bossSettingsController.refreshMonsters === 'function') {
+          window.bossSettingsController.refreshMonsters();
+        }
+        if (window.game && window.game.mapEditor) {
+          window.game.mapEditor.refreshMonsterPalette();
+        }
+      } else {
+        alert(data.message || 'กู้คืนล้มเหลว');
+      }
+    } catch (err) {
+      alert('เกิดข้อผิดพลาด: ' + err.message);
+    }
+  }
+
   async deleteMonster(key, name) {
-    if (!confirm(`คุณต้องการลบมอนสเตอร์ "${name}" (${key}) ออกจากระบบหรือไม่?`)) return;
+    if (!confirm(`คุณต้องการลบมอนสเตอร์ "${name}" (${key}) ออกจากระบบหรือไม่?\n(มอนสเตอร์จะถูกลบออกจากฐานข้อมูล แผนที่ เซฟ และไฟล์สไปรท์อย่างถาวร)`)) return;
     try {
       const res = await fetch('/api/monsters/delete', {
         method: 'POST',
@@ -1069,12 +1104,68 @@ class MonsterStudioController {
         body: JSON.stringify({ monster_key: key })
       });
       const data = await res.json();
-      if (res.ok) {
-        alert(data.message || 'ลบสำเร็จ');
-        this.loadMonsters();
+      if (res.ok && data.status === 'success') {
+        // 1. Purge active live instances from game engine in memory
+        if (window.game && window.game.enemyManager) {
+          if (Array.isArray(window.game.enemyManager.enemies)) {
+            window.game.enemyManager.enemies = window.game.enemyManager.enemies.filter(e => e.type !== key);
+          }
+          if (window.game.enemyManager.boss && window.game.enemyManager.boss.type === key) {
+            window.game.enemyManager.boss = null;
+          }
+        }
+        if (window.game && window.game.map && Array.isArray(window.game.map.savedEnemies)) {
+          window.game.map.savedEnemies = window.game.map.savedEnemies.filter(e => e.type !== key);
+        }
+
+        // 2. Purge from browser LocalStorage save caches
+        const slotKeys = ['yaksha_rpg_custom_map', 'yaksha_world_save_slot1', 'yaksha_world_save_slot2', 'yaksha_world_save_slot3', 'yaksha_world_save_default'];
+        slotKeys.forEach(slotKey => {
+          try {
+            const raw = localStorage.getItem(slotKey);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              if (Array.isArray(parsed.enemies)) {
+                parsed.enemies = parsed.enemies.filter(e => !(e && (e.type === key || (e.isBoss && e.bossType === key))));
+                localStorage.setItem(slotKey, JSON.stringify(parsed));
+              }
+            }
+          } catch (err) {}
+        });
+
+        // 3. Save cleansed state to database if game engine is running
+        if (window.game && typeof window.game.saveFullWorldState === 'function') {
+          window.game.saveFullWorldState();
+        }
+
+        // 4. Remove from cached customMonsters
+        if (window.customMonsters && window.customMonsters[key]) {
+          delete window.customMonsters[key];
+        }
+
+        // 5. Notify Map Editor and Balancer
         if (window.game && window.game.mapEditor) {
           window.game.mapEditor.refreshMonsterPalette();
         }
+        if (window.bossSettingsController && typeof window.bossSettingsController.refreshMonsters === 'function') {
+          window.bossSettingsController.refreshMonsters();
+        }
+
+        // 6. Broadcast deletion in real-time across tabs/windows (kills live running instances immediately)
+        try {
+          if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('yaksha_events');
+            bc.postMessage({ type: 'MONSTER_DELETED', key: key });
+            setTimeout(() => bc.close(), 200);
+          }
+        } catch (bErr) {}
+        try {
+          localStorage.setItem('yaksha_deleted_monster', key);
+          setTimeout(() => localStorage.removeItem('yaksha_deleted_monster'), 1200);
+        } catch (lErr) {}
+
+        alert(data.message || 'ลบสำเร็จ');
+        this.loadMonsters();
       } else {
         alert(data.message || 'ลบล้มเหลว');
       }
@@ -1110,11 +1201,11 @@ class MonsterStudioController {
         return `<span class="dir-pill ${has ? 'pill-ok' : 'pill-missing'}" title="${d}: ${has ? 'มีสไปรท์' : 'ขาดสไปรท์'}">${shortName}</span>`;
       }).join('');
 
-      // Preview Sprite
-      const spriteDir = m.key === 'mainchar' ? 'mainchar' : m.key;
+      // Preview Sprite (check monsters/ folder first, fallback to root folder)
+      const spriteDir = m.sprite_dir || (m.key === 'mainchar' ? 'mainchar' : (m.is_builtin ? m.key : `monsters/${m.key}`));
       const previewImgSrc = `Assets/${spriteDir}/idle_south.png?v=${Date.now()}`;
 
-      const deleteBtnHtml = !m.is_builtin ? `
+      const deleteBtnHtml = (m.key !== 'yak' && !m.is_player) ? `
         <button class="btn-card-action btn-card-del" onclick="window.monsterStudioController.deleteMonster('${m.key}', '${m.name}')">
           🗑️ ลบ
         </button>
@@ -1123,7 +1214,7 @@ class MonsterStudioController {
       card.innerHTML = `
         <div class="card-head">
           <div class="card-avatar-wrap">
-            <img src="${previewImgSrc}" class="card-avatar-img" onerror="this.onerror=null;this.src='Assets/ui/slot_frame_arch.png'" alt="${m.name}">
+            <img src="${previewImgSrc}" class="card-avatar-img" onerror="if(!this._triedLegacy){this._triedLegacy=true;this.src='Assets/${m.key}/idle_south.png';}else{this.onerror=null;this.src='Assets/ui/slot_frame_arch.png';}" alt="${m.name}">
           </div>
           <div class="card-meta">
             <div class="card-name-row">
@@ -1153,7 +1244,7 @@ class MonsterStudioController {
         </div>
 
         <div class="card-actions-row">
-          <a href="studio_anim.html" target="_blank" class="btn-card-action btn-card-preview" title="ดูแอนิเมชัน 8 ทิศทางในสตูดิโอ">
+          <a href="studio_anim.html?monster=${encodeURIComponent(m.key)}" target="_blank" class="btn-card-action btn-card-preview" title="ดูแอนิเมชัน 8 ทิศทางในสตูดิโอ">
             🎬 ดูใน Studio
           </a>
           ${deleteBtnHtml}

@@ -252,6 +252,34 @@ body, html {
   top: 14px;
   right: 14px;
   display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+  z-index: 90;
+}
+
+/* Sleek Horizontal Utility Dock attached seamlessly to Minimap */
+.utility-dock {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  height: 44px;
+  background: linear-gradient(145deg, rgba(24, 17, 11, 0.95) 0%, rgba(13, 12, 11, 0.98) 100%);
+  border: 2px solid #ca8a04;
+  border-right: none;
+  outline: 1px solid rgba(253, 224, 71, 0.35);
+  outline-offset: -3px;
+  border-radius: 8px 0 0 8px;
+  box-shadow: -4px 8px 22px rgba(0, 0, 0, 0.85), 0 0 12px rgba(202, 138, 4, 0.2);
+  backdrop-filter: blur(8px);
+  box-sizing: border-box;
+  margin-right: 0;
+}
+
+.minimap-column {
+  display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
@@ -263,7 +291,7 @@ body, html {
   border: 2px solid #ca8a04;
   outline: 1px solid rgba(253, 224, 71, 0.4);
   outline-offset: -3px;
-  border-radius: 8px;
+  border-radius: 0 8px 8px 8px;
   padding: 6px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.85), 0 0 12px rgba(202, 138, 4, 0.25);
   box-sizing: border-box;
@@ -327,8 +355,9 @@ body, html {
   box-shadow: 0 4px 12px rgba(0,0,0,0.45);
   cursor: pointer;
   user-select: none;
-  transition: all 0.2s ease;
-  width: 176px;
+  min-width: 176px;
+  width: auto;
+  white-space: nowrap;
   box-sizing: border-box;
 }
 
@@ -338,32 +367,137 @@ body, html {
   transform: translateY(-1px);
 }
 
-.utility-buttons {
-  display: flex;
-  gap: 8px;
-}
-
 .util-btn {
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid #ca8a04;
-  color: #fde047;
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 14px;
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(202, 138, 4, 0.45);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  text-decoration: none;
+  position: relative;
 }
 
 .util-btn:hover {
-  background: #1e293b;
-  transform: translateY(-2px);
-  border-color: #facc15;
+  background: rgba(202, 138, 4, 0.35);
+  border-color: #fde047;
+  transform: translateY(-2px) scale(1.08);
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.65);
+  z-index: 2;
+}
+
+.util-btn:active {
+  transform: translateY(1px) scale(0.96);
 }
 
 .util-btn.active {
-  background: #ca8a04;
-  color: #0f172a;
+  background: rgba(202, 138, 4, 0.4);
+  border-color: #fde047;
+  box-shadow: 0 0 12px rgba(234, 179, 8, 0.6);
+}
+
+.util-btn.muted img {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.util-btn-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+}
+
+/* --- Global Dark Fantasy RPG Tooltip --- */
+.hud-tooltip {
+  position: fixed;
+  z-index: 99999;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.96);
+  transition: opacity 0.18s cubic-bezier(0.16, 1, 0.3, 1), transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  background: linear-gradient(150deg, rgba(24, 18, 12, 0.97) 0%, rgba(12, 10, 8, 0.98) 100%);
+  border: 1.5px solid #ca8a04;
+  outline: 1px solid rgba(253, 224, 71, 0.35);
+  outline-offset: -3px;
+  border-radius: 8px;
+  padding: 8px 12px;
+  max-width: 260px;
+  min-width: 170px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.92), 0 0 14px rgba(202, 138, 4, 0.35);
+  backdrop-filter: blur(10px);
+  color: #e2e8f0;
+  font-family: 'Prompt', 'Kanit', sans-serif;
+  visibility: hidden;
+}
+
+.hud-tooltip.visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.hud-tt-arrow {
+  position: absolute;
+  top: -5px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 9px;
+  height: 9px;
+  background: #18120c;
+  border-left: 1.5px solid #ca8a04;
+  border-top: 1.5px solid #ca8a04;
+  box-shadow: -2px -2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.hud-tt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.hud-tt-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: #fde047;
+  text-shadow: 0 1px 3px #000, 0 0 8px rgba(245, 158, 11, 0.6);
+  letter-spacing: 0.3px;
+}
+
+.hud-tt-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fef08a;
+  background: rgba(202, 138, 4, 0.25);
+  border: 1px solid rgba(250, 204, 21, 0.5);
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px #000;
+}
+
+.hud-tt-divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(202, 138, 4, 0.8), rgba(202, 138, 4, 0.05));
+  margin: 5px 0 6px 0;
+}
+
+.hud-tt-desc {
+  font-size: 11px;
+  line-height: 1.45;
+  color: #cbd5e1;
+  text-shadow: 0 1px 2px #000;
 }
 
 /* Right Side: Quest Tracker */
@@ -1048,6 +1182,92 @@ body, html {
 
 .btn-action.btn-gold:hover {
   background: linear-gradient(135deg, #d97706, #f59e0b);
+}
+
+/* --- Floating Map Editor Coordinates HUD Bar --- */
+.editor-coords-hud {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 95;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(250, 204, 21, 0.45);
+  border-radius: 10px;
+  padding: 7px 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65), 0 0 12px rgba(250, 204, 21, 0.15);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-family: 'Kanit', sans-serif;
+  pointer-events: auto;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.hud-coord-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hud-coord-icon {
+  font-size: 13px;
+}
+
+.hud-coord-label {
+  color: #94a3b8;
+  font-size: 11px;
+}
+
+.hud-coord-val {
+  color: #fde047;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.hud-coord-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 2px;
+  border-left: 1px solid rgba(255, 255, 255, 0.15);
+  padding-left: 10px;
+}
+
+.hud-coord-btn {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hud-coord-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.hud-coord-btn.btn-gold {
+  border-color: rgba(250, 204, 21, 0.5);
+  color: #fde047;
+}
+
+.hud-coord-btn.btn-gold:hover {
+  background: rgba(250, 204, 21, 0.2);
+  border-color: #fde047;
+  color: #ffffff;
 }
 
 /* --- Boss Settings Modal & Tuning Controls --- */
@@ -1840,3 +2060,479 @@ body, html {
   color: #93c5fd;
 }
 
+
+/* ==========================================================================
+   Character Selection Screen (6-Slot Mythological Champions)
+   ========================================================================== */
+#characterSelectScreen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: url('../Assets/ui/char_select_bg.jpg') center center / cover no-repeat, #030508;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-y: auto;
+  padding: 24px 16px;
+  box-sizing: border-box;
+  font-family: 'Kanit', sans-serif;
+  color: #f8fafc;
+}
+
+#characterSelectScreen::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 30%, rgba(10, 15, 26, 0.45) 0%, rgba(5, 8, 14, 0.78) 60%, rgba(2, 3, 6, 0.94) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cs-container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 1140px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cs-header {
+  position: relative;
+  text-align: center;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, rgba(20, 26, 40, 0.88) 0%, rgba(10, 14, 22, 0.95) 100%);
+  border: 1.5px solid rgba(234, 179, 8, 0.65);
+  border-radius: 16px;
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.85), 0 0 25px rgba(234, 179, 8, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+}
+
+.cs-header-tag {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fbbf24;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.cs-header-title {
+  font-size: 26px;
+  font-weight: 900;
+  margin: 0;
+  background: linear-gradient(90deg, #fef08a 0%, #facc15 50%, #ca8a04 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
+}
+
+.cs-header-sub {
+  font-size: 13px;
+  color: #cbd5e1;
+  font-weight: 300;
+  margin: 4px 0 0 0;
+}
+
+.cs-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #78350f;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fde047;
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.cs-close-btn:hover {
+  background: #b45309;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.cs-content-wrap {
+  display: flex;
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (max-width: 900px) {
+  .cs-content-wrap {
+    flex-direction: column;
+  }
+}
+
+/* 6 Slots Grid */
+.cs-slots-grid {
+  flex: 1.25;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 600px) {
+  .cs-slots-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.char-select-slot {
+  position: relative;
+  background: linear-gradient(180deg, rgba(20, 26, 40, 0.85) 0%, rgba(10, 14, 24, 0.92) 100%);
+  border: 1.5px solid rgba(217, 119, 6, 0.45);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.char-select-slot:hover {
+  transform: translateY(-5px);
+  border-color: #facc15;
+  box-shadow: 0 10px 25px rgba(234, 179, 8, 0.3), 0 0 20px rgba(245, 158, 11, 0.25);
+}
+
+.char-select-slot.selected {
+  border: 2px solid #fde047;
+  background: linear-gradient(180deg, rgba(60, 38, 14, 0.92) 0%, rgba(26, 17, 8, 0.96) 100%);
+  box-shadow: 0 0 30px rgba(234, 179, 8, 0.55), inset 0 0 20px rgba(245, 158, 11, 0.25);
+  transform: translateY(-6px) scale(1.02);
+}
+
+.cs-slot-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 120px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.cs-slot-canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.cs-slot-badge {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 5px;
+  border-radius: 4px;
+  border: 1px solid;
+  line-height: 1;
+}
+
+.cs-slot-diff {
+  position: absolute;
+  bottom: 4px;
+  right: 6px;
+  font-size: 11px;
+  color: #fde047;
+  font-weight: bold;
+}
+
+.cs-slot-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #fde047;
+  margin-bottom: 1px;
+}
+
+.cs-slot-sub {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.cs-slot-pill {
+  font-size: 10px;
+  color: #fbbf24;
+  background: rgba(234, 179, 8, 0.15);
+  border: 1px solid rgba(234, 179, 8, 0.35);
+  padding: 3px 8px;
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Spotlight Card */
+.cs-spotlight-card {
+  flex: 1;
+  background: linear-gradient(135deg, rgba(20, 26, 40, 0.9) 0%, rgba(10, 14, 22, 0.95) 100%);
+  border: 2px solid rgba(234, 179, 8, 0.65);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9), 0 0 25px rgba(234, 179, 8, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cs-spotlight-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid rgba(180, 83, 9, 0.5);
+  padding-bottom: 10px;
+}
+
+.cs-role-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  background: rgba(234, 179, 8, 0.18);
+  border: 1px solid rgba(234, 179, 8, 0.45);
+  color: #fde047;
+  border-radius: 4px;
+  margin-bottom: 4px;
+}
+
+.cs-hero-title {
+  font-size: 22px;
+  font-weight: 900;
+  color: #fde047;
+  margin: 0;
+}
+
+.cs-hero-lore {
+  font-size: 11px;
+  color: #cbd5e1;
+  font-style: italic;
+  font-weight: 300;
+  margin-top: 2px;
+}
+
+.cs-diff-box {
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+}
+
+.cs-spotlight-canvas-box {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.cs-spotlight-canvas-box canvas {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+}
+
+.cs-weapon-tag {
+  position: absolute;
+  bottom: 6px;
+  left: 8px;
+  font-size: 11px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 3px 8px;
+  border-radius: 4px;
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Stat Panel */
+.cs-stats-panel {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(51, 65, 85, 0.8);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cs-stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.cs-stat-num {
+  font-weight: 800;
+}
+
+.cs-stat-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid rgba(51, 65, 85, 0.6);
+}
+
+.cs-stat-bar {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.35s ease;
+}
+
+.cs-bar-str { background: linear-gradient(90deg, #dc2626, #f97316); }
+.cs-bar-vit { background: linear-gradient(90deg, #16a34a, #2dd4bf); }
+.cs-bar-agi { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+.cs-bar-spi { background: linear-gradient(90deg, #9333ea, #c084fc); }
+
+.cs-passive-box {
+  background: rgba(120, 53, 15, 0.25);
+  border: 1px solid rgba(217, 119, 6, 0.4);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 11px;
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.cs-skills-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cs-skills-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fbbf24;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.cs-skills-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.cs-skill-item {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.cs-skill-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11px;
+  margin-bottom: 2px;
+}
+
+.cs-skill-name {
+  font-weight: 700;
+  color: #fde047;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cs-skill-badge {
+  font-family: monospace;
+  font-size: 9px;
+  padding: 1px 4px;
+  background: rgba(234, 179, 8, 0.2);
+  border: 1px solid rgba(234, 179, 8, 0.5);
+  color: #fde047;
+  border-radius: 3px;
+}
+
+.cs-skill-meta {
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.cs-skill-desc {
+  font-size: 10px;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+.cs-confirm-btn {
+  width: 100%;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: 1px solid #fef08a;
+  background: linear-gradient(90deg, #f59e0b 0%, #facc15 50%, #d97706 100%);
+  color: #0f172a;
+  font-family: 'Kanit', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.4);
+  transition: all 0.25s;
+}
+
+.cs-confirm-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(250, 204, 21, 0.7);
+  filter: brightness(1.1);
+}
+
+.cs-confirm-btn:active {
+  transform: translateY(1px);
+}
+
+/* Disabled State for Empty Character Slots */
+.cs-confirm-btn-disabled {
+  background: linear-gradient(90deg, #1e293b 0%, #334155 100%) !important;
+  color: #94a3b8 !important;
+  border: 1px solid #475569 !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  transform: none !important;
+  filter: grayscale(0.8) !important;
+}
+
+.char-select-slot.slot-empty {
+  opacity: 0.75;
+  border-style: dashed;
+}
+.char-select-slot.slot-empty:hover {
+  opacity: 1;
+}
