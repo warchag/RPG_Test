@@ -46,6 +46,29 @@ class Player {
     this.mpPotions = 3;
     this.maxPotions = 10;
 
+    // Inventory & Equipment System (Weapon, Armor, Bracer, Talisman)
+    this.inventory = [];
+    this.equipped = {
+      weapon: null,
+      armor: null,
+      bracer: null,
+      talisman: null
+    };
+    this.equipmentBonuses = {
+      attack: 0,
+      defense: 0,
+      maxHp: 0,
+      maxMp: 0,
+      critRate: 0,
+      speed: 0,
+      atkCooldown: 0,
+      bleedResist: 0,
+      str: 0,
+      vit: 0,
+      agi: 0,
+      spi: 0
+    };
+
     // Recalculate stats based on initial attributes
     this.computeStats();
 
@@ -134,10 +157,44 @@ class Player {
     }
   }
 
-  // Compute dynamic stats from base values + attributes + level
+  // Compute dynamic stats from base values + attributes + level + equipment
   computeStats() {
     const prevMaxHp = this.maxHp || 260;
     const prevMaxMp = this.maxMp || 120;
+
+    // 1. Calculate Equipment Bonuses from 4 equipped slots
+    this.equipmentBonuses = {
+      attack: 0,
+      defense: 0,
+      maxHp: 0,
+      maxMp: 0,
+      critRate: 0,
+      speed: 0,
+      atkCooldown: 0,
+      bleedResist: 0,
+      str: 0,
+      vit: 0,
+      agi: 0,
+      spi: 0
+    };
+
+    if (this.equipped) {
+      for (const slotKey of ['weapon', 'armor', 'bracer', 'talisman']) {
+        const item = this.equipped[slotKey];
+        if (item && item.stats) {
+          for (const [stKey, stVal] of Object.entries(item.stats)) {
+            if (this.equipmentBonuses[stKey] !== undefined) {
+              this.equipmentBonuses[stKey] += stVal;
+            }
+          }
+        }
+      }
+    }
+
+    const effStr = this.str + this.equipmentBonuses.str;
+    const effVit = this.vit + this.equipmentBonuses.vit;
+    const effAgi = this.agi + this.equipmentBonuses.agi;
+    const effSpi = this.spi + this.equipmentBonuses.spi;
 
     // Base formula per level
     // STR: +3.2 Attack per point, +finisher burst
@@ -145,28 +202,29 @@ class Player {
     // AGI: +1.6 Speed per point, +0.6% Crit Rate per point, attack recovery reduction
     // SPI: +8 Max MP per point, +bonus heal power, +0.12 MP/s regen per point
     const lvlBonus = (this.level - 1);
-    this.maxHp = 200 + (lvlBonus * 20) + (this.vit * 14);
-    this.maxMp = 80 + (lvlBonus * 10) + (this.spi * 8);
+    this.maxHp = 200 + (lvlBonus * 20) + (effVit * 14) + this.equipmentBonuses.maxHp;
+    this.maxMp = 80 + (lvlBonus * 10) + (effSpi * 8) + this.equipmentBonuses.maxMp;
 
-    this.baseAttack = 30 + (lvlBonus * 4) + Math.round(this.str * 3.2);
-    this.baseDefense = 8 + (lvlBonus * 2) + Math.round(this.vit * 0.85);
+    this.baseAttack = 30 + (lvlBonus * 4) + Math.round(effStr * 3.2) + this.equipmentBonuses.attack;
+    this.baseDefense = 8 + (lvlBonus * 2) + Math.round(effVit * 0.85) + this.equipmentBonuses.defense;
 
-    // Speed bonus from AGI
-    this.baseSpeed = 175 + (this.agi * 1.5);
-    // Crit rate from AGI (base 10% + 0.6% per AGI point, capped at 65%)
-    this.critRate = Math.min(0.65, 0.10 + (this.agi * 0.006));
+    // Speed bonus from AGI + equipment
+    this.baseSpeed = 175 + (effAgi * 1.5) + this.equipmentBonuses.speed;
 
-    // Attack cooldown reduction from AGI (faster swings)
-    this.attackCooldownMax = Math.max(0.18, 0.35 - (this.agi * 0.004));
+    // Crit rate from AGI + equipment (base 10% + 0.6% per AGI point, capped at 85%)
+    this.critRate = Math.min(0.85, 0.10 + (effAgi * 0.006) + (this.equipmentBonuses.critRate / 100));
+
+    // Attack cooldown reduction from AGI + equipment (faster swings)
+    this.attackCooldownMax = Math.max(0.12, 0.35 - (effAgi * 0.004) + this.equipmentBonuses.atkCooldown);
 
     // Passive MP regen from SPI (base 1.0 + 0.12 per SPI point)
-    this.mpRegenRate = 1.0 + (this.spi * 0.12);
+    this.mpRegenRate = 1.0 + (effSpi * 0.12);
 
     // Passive HP regen from high VIT (unlocks at VIT >= 20)
-    this.hpRegenRate = this.vit >= 20 ? (this.vit - 15) * 0.4 : 0;
+    this.hpRegenRate = effVit >= 20 ? (effVit - 15) * 0.4 : 0;
 
-    // Bleed resistance factor from VIT (1.0 = full bleed, reduced with higher VIT down to 0.4)
-    this.bleedResistFactor = Math.max(0.4, 1.0 - ((this.vit - 10) * 0.02));
+    // Bleed resistance factor from VIT (reduced with higher VIT and equipment)
+    this.bleedResistFactor = Math.max(0.2, 1.0 - ((effVit - 10) * 0.02) - (this.equipmentBonuses.bleedResist / 100));
 
     // Preserve HP/MP percentage after max changes if initialized
     if (this.hp !== undefined && prevMaxHp > 0) {
@@ -192,6 +250,53 @@ class Player {
       this.attack = this.baseAttack;
     }
     this.defense = this.baseDefense;
+  }
+
+  equipItem(itemIndex) {
+    if (!this.inventory || itemIndex < 0 || itemIndex >= this.inventory.length) return false;
+    const item = this.inventory[itemIndex];
+    if (!item || !['weapon', 'armor', 'bracer', 'talisman'].includes(item.slot)) return false;
+
+    if (!this.equipped) {
+      this.equipped = { weapon: null, armor: null, bracer: null, talisman: null };
+    }
+
+    const currentEquipped = this.equipped[item.slot];
+    this.inventory.splice(itemIndex, 1);
+    this.equipped[item.slot] = item;
+
+    if (currentEquipped) {
+      this.inventory.push(currentEquipped);
+    }
+
+    this.computeStats();
+    if (window.game && window.game.saveFullWorldState) {
+      window.game.saveFullWorldState();
+    }
+    return true;
+  }
+
+  unequipItem(slotKey) {
+    if (!this.equipped || !this.equipped[slotKey]) return false;
+    if (!this.inventory) this.inventory = [];
+    if (this.inventory.length >= 24) return false; // Full
+
+    const item = this.equipped[slotKey];
+    this.equipped[slotKey] = null;
+    this.inventory.push(item);
+
+    this.computeStats();
+    if (window.game && window.game.saveFullWorldState) {
+      window.game.saveFullWorldState();
+    }
+    return true;
+  }
+
+  addItem(item) {
+    if (!this.inventory) this.inventory = [];
+    if (this.inventory.length >= 24) return false;
+    this.inventory.push(item);
+    return true;
   }
 
   // Allocate 1 or more stat points to a specific stat ('str', 'vit', 'agi', 'spi')
@@ -991,6 +1096,8 @@ class Player {
       gold: this.gold || 0,
       hpPotions: this.hpPotions !== undefined ? this.hpPotions : 3,
       mpPotions: this.mpPotions !== undefined ? this.mpPotions : 3,
+      inventory: this.inventory || [],
+      equipped: this.equipped || { weapon: null, armor: null, bracer: null, talisman: null },
       charClass: this.charClass || 'yaksha',
       className: this.className || 'มหายักษ์อสูร',
       classTitle: this.classTitle || '"จอมพลังแห่งทศกัณฐ์ ผู้พิทักษ์ศิลาแลงและผืนพสุธาหิมพานต์"'
@@ -1017,7 +1124,10 @@ class Player {
     if (typeof state.agi === 'number') this.agi = state.agi;
     if (typeof state.spi === 'number') this.spi = state.spi;
 
-    // Recalculate all formulas with loaded attributes
+    if (Array.isArray(state.inventory)) this.inventory = state.inventory;
+    if (state.equipped && typeof state.equipped === 'object') this.equipped = state.equipped;
+
+    // Recalculate all formulas with loaded attributes and equipment
     this.computeStats();
 
     if (state.maxHp) this.maxHp = state.maxHp;

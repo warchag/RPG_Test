@@ -404,6 +404,20 @@ class Enemy {
         });
       }
     }
+
+    // Chance for Equipment Drop (35% normal, 75% for buffalo/elite)
+    const equipDropChance = this.type === 'buffalo' ? 0.75 : 0.35;
+    if (window.ItemSystem && Math.random() < equipDropChance) {
+      const dropItem = window.ItemSystem.rollDrop(this.type, player ? player.level : 1);
+      if (dropItem) {
+        window.gameMap.spawnPickup({
+          type: 'equipment',
+          itemData: dropItem,
+          x: this.x + (Math.random() - 0.5) * 20,
+          y: this.y + (Math.random() - 0.5) * 20
+        });
+      }
+    }
   }
 
   updateDirection8(dx, dy) {
@@ -1715,13 +1729,28 @@ class PretaBoss extends Enemy {
     window.effectsManager.addAuraBurst(this.x, this.y, '#f59e0b', 50);
     window.effectsManager.addDamageText(this.x, this.y - 80, 'พญาเปรตวัดสุทัศน์ พ่ายแพ้แล้ว!', 'crit');
 
-    // Huge drop
+    // Huge drop: Sacred Lotuses
     for (let i = 0; i < 6; i++) {
       window.gameMap.spawnPickup({
         type: 'lotus',
         x: this.x + (Math.random() - 0.5) * 80,
         y: this.y + (Math.random() - 0.5) * 80
       });
+    }
+
+    // Boss Guaranteed Epic/Legendary Equipment Drop!
+    if (window.ItemSystem) {
+      for (let i = 0; i < 2; i++) {
+        const bossDrop = window.ItemSystem.rollDrop('boss', player ? player.level : 25);
+        if (bossDrop) {
+          window.gameMap.spawnPickup({
+            type: 'equipment',
+            itemData: bossDrop,
+            x: this.x + (Math.random() - 0.5) * 60,
+            y: this.y + (Math.random() - 0.5) * 60
+          });
+        }
+      }
     }
 
     // Quest update

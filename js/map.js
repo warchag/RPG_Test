@@ -172,13 +172,14 @@ class GameMap {
   spawnPickup(item) {
     this.pickups.push({
       id: Math.random(),
-      type: item.type, // 'hp_potion', 'mp_potion', 'coin', 'lotus'
+      type: item.type, // 'hp_potion', 'mp_potion', 'coin', 'lotus', 'equipment'
+      itemData: item.itemData || null,
       x: item.x,
       y: item.y,
       value: item.value || 1,
       vy: -15 - Math.random() * 15,
       offsetY: 0,
-      life: 60, // disappears after 60s
+      life: item.type === 'equipment' ? 180 : 60, // Equipment stays 3 mins
       spawnTime: performance.now() / 1000
     });
   }
