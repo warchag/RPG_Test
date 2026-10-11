@@ -1,34 +1,71 @@
 /**
  * inventory_ui.js - Dark Fantasy Thai RPG Inventory & Equipment UI Controller
- * Manages interactive modal, 4 equipment slots, 24-slot bag grid, item tooltips,
- * stat comparisons, and equip/unequip workflows.
+ * Inspired by Classic Ragnarok Online (RO) Paperdoll Window & Dark Fantasy Suvarnabhumi Aesthetic.
+ * Features:
+ * - Central Paperdoll Shrine Pedestal with real-time animated hero preview (live animated celestial wings & costumes)
+ * - 8 surrounding equipment slots (Weapon, Armor, Pants, Talisman, Helmet, Bracer, Boots, Wings) visible simultaneously
+ * - 24-slot inventory grid (4 rows x 6 cols)
+ * - Hover Floating Tooltip (Ragnarok Online style) with live stat comparisons and hotkey hints
+ * - Slim Quick Action Bar (Hybrid style: non-cluttering action buttons for selected items)
+ * - Instant Right-Click & Double-Click to Equip / Unequip
+ * - Live total equipment bonus summary bar
  */
 
 class InventoryUIController {
   constructor() {
     this.modal = null;
+    this.tooltip = null;
     this.isOpen = false;
     this.selectedItemIndex = null;
     this.selectedEquippedSlot = null;
+    this.activeCategoryTab = 'all'; // 'all', 'equip', 'potion', 'talisman'
+    this.previewAnimFrameId = null;
     this.init();
   }
 
   init() {
     this.modal = document.getElementById('inventoryModal');
+    this.tooltip = document.getElementById('invFloatingTooltip');
     this.bindEvents();
   }
 
   bindEvents() {
+    // Category tabs
+    const tabContainer = document.getElementById('invCategoryTabs');
+    if (tabContainer) {
+      tabContainer.addEventListener('click', (e) => {
+        const btn = e.target.closest('.ro-tab-btn');
+        if (!btn) return;
+        const tabKey = btn.dataset.tab;
+        if (!tabKey) return;
+        this.activeCategoryTab = tabKey;
+        tabContainer.querySelectorAll('.ro-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+        this.selectedItemIndex = null;
+        this.render();
+      });
+    }
     // Utility Dock button
     const btnOpenUtil = document.getElementById('btnOpenInventory');
     if (btnOpenUtil) {
-      btnOpenUtil.addEventListener('click', () => this.toggleModal());
+      btnOpenUtil.onclick = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        this.toggleModal();
+      };
     }
 
     // Close button
     const btnClose = document.getElementById('btnCloseInventoryModal');
     if (btnClose) {
-      btnClose.addEventListener('click', () => this.closeModal());
+      btnClose.onclick = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        this.closeModal();
+      };
     }
 
     // Backdrop click close
@@ -43,17 +80,18 @@ class InventoryUIController {
     // Sort button
     const btnSort = document.getElementById('btnSortInventory');
     if (btnSort) {
-      btnSort.addEventListener('click', () => this.handleSortInventory());
+      btnSort.onclick = (e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        this.handleSortInventory();
+      };
     }
 
-    // Global Hotkeys: 'B' or 'I' toggles inventory
+    // Hotkey: Escape closes inventory modal if open
     window.addEventListener('keydown', (e) => {
-      // Don't trigger if typing in an input
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-      if ((e.key === 'b' || e.key === 'B' || e.key === 'i' || e.key === 'I') && !e.ctrlKey && !e.metaKey) {
-        this.toggleModal();
-      } else if (e.key === 'Escape' && this.isOpen) {
+      if (e.key === 'Escape' && this.isOpen) {
         this.closeModal();
       }
     });
@@ -69,7 +107,11 @@ class InventoryUIController {
 
   openModal() {
     if (!this.modal) this.modal = document.getElementById('inventoryModal');
-    if (!this.modal) return;
+    if (!this.tooltip) this.tooltip = document.getElementById('invFloatingTooltip');
+    if (!this.modal) {
+      console.warn('InventoryUI: #inventoryModal not found in DOM');
+      return;
+    }
 
     this.isOpen = true;
     this.modal.style.display = 'flex';
@@ -77,16 +119,109 @@ class InventoryUIController {
     this.selectedEquippedSlot = null;
 
     if (window.soundSystem && window.soundSystem.playClick) {
-      window.soundSystem.playClick();
+      try { window.soundSystem.playClick(); } catch (_) {}
     }
 
-    this.render();
+    try {
+      this.render();
+    } catch (err) {
+      console.error('InventoryUI render error:', err);
+    }
+
+    try {
+      this.startCharacterPreview();
+    } catch (err) {
+      console.error('InventoryUI preview error:', err);
+    }
   }
 
   closeModal() {
-    if (!this.modal) return;
+    if (!this.modal) this.modal = document.getElementById('inventoryModal');
     this.isOpen = false;
-    this.modal.style.display = 'none';
+    if (this.modal) {
+      this.modal.style.display = 'none';
+    }
+    this.stopCharacterPreview();
+    this.hideTooltip();
+  }
+
+  startCharacterPreview() {
+    this.stopCharacterPreview();
+    const loop = () => {
+      if (!this.isOpen) return;
+      try {
+        this.drawCharacterPreview();
+      } catch (e) {
+        console.error('Error drawing character preview:', e);
+      }
+      this.previewAnimFrameId = requestAnimationFrame(loop);
+    };
+    this.previewAnimFrameId = requestAnimationFrame(loop);
+  }
+
+  stopCharacterPreview() {
+    if (this.previewAnimFrameId) {
+      cancelAnimationFrame(this.previewAnimFrameId);
+      this.previewAnimFrameId = null;
+    }
+  }
+
+  /**
+   * Render real-time paperdoll character standing on the sandstone lotus pedestal
+   */
+  drawCharacterPreview() {
+    const canvas = document.getElementById('roCharPreviewCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const player = this.getPlayer();
+    if (!player) return;
+
+    const now = performance.now() / 1000;
+
+    // Clear canvas so the sandstone shrine background shows through
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Standing foot position: lotus pedestal surface is at (85, 175)
+    const cx = 85;
+    const cy = 175;
+
+    // Idle breathing gentle vertical bob
+    const idleBob = Math.sin(now * 3.2) * 1.5;
+    const px = cx;
+    const py = cy + idleBob;
+
+    if (player.renderFullCharacter) {
+      player.renderFullCharacter(ctx, px, py, 1.85, now, { shadow: false });
+    }
+  }
+
+  renderIconHtml(icon, size = 32) {
+    if (!icon) return '📦';
+    if (icon === 'item_hp_potion' || icon === 'hp_potion') {
+      return `<img src="Assets/ui/icon_potion_hp.png" style="width: ${size}px; height: ${size}px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); display: block;">`;
+    }
+    if (icon === 'item_mp_potion' || icon === 'mp_potion') {
+      return `<img src="Assets/ui/icon_potion_mp.png" style="width: ${size}px; height: ${size}px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); display: block;">`;
+    }
+    if (typeof icon === 'string' && (icon.includes('/') || icon.includes('.'))) {
+      return `<img src="${icon}" style="width: ${size}px; height: ${size}px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); display: block;">`;
+    }
+    if (window.assetManager && typeof icon === 'string') {
+      const asset = window.assetManager.getImage(icon);
+      if (asset) {
+        if (asset.toDataURL) {
+          try {
+            if (!asset._cachedDataUrl) asset._cachedDataUrl = asset.toDataURL();
+            return `<img src="${asset._cachedDataUrl}" style="width: ${size}px; height: ${size}px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); display: block;">`;
+          } catch (_) {}
+        } else if (asset.src) {
+          return `<img src="${asset.src}" style="width: ${size}px; height: ${size}px; object-fit: contain; pointer-events: none; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7)); display: block;">`;
+        }
+      }
+    }
+    return icon;
   }
 
   getPlayer() {
@@ -100,42 +235,99 @@ class InventoryUIController {
     this.renderEquipmentSlots(player);
     this.renderInventoryGrid(player);
     this.renderBonusStatsSummary(player);
-    this.renderItemDetails(player);
+    this.renderQuickActionBar(player);
 
     // Update Gold Coins counter
     const goldTxt = document.getElementById('invGoldCoinsText');
     if (goldTxt) goldTxt.textContent = (player.gold || 0).toLocaleString();
+
+    // Update hero title tag on pedestal
+    const charNameTag = document.getElementById('roCharNameTitle');
+    if (charNameTag) {
+      charNameTag.textContent = `${player.name || 'พญายักษ์'} • Lv.${player.level || 1}`;
+    }
   }
 
   /**
-   * Render the 4 equipped slots (Weapon, Armor, Bracer, Talisman)
+   * Render all 8 equipment slots simultaneously around the paperdoll pedestal:
+   * Left: weapon, armor, pants, talisman
+   * Right: helmet, bracer, boots, wings
    */
   renderEquipmentSlots(player) {
-    const slots = ['weapon', 'armor', 'bracer', 'talisman'];
+    const slots = ['weapon', 'armor', 'pants', 'talisman', 'helmet', 'bracer', 'boots', 'wings'];
+    const defaultIcons = {
+      weapon: 'Assets/items/wp_trident_bronze.png',
+      armor: 'Assets/items/ar_suvarn_asura.png',
+      pants: 'Assets/items/pn_hunter_pants.png',
+      talisman: 'Assets/items/tl_takrud_tone.png',
+      helmet: 'Assets/items/hm_chada_gold.png',
+      bracer: 'Assets/items/br_tiger_fangs.png',
+      boots: 'Assets/items/bt_golden_sabaton.png',
+      wings: 'Assets/items/wg_garuda_infernal.png'
+    };
+    const slotNames = {
+      weapon: 'อาวุธ',
+      armor: 'เกราะอสุรา',
+      pants: 'สนับเพลา',
+      talisman: 'เครื่องราง',
+      helmet: 'ศิราภรณ์',
+      bracer: 'สนับแขน',
+      boots: 'พระบาท',
+      wings: 'ปีกสวรรค์'
+    };
+
     slots.forEach(slotKey => {
       const slotEl = document.getElementById(`equipSlot_${slotKey}`);
       if (!slotEl) return;
 
       const item = player.equipped ? player.equipped[slotKey] : null;
       slotEl.innerHTML = '';
-      slotEl.className = 'equip-slot-box';
+      slotEl.className = 'ro-equip-box';
 
       if (item) {
-        const rarity = window.RARITY_TIERS[item.rarity] || window.RARITY_TIERS.common;
-        slotEl.classList.add(`rarity-${item.rarity}`);
+        const rarity = (window.RARITY_TIERS && window.RARITY_TIERS[item.rarity]) || {
+          name: 'ธรรมดา',
+          color: '#cbd5e1',
+          borderColor: '#94a3b8',
+          glowColor: 'rgba(148, 163, 184, 0.4)',
+          bgColor: 'rgba(30, 41, 59, 0.5)'
+        };
+
+        slotEl.classList.add('has-item');
+        if (this.selectedEquippedSlot === slotKey) {
+          slotEl.classList.add('selected');
+        }
+
         slotEl.style.borderColor = rarity.borderColor;
         slotEl.style.boxShadow = `0 0 10px ${rarity.glowColor}, inset 0 0 8px ${rarity.bgColor}`;
 
         slotEl.innerHTML = `
-          <div class="equip-slot-icon" style="font-size: 26px;">${item.icon || '⚔️'}</div>
-          <div class="equip-slot-name" style="color: ${rarity.color}; font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60px;">${item.name}</div>
-          <button class="equip-unequip-pill" title="ถอดอุปกรณ์">✕</button>
+          <div style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px;">
+            ${this.renderIconHtml(item.icon, 34)}
+          </div>
+          <div style="color: ${rarity.color}; font-size: 9.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 58px; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,0.8);">
+            ${item.name}
+          </div>
+          <button class="ro-slot-unequip-pill" title="ถอดอุปกรณ์" style="position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%; background: #ef4444; color: #fff; font-size: 10px; font-weight: bold; border: 1.5px solid #fecaca; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; line-height: 1; z-index: 5; box-shadow: 0 1px 4px rgba(0,0,0,0.6);">✕</button>
         `;
 
-        // Click to view details
+        // Hover Floating Tooltip (Ragnarok Online style)
+        slotEl.onmouseenter = (e) => this.showTooltip(item, true, e);
+        slotEl.onmousemove = (e) => this.updateTooltipPos(e);
+        slotEl.onmouseleave = () => this.hideTooltip();
+
+        // Right-Click instant unequip
+        slotEl.oncontextmenu = (e) => {
+          e.preventDefault();
+          this.hideTooltip();
+          this.handleUnequip(slotKey);
+        };
+
+        // Left-Click selects slot and updates Quick Action Bar
         slotEl.onclick = (e) => {
-          if (e.target.classList.contains('equip-unequip-pill')) {
+          if (e.target.classList.contains('ro-slot-unequip-pill')) {
             e.stopPropagation();
+            this.hideTooltip();
             this.handleUnequip(slotKey);
             return;
           }
@@ -143,79 +335,301 @@ class InventoryUIController {
           this.selectedItemIndex = null;
           this.render();
         };
+
+        // Double Click instant unequip
+        slotEl.ondblclick = (e) => {
+          e.stopPropagation();
+          this.hideTooltip();
+          this.handleUnequip(slotKey);
+        };
       } else {
-        const defaultIcons = { weapon: '⚔️', armor: '🛡️', bracer: '🥊', talisman: '📿' };
-        const slotNames = { weapon: 'อาวุธ', armor: 'เกราะอสุรา', bracer: 'สนับแขน', talisman: 'เครื่องราง' };
-        slotEl.style.borderColor = 'rgba(202, 138, 4, 0.4)';
+        slotEl.classList.add('empty');
+        slotEl.style.borderColor = 'rgba(202, 138, 4, 0.35)';
         slotEl.style.boxShadow = 'none';
+
+        if (this.selectedEquippedSlot === slotKey) {
+          slotEl.classList.add('selected');
+        }
+
         slotEl.innerHTML = `
-          <div style="font-size: 22px; opacity: 0.35;">${defaultIcons[slotKey]}</div>
-          <div style="font-size: 10px; color: #64748b; font-weight: 600;">${slotNames[slotKey]}</div>
+          <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; opacity: 0.28; filter: grayscale(1) brightness(1.3);">
+            <img src="${defaultIcons[slotKey]}" style="width: 26px; height: 26px; object-fit: contain; pointer-events: none;">
+          </div>
+          <div style="font-size: 9.5px; color: #78716c; font-weight: 600; margin-top: 1px;">${slotNames[slotKey]}</div>
         `;
+
+        slotEl.onmouseenter = null;
+        slotEl.onmousemove = null;
+        slotEl.onmouseleave = null;
+        slotEl.oncontextmenu = (e) => e.preventDefault();
+
         slotEl.onclick = () => {
           this.selectedEquippedSlot = null;
           this.render();
         };
+        slotEl.ondblclick = null;
       }
     });
   }
 
   /**
-   * Render 24-slot bag grid
+   * Render 24-slot bag grid (4 rows x 6 columns)
    */
   renderInventoryGrid(player) {
     const gridEl = document.getElementById('invGridContainer');
     if (!gridEl) return;
     gridEl.innerHTML = '';
 
-    const maxSlots = 24;
-    const inv = player.inventory || [];
+    const maxSlots = 999;
+    const allInv = player.inventory || [];
 
-    for (let i = 0; i < maxSlots; i++) {
+    // Filter items according to activeCategoryTab
+    const filteredItems = [];
+    allInv.forEach((item, originalIndex) => {
+      if (!item) return;
+      let match = true;
+      if (this.activeCategoryTab === 'equip') {
+        match = item.slot !== 'consumable' && item.slot !== 'talisman';
+      } else if (this.activeCategoryTab === 'potion') {
+        match = item.slot === 'consumable' || item.category === 'potion' || item.itemType === 'hp_potion' || item.itemType === 'mp_potion';
+      } else if (this.activeCategoryTab === 'talisman') {
+        match = item.slot === 'talisman';
+      }
+      if (match) {
+        filteredItems.push({ item, originalIndex });
+      }
+    });
+
+    // Render all filtered items + enough empty slots to fill to multiple of 8 (min 32 slots)
+    const baseSlots = Math.max(32, Math.ceil((filteredItems.length + 8) / 8) * 8);
+    const slotsToRender = Math.min(maxSlots, baseSlots);
+
+    for (let slotIdx = 0; slotIdx < slotsToRender; slotIdx++) {
       const slotEl = document.createElement('div');
-      slotEl.className = 'inv-grid-slot';
+      slotEl.className = 'ro-grid-slot';
 
-      const item = inv[i];
-      if (item) {
-        const rarity = window.RARITY_TIERS[item.rarity] || window.RARITY_TIERS.common;
+      const entry = filteredItems[slotIdx];
+      if (entry) {
+        const item = entry.item;
+        const i = entry.originalIndex;
+        const rarity = (window.RARITY_TIERS && window.RARITY_TIERS[item.rarity]) || {
+          name: 'ธรรมดา',
+          color: '#cbd5e1',
+          borderColor: '#94a3b8',
+          glowColor: 'rgba(148, 163, 184, 0.4)',
+          bgColor: 'rgba(30, 41, 59, 0.5)'
+        };
+
         slotEl.classList.add('has-item');
         slotEl.style.borderColor = rarity.borderColor;
         slotEl.style.background = rarity.bgColor;
 
         if (this.selectedItemIndex === i) {
           slotEl.classList.add('selected');
-          slotEl.style.boxShadow = `0 0 14px ${rarity.glowColor}, inset 0 0 10px ${rarity.glowColor}`;
+          slotEl.style.boxShadow = `0 0 12px ${rarity.glowColor}, inset 0 0 8px ${rarity.glowColor}`;
         }
 
+        const countBadge = (item.count && item.count > 1) 
+          ? `<span class="ro-item-stack-badge">${Math.min(99, item.count)}</span>` 
+          : '';
+
+        const rarityDot = (item.count && item.count > 1)
+          ? ''
+          : `<span style="position: absolute; bottom: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: ${rarity.color}; box-shadow: 0 0 5px ${rarity.glowColor}; pointer-events: none;"></span>`;
+
         slotEl.innerHTML = `
-          <span class="inv-slot-icon">${item.icon || '📦'}</span>
-          <span class="inv-slot-rarity-dot" style="background: ${rarity.color};"></span>
+          <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+            ${this.renderIconHtml(item.icon, 26)}
+          </span>
+          ${rarityDot}
+          ${countBadge}
         `;
 
+        // Hover Floating Tooltip
+        slotEl.addEventListener('mouseenter', (e) => this.showTooltip(item, false, e));
+        slotEl.addEventListener('mousemove', (e) => this.updateTooltipPos(e));
+        slotEl.addEventListener('mouseleave', () => this.hideTooltip());
+
+        // Right-Click instant equip or drink potion
+        slotEl.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          this.hideTooltip();
+          if (item.slot === 'consumable' || item.category === 'potion') {
+            this.handleUseConsumable(i);
+          } else {
+            this.handleEquip(i);
+          }
+        });
+
+        // Single click selects item & updates Quick Action Bar
         slotEl.addEventListener('click', () => {
           this.selectedItemIndex = i;
           this.selectedEquippedSlot = null;
           this.render();
         });
 
-        // Double click to instant equip
+        // Double click instant action
         slotEl.addEventListener('dblclick', () => {
-          this.handleEquip(i);
+          this.hideTooltip();
+          if (item.slot === 'consumable' || item.category === 'potion') {
+            this.handleUseConsumable(i);
+          } else {
+            this.handleEquip(i);
+          }
         });
       } else {
         slotEl.classList.add('empty');
+        slotEl.addEventListener('contextmenu', (e) => e.preventDefault());
       }
 
       gridEl.appendChild(slotEl);
     }
 
-    // Capacity counter
+    // Capacity counter (total items in full inventory / 999)
     const capTxt = document.getElementById('invCapacityText');
-    if (capTxt) capTxt.textContent = `${inv.length} / ${maxSlots}`;
+    if (capTxt) capTxt.textContent = `${allInv.length} / ${maxSlots}`;
   }
 
   /**
-   * Render total bonus stats provided by all 4 equipped items
+   * Show floating tooltip next to cursor
+   */
+  showTooltip(item, isEquipped, e) {
+    if (!this.tooltip) this.tooltip = document.getElementById('invFloatingTooltip');
+    if (!this.tooltip || !item) return;
+
+    const player = this.getPlayer();
+    const rarity = (window.RARITY_TIERS && window.RARITY_TIERS[item.rarity]) || {
+      name: 'ธรรมดา',
+      color: '#cbd5e1',
+      borderColor: '#94a3b8',
+      glowColor: 'rgba(148, 163, 184, 0.4)',
+      bgColor: 'rgba(30, 41, 59, 0.5)'
+    };
+
+    const slotNames = {
+      weapon: '⚔️ อาวุธ',
+      armor: '🛡️ เกราะอสุรา',
+      pants: '🩳 สนับเพลา',
+      talisman: '📿 เครื่องราง',
+      helmet: '👑 ศิราภรณ์/หมวก',
+      bracer: '🥊 สนับแขน',
+      boots: '👢 พระบาท/เกือก',
+      wings: '🪽 ปีกสวรรค์'
+    };
+
+    const currentEquippedItem = (player && player.equipped) ? player.equipped[item.slot] : null;
+
+    // Stat comparison helper
+    const buildStatComparisonHtml = (statKey, statVal, label, suffix = '') => {
+      let compHtml = '';
+      if (!isEquipped && currentEquippedItem) {
+        const curVal = currentEquippedItem.stats ? (currentEquippedItem.stats[statKey] || 0) : 0;
+        const diff = statVal - curVal;
+        if (diff > 0) {
+          compHtml = `<span style="color: #4ade80; font-size: 10px; margin-left: 4px; font-weight: bold;">(▲ +${diff}${suffix})</span>`;
+        } else if (diff < 0) {
+          compHtml = `<span style="color: #f87171; font-size: 10px; margin-left: 4px; font-weight: bold;">(▼ ${diff}${suffix})</span>`;
+        }
+      }
+      return `
+        <div class="ro-tt-stat-row">
+          <span style="color: #94a3b8;">${label}:</span>
+          <span style="color: #f1f5f9; font-weight: 700;">+${statVal}${suffix} ${compHtml}</span>
+        </div>
+      `;
+    };
+
+    let statsHtml = '';
+    const statLabels = {
+      attack: '⚔️ ATK',
+      defense: '🛡️ DEF',
+      maxHp: '❤️ Max HP',
+      maxMp: '💧 Max MP',
+      critRate: '💥 Crit',
+      speed: '🏃 Speed',
+      atkCooldown: '⏱️ Atk CD',
+      str: '💪 STR',
+      vit: '💎 VIT',
+      agi: '⚡ AGI',
+      spi: '🌸 SPI',
+      bleedResist: '🩸 Bleed Res'
+    };
+
+    for (const [sKey, sVal] of Object.entries(item.stats || {})) {
+      const label = statLabels[sKey] || sKey;
+      const suffix = (sKey === 'critRate' || sKey === 'bleedResist') ? '%' : (sKey === 'speed' ? ' px/s' : (sKey === 'atkCooldown' ? 's' : ''));
+      statsHtml += buildStatComparisonHtml(sKey, sVal, label, suffix);
+    }
+
+    this.tooltip.innerHTML = `
+      <div class="ro-tt-header">
+        <div class="ro-tt-icon-wrap" style="border-color: ${rarity.borderColor}; background: ${rarity.bgColor}; box-shadow: 0 0 8px ${rarity.glowColor};">
+          ${this.renderIconHtml(item.icon, 30)}
+        </div>
+        <div class="ro-tt-title-wrap">
+          <div class="ro-tt-name" style="color: ${rarity.color}; text-shadow: 0 0 6px ${rarity.glowColor};">
+            ${item.name}
+          </div>
+          <div class="ro-tt-badges-row">
+            <span class="ro-tt-badge" style="background: rgba(202, 138, 4, 0.25); color: #fde047; border: 1px solid #ca8a04;">
+              ${slotNames[item.slot] || item.slot}
+            </span>
+            <span class="ro-tt-badge" style="background: ${rarity.bgColor}; color: ${rarity.color}; border: 1px solid ${rarity.borderColor};">
+              ${rarity.name}
+            </span>
+            ${item.value ? `<span style="font-size: 10px; color: #facc15; margin-left: auto; font-weight: bold;">🪙 ${item.value.toLocaleString()}</span>` : ''}
+          </div>
+        </div>
+      </div>
+
+      <div class="ro-tt-stats-grid">
+        ${statsHtml || '<div style="color: #64748b; font-size: 10.5px; grid-column: span 2;">ไม่มีโบนัสสเตตัส</div>'}
+      </div>
+
+      <div class="ro-tt-lore">
+        "${item.lore || 'ยุทธภัณฑ์ศักดิ์สิทธิ์แห่งสุวรรณภูมิ'}"
+      </div>
+
+      <div class="ro-tt-footer-hint">
+        ⚡ ${isEquipped ? 'คลิกขวา หรือ ดับเบิลคลิก เพื่อถอด' : (item.slot === 'consumable' || item.category === 'potion' || item.itemType === 'hp_potion' || item.itemType === 'mp_potion') ? 'คลิกขวา หรือ ดับเบิลคลิก เพื่อดื่มยาโอสถ' : 'คลิกขวา หรือ ดับเบิลคลิก เพื่อสวมใส่'}
+      </div>
+    `;
+
+    this.tooltip.style.display = 'flex';
+    this.tooltip.style.borderColor = rarity.borderColor;
+    this.updateTooltipPos(e);
+  }
+
+  updateTooltipPos(e) {
+    if (!this.tooltip || this.tooltip.style.display === 'none') return;
+    const offset = 14;
+    let x = (e.clientX || 0) + offset;
+    let y = (e.clientY || 0) + offset;
+
+    const w = this.tooltip.offsetWidth || 270;
+    const h = this.tooltip.offsetHeight || 190;
+
+    if (x + w > window.innerWidth - 10) {
+      x = (e.clientX || 0) - w - offset;
+    }
+    if (y + h > window.innerHeight - 10) {
+      y = window.innerHeight - h - 10;
+    }
+    if (x < 10) x = 10;
+    if (y < 10) y = 10;
+
+    this.tooltip.style.left = `${x}px`;
+    this.tooltip.style.top = `${y}px`;
+  }
+
+  hideTooltip() {
+    if (this.tooltip) {
+      this.tooltip.style.display = 'none';
+    }
+  }
+
+  /**
+   * Render total bonus stats provided by all equipped items
    */
   renderBonusStatsSummary(player) {
     const summaryEl = document.getElementById('invEquipStatsSummary');
@@ -223,21 +637,21 @@ class InventoryUIController {
 
     const b = player.equipmentBonuses || { attack: 0, defense: 0, maxHp: 0, maxMp: 0, critRate: 0, speed: 0 };
     summaryEl.innerHTML = `
-      <div class="inv-stat-pill" title="พลังโจมตีเพิ่มขึ้น">⚔️ +${b.attack || 0} ATK</div>
-      <div class="inv-stat-pill" title="พลังป้องกันเพิ่มขึ้น">🛡️ +${b.defense || 0} DEF</div>
-      <div class="inv-stat-pill" title="พลังชีวิตสูงสุดเพิ่มขึ้น">❤️ +${b.maxHp || 0} HP</div>
-      <div class="inv-stat-pill" title="พลังมานาสูงสุดเพิ่มขึ้น">💧 +${b.maxMp || 0} MP</div>
-      <div class="inv-stat-pill" title="อัตราคริติคอลเพิ่มขึ้น">💥 +${b.critRate || 0}% CRIT</div>
-      <div class="inv-stat-pill" title="ความเร็วเดินเพิ่มขึ้น">🏃 +${b.speed || 0} SPD</div>
+      <div class="ro-stat-pill" title="พลังโจมตีเพิ่มขึ้น">⚔️ +${b.attack || 0} ATK</div>
+      <div class="ro-stat-pill" title="พลังป้องกันเพิ่มขึ้น">🛡️ +${b.defense || 0} DEF</div>
+      <div class="ro-stat-pill" title="พลังชีวิตสูงสุดเพิ่มขึ้น">❤️ +${b.maxHp || 0} HP</div>
+      <div class="ro-stat-pill" title="พลังมานาสูงสุดเพิ่มขึ้น">💧 +${b.maxMp || 0} MP</div>
+      <div class="ro-stat-pill" title="อัตราคริติคอลเพิ่มขึ้น">💥 +${b.critRate || 0}% CRIT</div>
+      <div class="ro-stat-pill" title="ความเร็วเดินเพิ่มขึ้น">🏃 +${b.speed || 0} SPD</div>
     `;
   }
 
   /**
-   * Render detailed inspect card for selected item (with stat comparisons)
+   * Render slim Quick Action Bar (Hybrid style: non-cluttering action buttons)
    */
-  renderItemDetails(player) {
-    const detailEl = document.getElementById('invItemDetailCard');
-    if (!detailEl) return;
+  renderQuickActionBar(player) {
+    const barEl = document.getElementById('invQuickActionBar');
+    if (!barEl) return;
 
     let item = null;
     let isEquipped = false;
@@ -252,127 +666,122 @@ class InventoryUIController {
     }
 
     if (!item) {
-      detailEl.innerHTML = `
-        <div class="inv-empty-detail">
-          <div style="font-size: 32px; opacity: 0.4;">🎒</div>
-          <div style="font-size: 13px; color: #94a3b8; font-weight: 600; margin-top: 6px;">
-            คลิกที่ไอเทมเพื่อดูรายละเอียดและสวมใส่
-          </div>
-          <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-            ดับเบิลคลิกที่ไอเทมในกระเป๋าเพื่อสวมใส่ทันที
-          </div>
+      barEl.innerHTML = `
+        <div class="ro-quick-item-info">
+          <span class="ro-quick-hint">👆 ชี้เมาส์ที่ไอเทมเพื่อดูสเตตัส • ดับเบิลคลิก/คลิกขวาเพื่อสวมใส่หรือถอดทันที</span>
+        </div>
+        <div class="ro-quick-action-buttons">
+          <!-- Standby -->
         </div>
       `;
       return;
     }
 
-    const rarity = window.RARITY_TIERS[item.rarity] || window.RARITY_TIERS.common;
-    const slotNames = { weapon: 'อาวุธ', armor: 'เกราะอสุรา', bracer: 'สนับแขน', talisman: 'เครื่องราง' };
-    const currentEquippedItem = player.equipped ? player.equipped[item.slot] : null;
+    const rarity = (window.RARITY_TIERS && window.RARITY_TIERS[item.rarity]) || {
+      name: 'ธรรมดา',
+      color: '#cbd5e1',
+      borderColor: '#94a3b8',
+      glowColor: 'rgba(148, 163, 184, 0.4)',
+      bgColor: 'rgba(30, 41, 59, 0.5)'
+    };
 
-    // Stat comparison helper
-    const buildStatComparisonHtml = (statKey, statVal, label, suffix = '') => {
-      let compHtml = '';
-      if (!isEquipped && currentEquippedItem) {
-        const curVal = currentEquippedItem.stats ? (currentEquippedItem.stats[statKey] || 0) : 0;
-        const diff = statVal - curVal;
-        if (diff > 0) {
-          compHtml = `<span style="color: #4ade80; font-size: 10px; margin-left: 6px; font-weight: bold;">(▲ +${diff}${suffix})</span>`;
-        } else if (diff < 0) {
-          compHtml = `<span style="color: #f87171; font-size: 10px; margin-left: 6px; font-weight: bold;">(▼ ${diff}${suffix})</span>`;
-        }
-      }
-      return `
-        <div class="inv-detail-stat-row">
-          <span class="label">${label}:</span>
-          <span class="val">+${statVal}${suffix} ${compHtml}</span>
+    const slotNames = {
+      weapon: '⚔️ อาวุธ',
+      armor: '🛡️ เกราะ',
+      pants: '🩳 สนับเพลา',
+      talisman: '📿 เครื่องราง',
+      helmet: '👑 ศิราภรณ์',
+      bracer: '🥊 สนับแขน',
+      boots: '👢 พระบาท',
+      wings: '🪽 ปีกสวรรค์'
+    };
+
+    barEl.innerHTML = `
+      <div class="ro-quick-item-info">
+        <div style="width: 28px; height: 28px; border-radius: 5px; border: 1.5px solid ${rarity.borderColor}; background: ${rarity.bgColor}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          ${this.renderIconHtml(item.icon, 22)}
         </div>
-      `;
-    };
-
-    let statsHtml = '';
-    const statLabels = {
-      attack: '⚔️ พลังโจมตี (Attack)',
-      defense: '🛡️ พลังป้องกัน (Defense)',
-      maxHp: '❤️ พลังชีวิตสูงสุด (Max HP)',
-      maxMp: '💧 พลังมานาสูงสุด (Max MP)',
-      critRate: '💥 อัตราคริติคอล (Crit Chance)',
-      speed: '🏃 ความเร็วเดิน (Speed)',
-      atkCooldown: '⏱️ ลดคูลดาวน์โจมตี',
-      str: '💪 พละกำลัง (STR)',
-      vit: '💎 กายาเหล็ก (VIT)',
-      agi: '⚡ วายุพริ้ว (AGI)',
-      spi: '🌸 อาคมญาณ (SPI)',
-      bleedResist: '🩸 ต้านเลือดไหล (Bleed Resist)'
-    };
-
-    for (const [sKey, sVal] of Object.entries(item.stats || {})) {
-      const label = statLabels[sKey] || sKey;
-      const suffix = (sKey === 'critRate' || sKey === 'bleedResist') ? '%' : (sKey === 'speed' ? ' px/s' : (sKey === 'atkCooldown' ? 's' : ''));
-      statsHtml += buildStatComparisonHtml(sKey, sVal, label, suffix);
-    }
-
-    detailEl.innerHTML = `
-      <div class="inv-detail-header" style="border-bottom: 1.5px solid ${rarity.borderColor};">
-        <div style="display: flex; align-items: center; gap: 10px;">
-          <div class="inv-detail-icon-box" style="border-color: ${rarity.borderColor}; background: ${rarity.bgColor};">
-            ${item.icon || '⚔️'}
+        <div style="min-width: 0;">
+          <div style="font-size: 12.5px; font-weight: 700; color: ${rarity.color}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.2;">
+            ${item.name}
           </div>
-          <div>
-            <div style="font-size: 14px; font-weight: 800; color: ${rarity.color}; text-shadow: 0 0 8px ${rarity.glowColor};">
-              ${item.name}
-            </div>
-            <div style="display: flex; gap: 6px; margin-top: 3px;">
-              <span class="inv-badge" style="background: rgba(202, 138, 4, 0.25); color: #fde047; border: 1px solid #ca8a04;">
-                ${slotNames[item.slot] || item.slot}
-              </span>
-              <span class="inv-badge" style="background: ${rarity.bgColor}; color: ${rarity.color}; border: 1px solid ${rarity.borderColor};">
-                ${rarity.name}
-              </span>
-            </div>
+          <div style="font-size: 10px; color: #94a3b8; display: flex; gap: 4px; align-items: center;">
+            <span>${slotNames[item.slot] || item.slot}</span>
+            <span>•</span>
+            <span style="color: ${rarity.color};">${rarity.name}</span>
           </div>
         </div>
       </div>
 
-      <div class="inv-detail-stats-list">
-        ${statsHtml}
-      </div>
-
-      <div class="inv-detail-lore">
-        "${item.lore || 'สมบัติล้ำค่าแห่งป่าหิมพานต์'}"
-      </div>
-
-      <div class="inv-detail-actions">
+      <div class="ro-quick-action-buttons">
         ${isEquipped ? `
-          <button id="btnDetailUnequip" class="action-btn-large" style="flex: 1; background: linear-gradient(135deg, #475569, #334155); border-color: #94a3b8;">
-            📤 ถอดอุปกรณ์
+          <button id="btnQuickUnequip" class="ro-action-btn ro-action-btn-unequip">
+            ✕ ถอดอุปกรณ์
+          </button>
+        ` : (item.slot === 'consumable' || item.category === 'potion' || item.itemType === 'hp_potion' || item.itemType === 'mp_potion') ? `
+          <button id="btnQuickUse" class="ro-action-btn ro-action-btn-use">
+            🧪 ดื่มยาโอสถ
+          </button>
+          <button id="btnQuickDiscard" class="ro-action-btn ro-action-btn-discard" title="ทิ้งไอเทม">
+            🗑️
           </button>
         ` : `
-          <button id="btnDetailEquip" class="action-btn-large" style="flex: 1; background: linear-gradient(135deg, #10b981, #059669); border-color: #34d399;">
-            📥 สวมใส่ (Equip)
+          <button id="btnQuickEquip" class="ro-action-btn ro-action-btn-equip">
+            ⚔️ สวมใส่
           </button>
-          <button id="btnDetailDiscard" class="action-btn-small" style="padding: 6px 12px; background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #fca5a5;" title="ทิ้งไอเทม">
-            🗑️ ทิ้ง
+          <button id="btnQuickDiscard" class="ro-action-btn ro-action-btn-discard" title="ทิ้งไอเทม">
+            🗑️
           </button>
         `}
       </div>
     `;
 
-    // Hook buttons
-    const btnEquip = document.getElementById('btnDetailEquip');
+    // Hook quick buttons
+    const btnEquip = document.getElementById('btnQuickEquip');
     if (btnEquip) {
-      btnEquip.addEventListener('click', () => this.handleEquip(this.selectedItemIndex));
+      btnEquip.addEventListener('click', () => {
+        this.hideTooltip();
+        this.handleEquip(this.selectedItemIndex);
+      });
     }
 
-    const btnUnequip = document.getElementById('btnDetailUnequip');
+    const btnUse = document.getElementById('btnQuickUse');
+    if (btnUse) {
+      btnUse.addEventListener('click', () => {
+        this.hideTooltip();
+        this.handleUseConsumable(this.selectedItemIndex);
+      });
+    }
+
+    const btnUnequip = document.getElementById('btnQuickUnequip');
     if (btnUnequip) {
-      btnUnequip.addEventListener('click', () => this.handleUnequip(equippedSlotKey));
+      btnUnequip.addEventListener('click', () => {
+        this.hideTooltip();
+        this.handleUnequip(equippedSlotKey);
+      });
     }
 
-    const btnDiscard = document.getElementById('btnDetailDiscard');
+    const btnDiscard = document.getElementById('btnQuickDiscard');
     if (btnDiscard) {
-      btnDiscard.addEventListener('click', () => this.handleDiscard(this.selectedItemIndex));
+      btnDiscard.addEventListener('click', () => {
+        this.hideTooltip();
+        this.handleDiscard(this.selectedItemIndex);
+      });
     }
+  }
+
+  handleUseConsumable(itemIndex) {
+    const player = this.getPlayer();
+    if (!player || itemIndex === null || itemIndex === undefined) return;
+    const item = player.inventory[itemIndex];
+    if (!item) return;
+
+    if (item.itemType === 'hp_potion' || item.templateKey === 'pot_hp_gourd') {
+      player.useHpPotion();
+    } else if (item.itemType === 'mp_potion' || item.templateKey === 'pot_mp_gourd') {
+      player.useMpPotion();
+    }
+    this.render();
   }
 
   handleEquip(itemIndex) {
@@ -446,7 +855,7 @@ class InventoryUIController {
     if (!player || !player.inventory) return;
 
     const rarityOrder = { legendary: 0, epic: 1, rare: 2, magic: 3, common: 4 };
-    const slotOrder = { weapon: 0, armor: 1, bracer: 2, talisman: 3 };
+    const slotOrder = { weapon: 0, helmet: 1, armor: 2, bracer: 3, wings: 4, pants: 5, boots: 6, talisman: 7 };
 
     player.inventory.sort((a, b) => {
       const rA = rarityOrder[a.rarity] !== undefined ? rarityOrder[a.rarity] : 99;
@@ -470,3 +879,17 @@ class InventoryUIController {
 }
 
 window.InventoryUIController = InventoryUIController;
+
+// Global initialization - handles both already ready and loading states
+function initInventoryUI() {
+  if (!window.inventoryUI) {
+    window.inventoryUI = new InventoryUIController();
+  }
+}
+window.initInventoryUI = initInventoryUI;
+
+if (document.readyState === 'loading') {
+  window.addEventListener('DOMContentLoaded', initInventoryUI);
+} else {
+  initInventoryUI();
+}

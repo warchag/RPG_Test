@@ -41,6 +41,10 @@ body, html {
   cursor: url('cursor_attack.png') 3 3, url('cursor_attack.svg') 3 3, pointer;
 }
 
+#gameCanvas.hover-pickup {
+  cursor: url('cursor_pickup.svg') 3 3, url('cursor_pickup.png') 3 3, pointer;
+}
+
 /* --- HUD Overlay --- */
 #hudOverlay {
   position: absolute;
@@ -256,6 +260,7 @@ body, html {
   align-items: flex-start;
   gap: 0;
   z-index: 90;
+  pointer-events: none; /* Never block movement clicks on empty background */
 }
 
 /* Sleek Horizontal Utility Dock attached seamlessly to Minimap */
@@ -276,6 +281,7 @@ body, html {
   backdrop-filter: blur(8px);
   box-sizing: border-box;
   margin-right: 0;
+  pointer-events: auto; /* Buttons accept clicks */
 }
 
 .minimap-column {
@@ -283,6 +289,13 @@ body, html {
   flex-direction: column;
   align-items: flex-end;
   gap: 10px;
+  pointer-events: none; /* Pass clicks on empty spaces around minimap */
+}
+
+.minimap-card,
+.weather-badge,
+#questTracker {
+  pointer-events: auto; /* Only actual card elements capture clicks */
 }
 
 .minimap-card {
@@ -567,7 +580,7 @@ body, html {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: 560px;
+  width: 610px;
   height: 96px;
   background: url('../Assets/ui/hotbar_frame.png') no-repeat center center;
   background-size: 100% 100%;
@@ -2101,70 +2114,10 @@ body, html {
   gap: 16px;
 }
 
-.cs-header {
-  position: relative;
-  text-align: center;
-  padding: 16px 24px;
-  background: linear-gradient(135deg, rgba(20, 26, 40, 0.88) 0%, rgba(10, 14, 22, 0.95) 100%);
-  border: 1.5px solid rgba(234, 179, 8, 0.65);
-  border-radius: 16px;
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.85), 0 0 25px rgba(234, 179, 8, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-}
-
-.cs-header-tag {
-  font-size: 12px;
-  font-weight: 700;
-  color: #fbbf24;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-
-.cs-header-title {
-  font-size: 26px;
-  font-weight: 900;
-  margin: 0;
-  background: linear-gradient(90deg, #fef08a 0%, #facc15 50%, #ca8a04 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
-}
-
-.cs-header-sub {
-  font-size: 13px;
-  color: #cbd5e1;
-  font-weight: 300;
-  margin: 4px 0 0 0;
-}
-
-.cs-close-btn {
-  position: absolute;
-  top: 12px;
-  right: 14px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid #78350f;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fde047;
-  font-size: 16px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
-}
-.cs-close-btn:hover {
-  background: #b45309;
-  color: #fff;
-  transform: scale(1.1);
-}
-
 .cs-content-wrap {
   display: flex;
   gap: 16px;
-  align-items: stretch;
+  align-items: flex-start;
 }
 
 @media (max-width: 900px) {
@@ -2179,6 +2132,7 @@ body, html {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
+  align-content: start;
 }
 
 @media (max-width: 600px) {
@@ -2192,7 +2146,7 @@ body, html {
   background: linear-gradient(180deg, rgba(20, 26, 40, 0.85) 0%, rgba(10, 14, 24, 0.92) 100%);
   border: 1.5px solid rgba(217, 119, 6, 0.45);
   border-radius: 12px;
-  padding: 10px;
+  padding: 10px 10px 12px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2201,6 +2155,7 @@ body, html {
   backdrop-filter: blur(8px);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
 
 .char-select-slot:hover {
@@ -2219,15 +2174,14 @@ body, html {
 .cs-slot-canvas-wrap {
   position: relative;
   width: 100%;
-  height: 120px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  height: 135px;
+  background: transparent;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  margin-bottom: 8px;
+  overflow: visible;
+  margin-bottom: 2px;
 }
 
 .cs-slot-canvas-wrap canvas {
@@ -2238,14 +2192,16 @@ body, html {
 
 .cs-slot-badge {
   position: absolute;
-  top: 5px;
-  left: 5px;
-  font-size: 10px;
+  top: 0px;
+  left: 2px;
+  font-size: 9.5px;
   font-weight: 700;
-  padding: 2px 5px;
+  padding: 2px 6px;
   border-radius: 4px;
   border: 1px solid;
-  line-height: 1;
+  line-height: 1.1;
+  z-index: 3;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.7);
 }
 
 .cs-slot-diff {
@@ -2267,7 +2223,7 @@ body, html {
 .cs-slot-sub {
   font-size: 11px;
   color: #94a3b8;
-  margin-bottom: 6px;
+  margin-bottom: 0px;
 }
 
 .cs-slot-pill {
@@ -2284,211 +2240,193 @@ body, html {
   text-overflow: ellipsis;
 }
 
-/* Spotlight Card */
-.cs-spotlight-card {
+/* --- Ragnarok Online Classic Character Status Window --- */
+.ro-cs-card {
   flex: 1;
-  background: linear-gradient(135deg, rgba(20, 26, 40, 0.9) 0%, rgba(10, 14, 22, 0.95) 100%);
-  border: 2px solid rgba(234, 179, 8, 0.65);
-  border-radius: 16px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9), 0 0 25px rgba(234, 179, 8, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 12px;
+  background: linear-gradient(155deg, rgba(22, 16, 11, 0.98) 0%, rgba(12, 10, 8, 0.98) 100%) !important;
+  border: 2px solid #ca8a04 !important;
+  outline: 1px solid rgba(253, 224, 71, 0.45) !important;
+  outline-offset: -3px;
+  border-radius: 14px !important;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.95), 0 0 25px rgba(202, 138, 4, 0.3) !important;
+  padding: 18px 20px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  box-sizing: border-box !important;
 }
 
-.cs-spotlight-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  border-bottom: 1px solid rgba(180, 83, 9, 0.5);
-  padding-bottom: 10px;
+.ro-cs-header {
+  border-bottom: 1.5px solid rgba(202, 138, 4, 0.4);
+  padding-bottom: 8px;
 }
 
-.cs-role-tag {
+.ro-cs-status-tag {
   display: inline-block;
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 700;
-  padding: 2px 7px;
-  background: rgba(234, 179, 8, 0.18);
-  border: 1px solid rgba(234, 179, 8, 0.45);
   color: #fde047;
-  border-radius: 4px;
-  margin-bottom: 4px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
 }
 
-.cs-hero-title {
+.ro-cs-name {
   font-size: 22px;
-  font-weight: 900;
+  font-weight: 800;
   color: #fde047;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
   margin: 0;
+  line-height: 1.2;
 }
 
-.cs-hero-lore {
-  font-size: 11px;
-  color: #cbd5e1;
-  font-style: italic;
-  font-weight: 300;
-  margin-top: 2px;
+.ro-cs-job {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-top: 3px;
 }
 
-.cs-diff-box {
-  text-align: right;
-  display: flex;
-  flex-direction: column;
-}
-
-.cs-spotlight-canvas-box {
+.ro-cs-stage-box {
   position: relative;
   width: 100%;
-  height: 140px;
+  height: 170px;
   border-radius: 10px;
-  background: rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: radial-gradient(circle at 50% 65%, rgba(45, 30, 15, 0.7) 0%, rgba(12, 10, 8, 0.95) 75%);
+  border: 1.5px solid rgba(202, 138, 4, 0.5);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9), 0 0 12px rgba(202, 138, 4, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
 
-.cs-spotlight-canvas-box canvas {
-  width: 140px;
-  height: 140px;
+.ro-cs-stage-box canvas {
+  width: 180px;
+  height: 170px;
   object-fit: contain;
 }
 
-.cs-weapon-tag {
+.ro-cs-map-pill {
   position: absolute;
   bottom: 6px;
   left: 8px;
-  font-size: 11px;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 3px 8px;
-  border-radius: 4px;
-  color: #e2e8f0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-/* Stat Panel */
-.cs-stats-panel {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(51, 65, 85, 0.8);
-  border-radius: 10px;
-  padding: 10px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.cs-stat-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  font-weight: 600;
-  color: #e2e8f0;
-}
-
-.cs-stat-num {
-  font-weight: 800;
-}
-
-.cs-stat-track {
-  width: 100%;
-  height: 6px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 3px;
-  overflow: hidden;
-  border: 1px solid rgba(51, 65, 85, 0.6);
-}
-
-.cs-stat-bar {
-  height: 100%;
-  border-radius: 3px;
-  transition: width 0.35s ease;
-}
-
-.cs-bar-str { background: linear-gradient(90deg, #dc2626, #f97316); }
-.cs-bar-vit { background: linear-gradient(90deg, #16a34a, #2dd4bf); }
-.cs-bar-agi { background: linear-gradient(90deg, #0284c7, #38bdf8); }
-.cs-bar-spi { background: linear-gradient(90deg, #9333ea, #c084fc); }
-
-.cs-passive-box {
-  background: rgba(120, 53, 15, 0.25);
-  border: 1px solid rgba(217, 119, 6, 0.4);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 11px;
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-}
-
-.cs-skills-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.cs-skills-title {
-  font-size: 11px;
-  font-weight: 700;
-  color: #fbbf24;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-}
-
-.cs-skills-list {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  max-height: 120px;
-  overflow-y: auto;
-}
-
-.cs-skill-item {
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid rgba(51, 65, 85, 0.7);
-  border-radius: 6px;
-  padding: 6px 8px;
-}
-
-.cs-skill-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 11px;
-  margin-bottom: 2px;
-}
-
-.cs-skill-name {
-  font-weight: 700;
-  color: #fde047;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.cs-skill-badge {
-  font-family: monospace;
-  font-size: 9px;
-  padding: 1px 4px;
-  background: rgba(234, 179, 8, 0.2);
-  border: 1px solid rgba(234, 179, 8, 0.5);
-  color: #fde047;
-  border-radius: 3px;
-}
-
-.cs-skill-meta {
-  font-size: 10px;
-  color: #94a3b8;
-}
-
-.cs-skill-desc {
-  font-size: 10px;
+  font-size: 10.5px;
   color: #cbd5e1;
-  line-height: 1.35;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(202, 138, 4, 0.35);
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.ro-cs-status-board {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(202, 138, 4, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.ro-cs-meters-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ro-cs-meter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.ro-cs-meter-lbl {
+  width: 44px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.ro-cs-meter-track {
+  flex: 1;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.ro-cs-meter-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.ro-cs-hp-fill {
+  background: linear-gradient(90deg, #16a34a, #22c55e);
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.ro-cs-mp-fill {
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+  box-shadow: 0 0 6px rgba(56, 189, 248, 0.5);
+}
+
+.ro-cs-meter-val {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #f8fafc;
+  min-width: 80px;
+  text-align: right;
+  font-family: monospace;
+}
+
+.ro-cs-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+}
+
+.ro-cs-stat-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(18, 14, 10, 0.85);
+  border: 1px solid rgba(202, 138, 4, 0.25);
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 11px;
+}
+
+.ro-cs-stat-title {
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.ro-cs-stat-val {
+  font-weight: 800;
+  font-family: monospace;
+}
+
+.ro-cs-combat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  border-top: 1px solid rgba(202, 138, 4, 0.2);
+  padding-top: 6px;
+}
+
+.ro-cs-combat-pill {
+  background: rgba(30, 20, 10, 0.7);
+  border: 1px solid rgba(202, 138, 4, 0.25);
+  border-radius: 4px;
+  padding: 3px 4px;
+  font-size: 10.5px;
+  color: #e2e8f0;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .cs-confirm-btn {
@@ -2533,6 +2471,661 @@ body, html {
   opacity: 0.75;
   border-style: dashed;
 }
-.char-select-slot.slot-empty:hover {
+.char-select-slot.slot-empty.slot-empty:hover {
   opacity: 1;
 }
+
+/* ==========================================================================
+   RAGNAROK CLASSIC INVENTORY & EQUIPMENT MODAL (Dark Fantasy Thai RPG)
+   ========================================================================== */
+.ro-inv-dialog {
+  width: 960px !important;
+  max-width: 96vw !important;
+  max-height: 94vh !important;
+  background: linear-gradient(155deg, #18130e 0%, #0d0b09 100%) !important;
+  border: 2px solid #ca8a04 !important;
+  outline: 1px solid rgba(253, 224, 71, 0.45) !important;
+  outline-offset: -3px;
+  border-radius: 12px !important;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.95), 0 0 35px rgba(202, 138, 4, 0.35) !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: mapModalFadeIn 0.22s ease-out;
+}
+
+.ro-inv-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 18px;
+  border-bottom: 1.5px solid rgba(202, 138, 4, 0.65);
+  background: linear-gradient(90deg, rgba(30, 20, 10, 0.9) 0%, rgba(15, 12, 8, 0.9) 100%);
+}
+
+.ro-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ro-header-icon {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 6px rgba(245, 158, 11, 0.6));
+}
+
+.ro-header-title {
+  margin: 0;
+  font-size: 18px;
+  color: #fde047;
+  text-shadow: 0 0 10px rgba(245, 158, 11, 0.6);
+  font-weight: 700;
+}
+
+.ro-header-sub {
+  margin: 0;
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.ro-close-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  color: #fca5a5;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.ro-close-btn:hover {
+  background: #ef4444;
+  color: #fff;
+  transform: scale(1.08);
+}
+
+.ro-inv-body {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  padding: 14px 18px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+/* --- Left Column: Ragnarok Paperdoll & 8 Equipment Slots --- */
+.ro-paperdoll-panel {
+  width: 430px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ro-panel-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #fde047;
+  border-bottom: 1px solid rgba(202, 138, 4, 0.35);
+  padding-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ro-paperdoll-stage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  position: relative;
+  background: rgba(12, 10, 8, 0.75);
+  border: 1px solid rgba(202, 138, 4, 0.35);
+  border-radius: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.ro-slots-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 72px;
+}
+
+.ro-slot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.ro-slot-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #cbd5e1;
+  white-space: nowrap;
+}
+
+.ro-equip-box {
+  width: 66px;
+  height: 66px;
+  background: rgba(18, 14, 10, 0.92);
+  border: 1.5px solid rgba(202, 138, 4, 0.45);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+  padding: 3px;
+  user-select: none;
+}
+
+.ro-equip-box:hover {
+  transform: translateY(-2px);
+  border-color: #fde047;
+  box-shadow: 0 0 12px rgba(250, 204, 21, 0.45);
+}
+
+.ro-equip-box.selected {
+  outline: 2px solid #fde047;
+  outline-offset: -1px;
+}
+
+.ro-pedestal-niche {
+  width: 195px;
+  height: 295px;
+  border-radius: 8px;
+  background: url('../Assets/ui/inv_paperdoll_bg.png') center bottom / cover no-repeat;
+  border: 1.5px solid rgba(202, 138, 4, 0.55);
+  box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.85), 0 0 15px rgba(202, 138, 4, 0.25);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+#roCharPreviewCanvas {
+  width: 170px;
+  height: 230px;
+  pointer-events: none;
+  z-index: 2;
+  margin-bottom: 2px;
+}
+
+.ro-pedestal-name-tag {
+  position: absolute;
+  top: 8px;
+  background: rgba(0, 0, 0, 0.75);
+  border: 1px solid rgba(202, 138, 4, 0.6);
+  border-radius: 12px;
+  padding: 2px 10px;
+  font-size: 11px;
+  color: #fde047;
+  font-weight: bold;
+  z-index: 3;
+}
+
+/* Equipment Bonuses Badge Bar */
+.ro-equip-stats-bar {
+  background: rgba(18, 14, 10, 0.85);
+  border: 1px solid rgba(202, 138, 4, 0.35);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.ro-stats-bar-header {
+  font-size: 10.5px;
+  font-weight: bold;
+  color: #fde047;
+  margin-bottom: 4px;
+}
+
+.ro-stats-pills-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ro-stat-pill {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(202, 138, 4, 0.3);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  color: #4ade80;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* --- Right Column: Inventory Bag Grid & Details --- */
+.ro-inventory-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 440px;
+}
+
+.ro-bag-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(202, 138, 4, 0.35);
+  padding-bottom: 6px;
+}
+
+.ro-bag-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ro-bag-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.ro-capacity-pill {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(202, 138, 4, 0.4);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: #fde047;
+  font-weight: bold;
+}
+
+.ro-bag-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ro-gold-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(202, 138, 4, 0.15);
+  border: 1px solid #ca8a04;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11.5px;
+  color: #fde047;
+  font-weight: bold;
+}
+
+.ro-sort-btn {
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(202, 138, 4, 0.4);
+  border-radius: 5px;
+  color: #cbd5e1;
+  font-size: 11px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-family: 'Kanit', sans-serif;
+  transition: all 0.15s ease;
+}
+
+.ro-sort-btn:hover {
+  background: rgba(45, 55, 72, 0.95);
+  border-color: #fde047;
+  color: #fef08a;
+}
+
+/* Inventory Category Tabs */
+.ro-bag-tabs {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(14, 11, 8, 0.7);
+  padding: 3px 5px;
+  border-radius: 6px;
+  border: 1px solid rgba(202, 138, 4, 0.25);
+}
+
+.ro-tab-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(25, 20, 15, 0.85);
+  border: 1px solid rgba(202, 138, 4, 0.25);
+  border-radius: 5px;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: 'Kanit', sans-serif;
+  transition: all 0.15s ease;
+}
+
+.ro-tab-btn:hover {
+  background: rgba(45, 35, 20, 0.95);
+  color: #fde047;
+  border-color: rgba(202, 138, 4, 0.6);
+}
+
+.ro-tab-btn.active {
+  background: linear-gradient(135deg, rgba(202, 138, 4, 0.35) 0%, rgba(120, 53, 15, 0.5) 100%);
+  color: #fef08a;
+  border-color: #facc15;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.3);
+}
+
+.ro-grid-container {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-auto-rows: 46px;
+  gap: 5px;
+  padding: 6px;
+  background: rgba(10, 8, 6, 0.88);
+  border: 1.5px solid rgba(202, 138, 4, 0.35);
+  border-radius: 8px;
+  box-sizing: border-box;
+  max-height: 285px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.ro-grid-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.ro-grid-container::-webkit-scrollbar-track {
+  background: rgba(15, 12, 8, 0.9);
+  border-radius: 4px;
+}
+
+.ro-grid-container::-webkit-scrollbar-thumb {
+  background: rgba(202, 138, 4, 0.6);
+  border-radius: 4px;
+}
+
+.ro-grid-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(250, 204, 21, 0.9);
+}
+
+.ro-grid-slot {
+  width: 100%;
+  height: 46px;
+  min-height: 46px;
+  max-height: 46px;
+  background: rgba(18, 14, 10, 0.9);
+  border: 1.5px solid rgba(148, 163, 184, 0.25);
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.ro-grid-slot.empty {
+  border-style: dashed;
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ro-grid-slot.has-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
+  z-index: 2;
+}
+
+.ro-grid-slot.selected {
+  outline: 2px solid #fde047;
+  outline-offset: -1px;
+  z-index: 3;
+}
+
+/* Stack Count Badge (RO style bottom-right numbers) */
+.ro-item-stack-badge {
+  position: absolute;
+  bottom: 1px;
+  right: 2px;
+  font-size: 8.5px;
+  font-weight: 800;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(250, 204, 21, 0.6);
+  border-radius: 3px;
+  padding: 0 3px;
+  line-height: 1.1;
+  font-family: monospace;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 2px #000;
+}
+
+/* --- Slim Quick Action Bar (Hybrid Style: Clean & Fast) --- */
+.ro-quick-action-bar {
+  background: linear-gradient(155deg, rgba(22, 16, 11, 0.95) 0%, rgba(12, 10, 7, 0.98) 100%);
+  border: 1.5px solid rgba(202, 138, 4, 0.55);
+  outline: 1px solid rgba(253, 224, 71, 0.25);
+  outline-offset: -2px;
+  border-radius: 8px;
+  padding: 6px 12px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-sizing: border-box;
+}
+
+.ro-quick-item-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.ro-quick-hint {
+  font-size: 11px;
+  color: #94a3b8;
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ro-quick-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ro-action-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: 'Kanit', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid;
+}
+
+.ro-action-btn-equip {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(21, 128, 61, 0.3) 100%);
+  border-color: #22c55e;
+  color: #86efac;
+}
+
+.ro-action-btn-equip:hover {
+  background: #22c55e;
+  color: #052e16;
+  transform: translateY(-1px);
+}
+
+.ro-action-btn-use {
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.25) 0%, rgba(2, 132, 199, 0.3) 100%);
+  border-color: #38bdf8;
+  color: #bae6fd;
+}
+
+.ro-action-btn-use:hover {
+  background: #0284c7;
+  color: #f0f9ff;
+  transform: translateY(-1px);
+}
+
+.ro-action-btn-unequip {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.3) 100%);
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.ro-action-btn-unequip:hover {
+  background: #ef4444;
+  color: #450a0a;
+  transform: translateY(-1px);
+}
+
+.ro-action-btn-discard {
+  background: rgba(100, 116, 139, 0.2);
+  border-color: #64748b;
+  color: #cbd5e1;
+}
+
+.ro-action-btn-discard:hover {
+  background: #64748b;
+  color: #fff;
+}
+
+/* --- Floating Ragnarok Online Item Hover Tooltip --- */
+.ro-floating-tooltip {
+  position: fixed;
+  z-index: 99999;
+  pointer-events: none;
+  width: 270px;
+  max-width: 90vw;
+  background: linear-gradient(155deg, rgba(22, 16, 11, 0.98) 0%, rgba(12, 10, 8, 0.98) 100%);
+  border: 1.5px solid #ca8a04;
+  outline: 1px solid rgba(253, 224, 71, 0.45);
+  outline-offset: -2px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.95), 0 0 20px rgba(202, 138, 4, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  box-sizing: border-box;
+  font-family: 'Kanit', sans-serif;
+  color: #f1f5f9;
+  transform: translate3d(0, 0, 0);
+  transition: opacity 0.1s ease-out;
+}
+
+.ro-tt-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(202, 138, 4, 0.35);
+}
+
+.ro-tt-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8);
+}
+
+.ro-tt-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+.ro-tt-name {
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ro-tt-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.ro-tt-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 1px 6px;
+  line-height: 1.2;
+}
+
+.ro-tt-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 10px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 6px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ro-tt-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+.ro-tt-lore {
+  font-size: 10px;
+  color: #94a3b8;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px 7px;
+  border-radius: 4px;
+  border-left: 2px solid #ca8a04;
+  line-height: 1.35;
+}
+
+.ro-tt-footer-hint {
+  font-size: 9.5px;
+  color: #fde047;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+  opacity: 0.9;
+}
+
+

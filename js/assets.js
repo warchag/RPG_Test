@@ -39,16 +39,14 @@ class AssetManager {
       }
     }
 
-    // 2.5 Yak Attack Animation Frames (8 directions x 4 frames = 32 frames)
+    // 2.5 Yak Attack Sheet (16-bit authentic retro pixel art matching hero asset)
+    list.push({
+      key: 'yak_attack_cleave_sheet',
+      src: 'Assets/characters/yak/yak_attack_normal_sheet.png?v=normal_swing_v1'
+    });
+
     for (const dir of this.directions) {
       list.push({ key: `yak_attack_${dir}`, src: `Assets/characters/yak/Attack/rotations/${dir}.png` });
-      for (let f = 0; f < 4; f++) {
-        const framePad = String(f).padStart(3, '0');
-        list.push({
-          key: `yak_attack_${dir}_${f}`,
-          src: `Assets/characters/yak/Idle/animations/Attack/${dir}/frame_${framePad}.png`
-        });
-      }
     }
 
     // 3. Realistic Hand-Painted Fantasy Player Hero Skills & Attack VFX
@@ -178,6 +176,7 @@ class AssetManager {
       // Generate procedural monsters, items, and world props
       this.generateProceduralSprites();
       this.loadCustomMonsters();
+      this.processYakAttackSheet();
       this.isReady = true;
       console.log(`[AssetManager] Loaded ${completed}/${this.totalToLoad} sprites. Game ready!`);
       if (this.onComplete) this.onComplete();
@@ -253,7 +252,14 @@ class AssetManager {
   getImage(key) {
     if (!key) return null;
     if (this.images[key]) return this.images[key];
-    // Directional fallback for 4-direction monsters requesting 8-direction keys
+
+    // Lazy process yak attack sheet if requested before finishAll
+    if (key.startsWith('yak_attack_') && this.images['yak_attack_cleave_sheet'] && !this._yakAttackProcessed) {
+      this.processYakAttackSheet();
+      if (this.images[key]) return this.images[key];
+    }
+
+    // Directional fallback for 4-direction monsters/attacks requesting 8-direction keys
     for (const d8 of ['south-east', 'south-west', 'north-east', 'north-west']) {
       if (key.includes(d8)) {
         const d4 = d8.includes('east') ? 'east' : (d8.includes('west') ? 'west' : (d8.includes('north') ? 'north' : 'south'));
@@ -262,6 +268,115 @@ class AssetManager {
       }
     }
     return null;
+  }
+
+  processYakAttackSheet() {
+    const sheet = this.images['yak_attack_cleave_sheet'];
+    if (!sheet) return;
+    const sWidth = sheet.naturalWidth || sheet.width;
+    const sHeight = sheet.naturalHeight || sheet.height;
+    if (!sWidth || !sHeight) return;
+
+    this._yakAttackProcessed = true;
+    const cellW = sWidth / 4;
+    const cellH = sHeight / 4;
+    const targetSize = 68;
+    const rowDirs = ['south', 'east', 'north', 'west'];
+
+    for (let row = 0; row < 4; row++) {
+      const mainDir = rowDirs[row];
+      for (let col = 0; col < 4; col++) {
+        const cvs = document.createElement('canvas');
+        cvs.width = targetSize;
+        cvs.height = targetSize;
+        const ctx = cvs.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        // Subtle inset to center character nicely
+        const inset = 6;
+        const sx = col * cellW + inset;
+        const sy = row * cellH + inset;
+        const sW = cellW - (inset * 2);
+        const sH = cellH - (inset * 2);
+
+        ctx.drawImage(sheet, sx, sy, sW, sH, 0, 0, targetSize, targetSize);
+
+        // Color keying: Cleanly remove white background (#ffffff) or black background
+        try {
+          const imgData = ctx.getImageData(0, 0, targetSize, targetSize);
+          const d = imgData.data;
+          const w = targetSize;
+          const h = targetSize;
+
+          // 1. Flood-fill from borders for connected near-white / black background
+          const visited = new Uint8Array(w * h);
+          const queue = [];
+
+          // Enqueue border pixels
+          for (let x = 0; x < w; x++) {
+            queue.push(x, 0);
+            queue.push(x, h - 1);
+          }
+          for (let y = 1; y < h - 1; y++) {
+            queue.push(0, y);
+            queue.push(w - 1, y);
+          }
+
+          let qHead = 0;
+          while (qHead < queue.length) {
+            const px = queue[qHead++];
+            const py = queue[qHead++];
+            const idx = py * w + px;
+            if (visited[idx]) continue;
+            visited[idx] = 1;
+
+            const p4 = idx * 4;
+            const r = d[p4];
+            const g = d[p4 + 1];
+            const b = d[p4 + 2];
+
+            // If white / near-white or black background
+            const isWhite = (r > 215 && g > 215 && b > 215);
+            const isBlack = (r < 24 && g < 24 && b < 24);
+
+            if (isWhite || isBlack) {
+              d[p4 + 3] = 0; // Make transparent
+
+              // Neighbor expansion
+              if (px > 0 && !visited[idx - 1]) queue.push(px - 1, py);
+              if (px < w - 1 && !visited[idx + 1]) queue.push(px + 1, py);
+              if (py > 0 && !visited[idx - w]) queue.push(px, py - 1);
+              if (py < h - 1 && !visited[idx + w]) queue.push(px, py + 1);
+            }
+          }
+
+          // 2. Extra pass for any isolated near-white background artifacts
+          for (let i = 0; i < d.length; i += 4) {
+            const r = d[i];
+            const g = d[i + 1];
+            const b = d[i + 2];
+            if (r > 238 && g > 238 && b > 238) {
+              d[i + 3] = 0;
+            }
+          }
+
+          ctx.putImageData(imgData, 0, 0);
+        } catch (e) {
+          console.warn('[AssetManager] Color keying error on yak attack frame:', e);
+        }
+
+        const targetDirs = [mainDir];
+        if (mainDir === 'east') targetDirs.push('south-east', 'north-east');
+        if (mainDir === 'west') targetDirs.push('south-west', 'north-west');
+
+        for (const dir of targetDirs) {
+          this.images[`yak_attack_${dir}_${col}`] = cvs;
+          if (col === 2) {
+            this.images[`yak_attack_${dir}`] = cvs;
+          }
+        }
+      }
+    }
   }
 
   createFallbackImage() {
@@ -589,88 +704,274 @@ class AssetManager {
 
   // --- Procedural Items & Pickups ---
   generateItemSprites() {
-    // 1. Treasure Chest (36x32)
+    // 1. Treasure Chest (36x32) - Weathered teak & gold Asura reliquary
     this.images['item_chest'] = this.drawCanvas(36, 32, (ctx) => {
-      // Wood body
-      ctx.fillStyle = '#92400e';
+      // Wood body with deep iron/gold rivets
+      ctx.fillStyle = '#451a03';
       ctx.fillRect(4, 10, 28, 18);
-      // Gold trim
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(6, 12, 24, 14);
+
+      // Gold frame trims and corner brackets
       ctx.fillStyle = '#fbbf24';
-      ctx.fillRect(2, 8, 32, 4);
-      ctx.fillRect(15, 12, 6, 8);
-      ctx.fillRect(4, 26, 28, 2);
-      // Keyhole
-      ctx.fillStyle = '#1c1917';
-      ctx.fillRect(17, 15, 2, 3);
+      ctx.fillRect(4, 9, 28, 3);
+      ctx.fillRect(4, 25, 28, 3);
+      ctx.fillRect(4, 10, 3, 16);
+      ctx.fillRect(29, 10, 3, 16);
+      ctx.fillRect(15, 9, 6, 18);
+
+      // Antique highlight & rivets
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(5, 10, 1, 1);
+      ctx.fillRect(30, 10, 1, 1);
+      ctx.fillRect(16, 10, 4, 1);
+      ctx.fillRect(17, 18, 2, 2);
+
+      // Central Keyhole with glowing ruby
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(17, 15, 2, 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(17, 20, 2, 3);
     });
 
-    // 2. Health Potion / ยาเพิ่มพลังชีวิต (28x28)
-    this.images['item_hp_potion'] = this.drawCanvas(28, 28, (ctx) => {
-      // Bottle neck
+    // 2. Health Potion / น้ำเต้าโอสถทิพย์ฟื้นฟูเลือด (32x32) - Authentic Thai Gourd Flask
+    this.images['item_hp_potion'] = this.drawCanvas(32, 32, (ctx) => {
+      // Gold ornate stopper / จุกทองคำปลายกนก
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(14, 2, 4, 3);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(15, 1, 2, 2);
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(13, 5, 6, 2);
+
+      // Upper gourd sphere (ลูกน้ำเต้าท่อนบน)
+      ctx.fillStyle = '#991b1b';
+      ctx.beginPath();
+      ctx.arc(16, 11, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lower gourd sphere (ลูกน้ำเต้าท่อนล่างอวบอิ่ม)
+      ctx.fillStyle = '#991b1b';
+      ctx.beginPath();
+      ctx.arc(16, 20, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing crimson elixir gradient fill (น้ำยาโอสถสีชาด)
+      const hpGrad = ctx.createRadialGradient(15, 20, 1, 16, 20, 8);
+      hpGrad.addColorStop(0, '#f87171');
+      hpGrad.addColorStop(0.5, '#ef4444');
+      hpGrad.addColorStop(1, '#b91c1c');
+      ctx.fillStyle = hpGrad;
+      ctx.beginPath();
+      ctx.arc(16, 20, 7.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Sacred Gold Waist Ribbon & Talisman Knot (เชือกแพรทองคาดเอวน้ำเต้า)
+      ctx.fillStyle = '#fbbf24';
+      ctx.fillRect(13, 14, 6, 2);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(15, 15, 2, 3); // Hanging tassel
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(12, 14, 1, 2);
+      ctx.fillRect(19, 14, 1, 2);
+
+      // Glass specular reflection highlights (แสงสะท้อนทรงกลม 16-bit)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      ctx.fillRect(13, 8, 2, 3);
+      ctx.fillRect(12, 17, 2, 4);
+      ctx.fillRect(14, 16, 1, 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(13, 18, 1, 2);
+
+      // Tiny healing sparkle
+      ctx.fillStyle = '#fecaca';
+      ctx.fillRect(20, 22, 1, 1);
+      ctx.fillRect(21, 23, 1, 1);
+    });
+
+    // 3. Mana Potion / น้ำเต้าอมฤตฟื้นฟูมานา (32x32) - Celestial Sapphire Gourd Flask
+    this.images['item_mp_potion'] = this.drawCanvas(32, 32, (ctx) => {
+      // Silver/White-gold ornate stopper / จุกเงินลงยันต์
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(14, 2, 4, 3);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(15, 1, 2, 2);
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(13, 5, 6, 2);
+
+      // Upper gourd sphere
+      ctx.fillStyle = '#1e3a8a';
+      ctx.beginPath();
+      ctx.arc(16, 11, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lower gourd sphere
+      ctx.fillStyle = '#1e3a8a';
+      ctx.beginPath();
+      ctx.arc(16, 20, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing mystical sapphire elixir fill
+      const mpGrad = ctx.createRadialGradient(15, 20, 1, 16, 20, 8);
+      mpGrad.addColorStop(0, '#67e8f9');
+      mpGrad.addColorStop(0.4, '#38bdf8');
+      mpGrad.addColorStop(0.8, '#0284c7');
+      mpGrad.addColorStop(1, '#1e40af');
+      ctx.fillStyle = mpGrad;
+      ctx.beginPath();
+      ctx.arc(16, 20, 7.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Silver Waist Band & Talisman Knot
       ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(11, 4, 6, 5);
-      ctx.fillStyle = '#b45309'; // Cork
-      ctx.fillRect(11, 2, 6, 3);
-      // Round glass body
-      ctx.fillStyle = '#ef4444'; // Red potion
-      ctx.beginPath();
-      ctx.arc(14, 17, 9, 0, Math.PI * 2);
-      ctx.fill();
-      // Glass sheen
-      ctx.fillStyle = '#fca5a5';
-      ctx.beginPath();
-      ctx.arc(11, 14, 3, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillRect(13, 14, 6, 2);
+      ctx.fillStyle = '#f1f5f9';
+      ctx.fillRect(15, 15, 2, 3);
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(12, 14, 1, 2);
+      ctx.fillRect(19, 14, 1, 2);
+
+      // Specular glass reflection
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.fillRect(13, 8, 2, 3);
+      ctx.fillRect(12, 17, 2, 4);
+      ctx.fillRect(14, 16, 1, 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(13, 18, 1, 2);
+
+      // Mana sparkle
+      ctx.fillStyle = '#cffafe';
+      ctx.fillRect(20, 22, 1, 1);
+      ctx.fillRect(21, 23, 1, 1);
     });
 
-    // 3. Mana Potion / ยาเพิ่มมานา (28x28)
-    this.images['item_mp_potion'] = this.drawCanvas(28, 28, (ctx) => {
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(11, 4, 6, 5);
-      ctx.fillStyle = '#b45309';
-      ctx.fillRect(11, 2, 6, 3);
-      ctx.fillStyle = '#3b82f6'; // Blue potion
+    // 4. Gold Coins / กองเหรียญทองคำและเงินพดด้วง (32x28) - Authentic Siamese Bullet Coins & Gold Coins
+    this.images['item_coin'] = this.drawCanvas(32, 28, (ctx) => {
+      // 1. Shadow beneath pile
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
       ctx.beginPath();
-      ctx.arc(14, 17, 9, 0, Math.PI * 2);
+      ctx.ellipse(16, 21, 12, 5, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#93c5fd';
-      ctx.beginPath();
-      ctx.arc(11, 14, 3, 0, Math.PI * 2);
-      ctx.fill();
-    });
 
-    // 4. Gold Coin (24x24)
-    this.images['item_coin'] = this.drawCanvas(24, 24, (ctx) => {
-      ctx.fillStyle = '#eab308';
+      // 2. Base round gold coins (เหรียญกษาปณ์ทองคำทรงกลม)
+      // Bottom coin left
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath(); ctx.ellipse(9, 18, 6.5, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.ellipse(9, 17, 6, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.ellipse(9, 16.5, 4, 2, 0, 0, Math.PI * 2); ctx.fill();
+
+      // Bottom coin right
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath(); ctx.ellipse(22, 19, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.ellipse(22, 18, 6.5, 3.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.ellipse(22, 17.5, 4, 2, 0, 0, Math.PI * 2); ctx.fill();
+
+      // 3. Ancient Siamese Pod Duang Bullet Coins (เงินพดด้วงทรงกระสุนประทับตรา)
+      // Left Pod Duang (เงินพดด้วงซ้าย)
+      ctx.fillStyle = '#1e293b';
       ctx.beginPath();
-      ctx.arc(12, 12, 9, 0, Math.PI * 2);
+      ctx.roundRect ? ctx.roundRect(6, 10, 8, 8, 3) : ctx.rect(6, 10, 8, 8);
+      ctx.fill();
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(7, 11, 6, 6, 2) : ctx.rect(7, 11, 6, 6);
+      ctx.fill();
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(9, 13, 2, 2); // ตราประทับจักร/ปราสาท
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(8, 12, 2, 1);
+
+      // Center High-Value Golden Pod Duang (พดด้วงทองคำแท้ตรงกลาง)
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(12, 7, 10, 10, 4) : ctx.rect(12, 7, 10, 10);
+      ctx.fill();
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(13, 8, 8, 8, 3) : ctx.rect(13, 8, 8, 8);
       ctx.fill();
       ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.arc(12, 12, 6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = '#ca8a04';
-      ctx.font = 'bold 9px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('฿', 12, 12);
+      ctx.fillRect(15, 9, 4, 3);
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(16, 12, 2, 2); // ตราประทับสุวรรณภูมิ
+
+      // 4. Overlapping front gold coins
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath(); ctx.ellipse(16, 20, 7.5, 4.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath(); ctx.ellipse(16, 19, 7, 4, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath(); ctx.ellipse(16, 18.5, 5, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(15, 18, 2, 1.5); // สัญลักษณ์ ฿
+
+      // 5. Golden Glint & Sparkle (ประกายดาวทองคำ 4 ทิศ)
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(23, 7, 1, 1);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(22, 7, 3, 1);
+      ctx.fillRect(23, 6, 1, 3);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(8, 6, 1, 1);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(7, 6, 3, 1);
+      ctx.fillRect(8, 5, 1, 3);
     });
 
-    // 5. Sacred Lotus / บัวทิพย์ (30x30)
-    this.images['item_lotus'] = this.drawCanvas(30, 30, (ctx) => {
-      // Petals
-      const colors = ['#f472b6', '#ec4899', '#db2777'];
-      colors.forEach((col, i) => {
-        ctx.fillStyle = col;
+    // 5. Sacred Lotus / ดอกบัวทิพย์สระอโนดาต (32x32)
+    this.images['item_lotus'] = this.drawCanvas(32, 32, (ctx) => {
+      // Outer deep pink petals
+      const outerPetals = [
+        { cx: 9, cy: 19, rx: 5, ry: 9, rot: -0.6 },
+        { cx: 23, cy: 19, rx: 5, ry: 9, rot: 0.6 },
+        { cx: 16, cy: 23, rx: 8, ry: 4, rot: 0 }
+      ];
+      ctx.fillStyle = '#be185d';
+      outerPetals.forEach(p => {
         ctx.beginPath();
-        ctx.ellipse(15, 17 - i * 2, 10 - i * 2, 6, 0, 0, Math.PI * 2);
+        ctx.ellipse(p.cx, p.cy, p.rx, p.ry, p.rot, 0, Math.PI * 2);
         ctx.fill();
       });
-      // Golden center
+
+      // Mid-layer radiant pink lotus petals
+      const midPetals = [
+        { cx: 12, cy: 16, rx: 4.5, ry: 8, rot: -0.3 },
+        { cx: 20, cy: 16, rx: 4.5, ry: 8, rot: 0.3 },
+        { cx: 16, cy: 14, rx: 5, ry: 9, rot: 0 }
+      ];
+      ctx.fillStyle = '#f472b6';
+      midPetals.forEach(p => {
+        ctx.beginPath();
+        ctx.ellipse(p.cx, p.cy, p.rx, p.ry, p.rot, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Inner glowing holy gold & white core
+      ctx.fillStyle = '#fdf2f8';
+      ctx.beginPath();
+      ctx.ellipse(16, 15, 3.5, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Golden Anodat pollen pod (ฝักบัวทองคำเรืองแสง)
       ctx.fillStyle = '#fde047';
       ctx.beginPath();
-      ctx.arc(15, 15, 3, 0, Math.PI * 2);
+      ctx.ellipse(16, 18, 5, 3, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(14, 18, 1, 1);
+      ctx.fillRect(16, 17, 1, 1);
+      ctx.fillRect(18, 18, 1, 1);
+
+      // Holy celestial sparkles
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(16, 5, 1, 1);
+      ctx.fillRect(8, 10, 1, 1);
+      ctx.fillRect(24, 10, 1, 1);
     });
   }
 

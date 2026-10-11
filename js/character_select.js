@@ -28,95 +28,42 @@ class CharacterSelectManager {
         name: 'ยักษ์ไทย',
         enName: 'Yaksha Hero',
         isAvailable: true,
-        role: '🛡️ วีรชนยักษ์ / จอมพลังหิมพานต์ (Melee Tank)',
-        title: '"ยักษ์นักรบแห่งป่าหิมพานต์ ผู้พิทักษ์ศิลาแลงและวิหารโบราณสุวรรณภูมิ"',
-        weapon: 'กระบองตรีศูลสุวรรณ',
-        difficulty: '⭐⭐ (เข้าใจง่าย / แข็งแกร่ง)',
-        passive: {
-          title: 'พรแห่งอสุรา:',
-          desc: 'เมื่อพลังชีวิตต่ำกว่า 30% จะปลดปล่อยเกราะศิลาแลงลดดาเมจ 40% และฟื้นฟูเลือดอัตโนมัติ'
-        },
-        skills: [
-          { name: 'เพลงกระบองยักษ์ตรีศูล', key: 'Space', cd: '0.35 วินาที', cost: '0 MP', desc: 'ฟาดกระบองตรีศูลคอมโบ 3 จังหวะ จังหวะสุดท้ายกระโดดฟาดสร้างดาเมจกระจาย' },
-          { name: 'ยักษ์ทุบปฐพี', key: '1 / J', cd: '4.0 วินาที', cost: '25 MP', desc: 'กระโดดทุบพื้นสร้างคลื่นแผ่นดินไหว สตันศัตรูรอบข้าง 1.5 วินาที พร้อมสร้างดาเมจวงกว้าง' },
-          { name: 'คำรามก้องฟ้า', key: '2 / K', cd: '10 วินาที', cost: '30 MP', desc: 'ปลุกออร่าเพลิงสุริยันสีทอง เพิ่มพลังโจมตี +25% และต้านทานดาเมจ 6 วินาที' },
-          { name: 'มนต์ฟื้นกายา', key: '3 / L', cd: '8.0 วินาที', cost: '35 MP', desc: 'เสกดอกบัวทองคำหิมพานต์ ฟื้นฟูเลือดมหาศาลและลบล้างสถานะเลือดไหล' }
-        ]
+        role: '🛡️ มหายักษ์อสูร (Melee Tank)'
       },
       {
         id: 'slot_2',
-        name: 'ช่องว่าง (Slot 2)',
+        name: 'ช่องว่าง #๒',
         enName: 'Empty Slot',
         isAvailable: false,
-        role: '🔒 ว่าง - รอเปิดตัวในอนาคต',
-        title: '"ช่องว่างสำหรับตัวละครใหม่ในอนาคต ปัจจุบันยังไม่มีข้อมูลตัวละครในช่องนี้"',
-        weapon: '-',
-        difficulty: '-',
-        passive: {
-          title: 'ยังไม่ปลดล็อค:',
-          desc: 'ช่องนี้จัดเตรียมไว้เพื่อรองรับการเพิ่มตัวละครหรือสร้างตัวละครใหม่ในอนาคต'
-        },
-        skills: []
+        role: '🔒 ว่าง - รอเปิดตัวในอนาคต'
       },
       {
         id: 'slot_3',
-        name: 'ช่องว่าง (Slot 3)',
+        name: 'ช่องว่าง #๓',
         enName: 'Empty Slot',
         isAvailable: false,
-        role: '🔒 ว่าง - รอเปิดตัวในอนาคต',
-        title: '"ช่องว่างสำหรับตัวละครใหม่ในอนาคต ปัจจุบันยังไม่มีข้อมูลตัวละครในช่องนี้"',
-        weapon: '-',
-        difficulty: '-',
-        passive: {
-          title: 'ยังไม่ปลดล็อค:',
-          desc: 'ช่องนี้จัดเตรียมไว้เพื่อรองรับการเพิ่มตัวละครหรือสร้างตัวละครใหม่ในอนาคต'
-        },
-        skills: []
+        role: '🔒 ว่าง - รอเปิดตัวในอนาคต'
       },
       {
         id: 'slot_4',
-        name: 'ช่องว่าง (Slot 4)',
+        name: 'ช่องว่าง #๔',
         enName: 'Empty Slot',
         isAvailable: false,
-        role: '🔒 ว่าง - รอเปิดตัวในอนาคต',
-        title: '"ช่องว่างสำหรับตัวละครใหม่ในอนาคต ปัจจุบันยังไม่มีข้อมูลตัวละครในช่องนี้"',
-        weapon: '-',
-        difficulty: '-',
-        passive: {
-          title: 'ยังไม่ปลดล็อค:',
-          desc: 'ช่องนี้จัดเตรียมไว้เพื่อรองรับการเพิ่มตัวละครหรือสร้างตัวละครใหม่ในอนาคต'
-        },
-        skills: []
+        role: '🔒 ว่าง - รอเปิดตัวในอนาคต'
       },
       {
         id: 'slot_5',
-        name: 'ช่องว่าง (Slot 5)',
+        name: 'ช่องว่าง #๕',
         enName: 'Empty Slot',
         isAvailable: false,
-        role: '🔒 ว่าง - รอเปิดตัวในอนาคต',
-        title: '"ช่องว่างสำหรับตัวละครใหม่ในอนาคต ปัจจุบันยังไม่มีข้อมูลตัวละครในช่องนี้"',
-        weapon: '-',
-        difficulty: '-',
-        passive: {
-          title: 'ยังไม่ปลดล็อค:',
-          desc: 'ช่องนี้จัดเตรียมไว้เพื่อรองรับการเพิ่มตัวละครหรือสร้างตัวละครใหม่ในอนาคต'
-        },
-        skills: []
+        role: '🔒 ว่าง - รอเปิดตัวในอนาคต'
       },
       {
         id: 'slot_6',
-        name: 'ช่องว่าง (Slot 6)',
+        name: 'ช่องว่าง #๖',
         enName: 'Empty Slot',
         isAvailable: false,
-        role: '🔒 ว่าง - รอเปิดตัวในอนาคต',
-        title: '"ช่องว่างสำหรับตัวละครใหม่ในอนาคต ปัจจุบันยังไม่มีข้อมูลตัวละครในช่องนี้"',
-        weapon: '-',
-        difficulty: '-',
-        passive: {
-          title: 'ยังไม่ปลดล็อค:',
-          desc: 'ช่องนี้จัดเตรียมไว้เพื่อรองรับการเพิ่มตัวละครหรือสร้างตัวละครใหม่ในอนาคต'
-        },
-        skills: []
+        role: '🔒 ว่าง - รอเปิดตัวในอนาคต'
       }
     ];
   }
@@ -169,19 +116,31 @@ class CharacterSelectManager {
 
   getLivePlayerData() {
     const p = (window.game && window.game.player) ? window.game.player : null;
+    let mapName = 'วิหารศิลาแลงสุวรรณภูมิ';
+    if (window.game) {
+      if (window.game.currentMapName) mapName = window.game.currentMapName;
+      else if (window.game.mapManager && window.game.mapManager.currentMap) {
+        mapName = window.game.mapManager.currentMap.name || mapName;
+      }
+    }
     return {
       level: p ? p.level : 1,
       exp: p ? p.exp : 0,
       expToNext: p ? p.expToNext : 100,
       hp: p ? Math.round(p.hp) : 260,
-      maxHp: p ? p.maxHp : 260,
+      maxHp: p ? Math.round(p.maxHp) : 260,
       mp: p ? Math.round(p.mp) : 120,
-      maxMp: p ? p.maxMp : 120,
+      maxMp: p ? Math.round(p.maxMp) : 120,
       str: p ? p.str : 10,
       vit: p ? p.vit : 10,
       agi: p ? p.agi : 10,
       spi: p ? p.spi : 10,
-      gold: p ? p.gold : 0
+      atk: p ? (p.attack || p.baseAttack || 25) : 25,
+      def: p ? (p.defense || p.baseDefense || 10) : 10,
+      crit: p ? (p.critRate != null ? p.critRate : 5) : 5,
+      spd: p ? Math.round(p.speed || 140) : 140,
+      gold: p ? p.gold : 0,
+      mapName: mapName
     };
   }
 
@@ -207,94 +166,70 @@ class CharacterSelectManager {
       if (el) el.innerText = text;
     };
 
+    const setWidth = (id, pct) => {
+      const el = document.getElementById(id);
+      if (el) el.style.width = pct;
+    };
+
     const pData = this.getLivePlayerData();
 
     if (slot.isAvailable) {
-      // Slot 1: Show real player champion info
-      setTxt('csSpotlightRole', `${slot.role} • LV. ${pData.level}`);
-      setTxt('csSpotlightName', `${slot.name} (Yaksha Hero)`);
-      setTxt('csSpotlightTitle', slot.title);
-      setTxt('csSpotlightDifficulty', slot.difficulty);
-      setTxt('csSpotlightWeapon', slot.weapon);
+      // Slot 0: Real Yaksha Hero
+      setTxt('csSlot0Sub', `มหายักษ์อสูร • Base Lv. ${pData.level}`);
+      setTxt('csSpotlightName', `${slot.name} (${slot.enName})`);
+      setTxt('csSpotlightRole', `มหายักษ์อสูร • Base Lv. ${pData.level}`);
+      setTxt('csSpotlightMap', pData.mapName);
 
-      // Real live attributes
-      setTxt('csStatStrVal', `${pData.str} (${pData.str >= 10 ? '+' : ''}${pData.str - 10})`);
-      setTxt('csStatVitVal', `${pData.vit} (${pData.vit >= 10 ? '+' : ''}${pData.vit - 10})`);
-      setTxt('csStatAgiVal', `${pData.agi} (${pData.agi >= 10 ? '+' : ''}${pData.agi - 10})`);
-      setTxt('csStatSpiVal', `${pData.spi} (${pData.spi >= 10 ? '+' : ''}${pData.spi - 10})`);
+      // HP & MP Meters
+      setTxt('csHpText', `${pData.hp} / ${pData.maxHp}`);
+      setWidth('csHpBar', `${Math.max(0, Math.min(100, (pData.hp / pData.maxHp) * 100))}%`);
 
-      const setBar = (id, val) => {
-        const el = document.getElementById(id);
-        if (el) el.style.width = `${Math.min(100, (val / 60) * 100)}%`;
-      };
-      setBar('csBarStr', pData.str);
-      setBar('csBarVit', pData.vit);
-      setBar('csBarAgi', pData.agi);
-      setBar('csBarSpi', pData.spi);
+      setTxt('csMpText', `${pData.mp} / ${pData.maxMp}`);
+      setWidth('csMpBar', `${Math.max(0, Math.min(100, (pData.mp / pData.maxMp) * 100))}%`);
 
-      // Passive
-      setTxt('csPassiveTitle', slot.passive.title);
-      setTxt('csPassiveDesc', slot.passive.desc);
+      // Core Attributes (STR, AGI, VIT, SPI)
+      const strBonus = pData.str - 10;
+      const agiBonus = pData.agi - 10;
+      const vitBonus = pData.vit - 10;
+      const spiBonus = pData.spi - 10;
+      setTxt('csStatStrVal', `${pData.str} (${strBonus >= 0 ? '+' : ''}${strBonus})`);
+      setTxt('csStatAgiVal', `${pData.agi} (${agiBonus >= 0 ? '+' : ''}${agiBonus})`);
+      setTxt('csStatVitVal', `${pData.vit} (${vitBonus >= 0 ? '+' : ''}${vitBonus})`);
+      setTxt('csStatSpiVal', `${pData.spi} (${spiBonus >= 0 ? '+' : ''}${spiBonus})`);
 
-      // Real Skills
-      const skillsList = document.getElementById('csSkillsList');
-      if (skillsList) {
-        skillsList.innerHTML = '';
-        slot.skills.forEach(s => {
-          const item = document.createElement('div');
-          item.className = 'cs-skill-item';
-          item.innerHTML = `
-            <div class="cs-skill-header">
-              <span class="cs-skill-name">
-                <span class="cs-skill-badge">${s.key}</span>
-                ${s.name}
-              </span>
-              <span class="cs-skill-meta">⏱️ ${s.cd} | 💧 ${s.cost}</span>
-            </div>
-            <div class="cs-skill-desc">${s.desc}</div>
-          `;
-          skillsList.appendChild(item);
-        });
-      }
+      // Combat Attributes Summary
+      setTxt('csStatAtkVal', `${pData.atk}`);
+      setTxt('csStatDefVal', `${pData.def}`);
+      setTxt('csStatCritVal', `${pData.crit}%`);
+      setTxt('csStatSpdVal', `${pData.spd}`);
 
       // Confirm CTA button enabled
       const btnConfirm = document.getElementById('btnConfirmCharSelect');
       if (btnConfirm) {
         btnConfirm.disabled = false;
         btnConfirm.className = 'cs-confirm-btn';
-        btnConfirm.innerHTML = `<span>⚔️ เข้าสู่สมรภูมิ (เข้าเล่นตัวละครนี้)</span>`;
+        btnConfirm.innerHTML = `<span>⚔️ เข้าสู่สมรภูมิหิมพานต์ (START ADVENTURE)</span>`;
       }
     } else {
-      // Slots 2-6: Empty slot reserved for future characters
-      setTxt('csSpotlightRole', slot.role);
+      // Slots 1-5: Empty reserved slots
       setTxt('csSpotlightName', slot.name);
-      setTxt('csSpotlightTitle', slot.title);
-      setTxt('csSpotlightDifficulty', 'ยังไม่เปิดให้บริการ');
-      setTxt('csSpotlightWeapon', 'ยังไม่มีอาวุธ');
+      setTxt('csSpotlightRole', '🔒 ยังไม่มีตัวละครในช่องนี้');
+      setTxt('csSpotlightMap', '-');
+
+      setTxt('csHpText', '-- / --');
+      setWidth('csHpBar', '0%');
+      setTxt('csMpText', '-- / --');
+      setWidth('csMpBar', '0%');
 
       setTxt('csStatStrVal', '--');
-      setTxt('csStatVitVal', '--');
       setTxt('csStatAgiVal', '--');
+      setTxt('csStatVitVal', '--');
       setTxt('csStatSpiVal', '--');
 
-      ['csBarStr', 'csBarVit', 'csBarAgi', 'csBarSpi'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.style.width = '0%';
-      });
-
-      setTxt('csPassiveTitle', slot.passive.title);
-      setTxt('csPassiveDesc', slot.passive.desc);
-
-      const skillsList = document.getElementById('csSkillsList');
-      if (skillsList) {
-        skillsList.innerHTML = `
-          <div style="text-align: center; padding: 18px 10px; color: #94a3b8; font-size: 12px; background: rgba(0,0,0,0.3); border-radius: 8px;">
-            <div style="font-size: 20px; margin-bottom: 4px;">🔒</div>
-            ช่องนี้สำหรับตัวละครใหม่ในอนาคต<br>
-            <span style="color: #64748b; font-size: 11px;">โปรดเลือกช่องที่ ๑ "ยักษ์ไทย" เพื่อเริ่มเล่นเกมครับ</span>
-          </div>
-        `;
-      }
+      setTxt('csStatAtkVal', '--');
+      setTxt('csStatDefVal', '--');
+      setTxt('csStatCritVal', '--');
+      setTxt('csStatSpdVal', '--');
 
       // Confirm CTA button disabled
       const btnConfirm = document.getElementById('btnConfirmCharSelect');
@@ -400,48 +335,56 @@ class CharacterSelectManager {
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
     const cx = w / 2;
-    const cy = h / 2 + (isSpotlight ? 16 : 8);
-    const breath = Math.sin(t * 3.5) * (isSpotlight ? 3 : 2);
+    const breath = Math.sin(t * 3.5) * (isSpotlight ? 2.5 : 1.2);
+    const scale = isSpotlight ? 2.1 : 1.5;
+    const footY = isSpotlight ? (142 + breath) : (118 + breath);
 
     // 1. Golden Lotus / Sacred Fire Aura
-    const auraRadius = isSpotlight ? 68 : 42;
-    const aura = ctx.createRadialGradient(cx, cy - 10, 8, cx, cy - 10, auraRadius);
+    const auraRadius = isSpotlight ? 68 : 46;
+    const auraCenterY = isSpotlight ? (footY - 48) : (footY - 36);
+    const aura = ctx.createRadialGradient(cx, auraCenterY, 8, cx, auraCenterY, auraRadius);
     aura.addColorStop(0, 'rgba(250, 204, 21, 0.45)');
     aura.addColorStop(0.65, 'rgba(234, 179, 8, 0.2)');
     aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = aura;
     ctx.beginPath();
-    ctx.arc(cx, cy - 10, auraRadius, 0, Math.PI * 2);
+    ctx.arc(cx, auraCenterY, auraRadius, 0, Math.PI * 2);
     ctx.fill();
 
     // 2. Ground Shadow
     ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
     ctx.beginPath();
-    ctx.ellipse(cx, cy + (isSpotlight ? 32 : 20), isSpotlight ? 36 : 22, isSpotlight ? 12 : 7, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, footY + 2, isSpotlight ? 36 : 26, isSpotlight ? 11 : 8, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // 3. Draw Actual Yaksha Sprite
-    const img = (window.assetManager && window.assetManager.getImage('yak_idle_south')) || this.yakImage;
-    if (img && img.complete && img.naturalWidth > 0) {
-      ctx.save();
-      ctx.imageSmoothingEnabled = false; // Crisp pixel art
+    // 3. Draw Yaksha Hero with live equipped wings, armor, pants, boots, and helmet
+    const player = (window.game && window.game.player) ? window.game.player : null;
 
-      const scale = isSpotlight ? 2.6 : 1.7;
-      const dw = 48 * scale;
-      const dh = 48 * scale;
-      const dx = cx - (dw / 2);
-      const dy = cy - (dh * 0.75) + breath;
+    if (player && player.renderFullCharacter) {
+      player.renderFullCharacter(ctx, cx, footY, scale, t, { shadow: false });
+    } else {
+      const img = (window.assetManager && window.assetManager.getImage('yak_idle_south')) || this.yakImage;
+      if (img && img.complete && img.naturalWidth > 0) {
+        ctx.save();
+        ctx.imageSmoothingEnabled = false; // Crisp pixel art
 
-      ctx.drawImage(img, dx, dy, dw, dh);
-      ctx.restore();
+        const dw = 48 * scale;
+        const dh = 48 * scale;
+        const dx = cx - (dw / 2);
+        const dy = footY - (46 * scale);
+
+        ctx.drawImage(img, dx, dy, dw, dh);
+        ctx.restore();
+      }
     }
 
     // 4. Floating Divine Sparks
+    const sparkCenterY = isSpotlight ? (footY - 50) : (footY - 38);
     for (let i = 0; i < 4; i++) {
       const sparkAngle = t * 2 + (i * Math.PI / 2);
-      const dist = (isSpotlight ? 42 : 26) + Math.sin(t * 4 + i) * 6;
+      const dist = (isSpotlight ? 42 : 28) + Math.sin(t * 4 + i) * 5;
       const sx = cx + Math.cos(sparkAngle) * dist;
-      const sy = (cy - 16) + Math.sin(sparkAngle) * (dist * 0.6);
+      const sy = sparkCenterY + Math.sin(sparkAngle) * (dist * 0.55);
       ctx.fillStyle = '#fef08a';
       ctx.beginPath();
       ctx.arc(sx, sy, isSpotlight ? 2 : 1.5, 0, Math.PI * 2);
@@ -454,41 +397,41 @@ class CharacterSelectManager {
     const w = ctx.canvas.width;
     const h = ctx.canvas.height;
     const cx = w / 2;
-    const cy = h / 2 + (isSpotlight ? 8 : 4);
-    const float = Math.sin(t * 2.5 + slotIdx) * 3;
+    const cy = isSpotlight ? (h / 2 + 10) : 78;
+    const float = Math.sin(t * 2.5 + slotIdx) * 2.5;
 
     // Pedestal Base (Stone Altar)
     ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
     ctx.strokeStyle = 'rgba(100, 116, 139, 0.4)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(cx, cy + (isSpotlight ? 32 : 20), isSpotlight ? 42 : 26, isSpotlight ? 14 : 9, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy + (isSpotlight ? 34 : 26), isSpotlight ? 42 : 32, isSpotlight ? 14 : 10, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
 
     // Subtle Mist
-    const mist = ctx.createRadialGradient(cx, cy, 5, cx, cy, isSpotlight ? 50 : 32);
+    const mist = ctx.createRadialGradient(cx, cy, 5, cx, cy, isSpotlight ? 50 : 38);
     mist.addColorStop(0, 'rgba(148, 163, 184, 0.15)');
     mist.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = mist;
     ctx.beginPath();
-    ctx.arc(cx, cy, isSpotlight ? 50 : 32, 0, Math.PI * 2);
+    ctx.arc(cx, cy, isSpotlight ? 50 : 38, 0, Math.PI * 2);
     ctx.fill();
 
     // Golden Padlock Icon
     ctx.save();
-    ctx.font = isSpotlight ? '38px sans-serif' : '24px sans-serif';
+    ctx.font = isSpotlight ? '38px sans-serif' : '30px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.shadowColor = 'rgba(234, 179, 8, 0.5)';
     ctx.shadowBlur = 10;
-    ctx.fillText('🔒', cx, cy - 8 + float);
+    ctx.fillText('🔒', cx, cy - 2 + float);
     ctx.restore();
 
     // Runic dots floating
     const dotA = t * 1.5 + slotIdx;
-    const dx = cx + Math.cos(dotA) * (isSpotlight ? 28 : 18);
-    const dy = (cy - 8) + Math.sin(dotA) * (isSpotlight ? 16 : 10) + float;
+    const dx = cx + Math.cos(dotA) * (isSpotlight ? 28 : 22);
+    const dy = (cy - 8) + Math.sin(dotA) * (isSpotlight ? 16 : 12) + float;
     ctx.fillStyle = 'rgba(234, 179, 8, 0.6)';
     ctx.beginPath();
     ctx.arc(dx, dy, isSpotlight ? 2.5 : 1.5, 0, Math.PI * 2);

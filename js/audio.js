@@ -335,6 +335,55 @@ class SoundSystem {
     osc.stop(t + 0.2);
   }
 
+  // Ragnarok Online Style Critical Hit (Crisp High-End Snap + Deep Resonant Impact)
+  playCrit() {
+    if (this.isMuted) return;
+    this.resume();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+
+    // 1. Crisp high-frequency metallic blade snap ("TINK / KSHING")
+    const oscSnap = this.ctx.createOscillator();
+    const gainSnap = this.ctx.createGain();
+    const filterSnap = this.ctx.createBiquadFilter();
+
+    oscSnap.type = 'sawtooth';
+    oscSnap.frequency.setValueAtTime(1600, t);
+    oscSnap.frequency.exponentialRampToValueAtTime(340, t + 0.16);
+
+    filterSnap.type = 'bandpass';
+    filterSnap.frequency.setValueAtTime(3900, t);
+    filterSnap.frequency.exponentialRampToValueAtTime(1100, t + 0.16);
+
+    gainSnap.gain.setValueAtTime(0.65, t);
+    gainSnap.gain.exponentialRampToValueAtTime(0.01, t + 0.18);
+
+    oscSnap.connect(filterSnap);
+    filterSnap.connect(gainSnap);
+    gainSnap.connect(this.sfxGain);
+
+    oscSnap.start(t);
+    oscSnap.stop(t + 0.19);
+
+    // 2. Heavy resonant critical thud punch
+    const oscThud = this.ctx.createOscillator();
+    const gainThud = this.ctx.createGain();
+
+    oscThud.type = 'triangle';
+    oscThud.frequency.setValueAtTime(240, t);
+    oscThud.frequency.exponentialRampToValueAtTime(38, t + 0.22);
+
+    gainThud.gain.setValueAtTime(0.75, t);
+    gainThud.gain.exponentialRampToValueAtTime(0.01, t + 0.24);
+
+    oscThud.connect(gainThud);
+    gainThud.connect(this.sfxGain);
+
+    oscThud.start(t);
+    oscThud.stop(t + 0.25);
+  }
+
   // Magic / Fireball sound
   playFireball() {
     this.playSkill1();

@@ -1434,7 +1434,9 @@
       window.assetManager = new AssetManager();
       window.game = new Game(canvas);
       window.game.isAdminMode = true; // In Admin Studio, game actions and player controls are permanently disabled
-      window.bossSettingsController = new BossSettingsController();
+      if (!window.bossSettingsController) {
+        window.bossSettingsController = new BossSettingsController();
+      }
       window.monsterStudioController = new MonsterStudioController();
       ensureMapPanelInView();
 

@@ -65,7 +65,7 @@ class Game {
     // Quests
     this.quests = [
       { id: 'minions', title: 'ปราบศัตรู (ผีกระสือ & วิญญาณนักรบดาบอาคม)', current: 0, target: 8, done: false, rewardExp: 180 },
-      { id: 'chests', title: 'เปิดหีบสมบัติหรือเก็บผลบัวทิพย์', current: 0, target: 3, done: false, rewardExp: 100 },
+      { id: 'chests', title: 'ค้นหาและเปิดหีบสมบัติโบราณ', current: 0, target: 3, done: false, rewardExp: 100 },
       { id: 'boss', title: 'บุกวิหารทิศเหนือ สยบพญาเปรตวัดสุทัศน์', current: 0, target: 1, done: false, rewardExp: 750 }
     ];
 
@@ -220,9 +220,11 @@ class Game {
     const skill1 = document.getElementById('hudSkill1');
     if (skill1) skill1.addEventListener('click', () => this.player.useSkill1(this.enemyManager.enemies, this.enemyManager.boss));
     const skill2 = document.getElementById('hudSkill2');
-    if (skill2) skill2.addEventListener('click', () => this.player.useSkill2());
+    if (skill2) skill2.addEventListener('click', () => this.player.useSkill2(this.enemyManager.enemies, this.enemyManager.boss));
     const skill3 = document.getElementById('hudSkill3');
     if (skill3) skill3.addEventListener('click', () => this.player.useSkill3());
+    const skill4 = document.getElementById('hudSkill4');
+    if (skill4) skill4.addEventListener('click', () => this.player.useSkill4());
 
     // World Map Modal Toggles
     this.worldMapModal = document.getElementById('worldMapModal');
@@ -1067,10 +1069,13 @@ class Game {
       this.player.useSkill1(this.enemyManager.enemies, this.enemyManager.boss);
     }
     if (this.input.consumeAction('skill2')) {
-      this.player.useSkill2();
+      this.player.useSkill2(this.enemyManager.enemies, this.enemyManager.boss);
     }
     if (this.input.consumeAction('skill3')) {
       this.player.useSkill3();
+    }
+    if (this.input.consumeAction('skill4')) {
+      this.player.useSkill4();
     }
     if (this.input.consumeAction('useHp')) {
       this.player.useHpPotion();
@@ -1086,10 +1091,22 @@ class Game {
       const worldY = click.y + this.camera.y;
 
       let clickedEnemy = null;
+      let clickedPickup = null;
       let minDist = 999;
 
+      // Check Pickups hit first (Ragnarok Online style item looting)
+      if (this.map && Array.isArray(this.map.pickups)) {
+        for (const p of this.map.pickups) {
+          const d = Math.hypot(worldX - p.x, worldY - p.y);
+          if (d <= 32 && d < minDist) {
+            clickedPickup = p;
+            minDist = d;
+          }
+        }
+      }
+
       // Check Boss hit
-      if (this.enemyManager.boss && !this.enemyManager.boss.isDead) {
+      if (!clickedPickup && this.enemyManager.boss && !this.enemyManager.boss.isDead) {
         const b = this.enemyManager.boss;
         const d = Math.hypot(worldX - b.x, worldY - b.y);
         if (d <= b.radius + 36) {
@@ -1099,48 +1116,77 @@ class Game {
       }
 
       // Check regular enemies hit
-      for (const e of this.enemyManager.enemies) {
-        if (e.isDead) continue;
-        const d = Math.hypot(worldX - e.x, worldY - e.y);
-        if (d <= e.radius + 28 && d < minDist) {
-          clickedEnemy = e;
-          minDist = d;
+      if (!clickedPickup) {
+        for (const e of this.enemyManager.enemies) {
+          if (e.isDead) continue;
+          const d = Math.hypot(worldX - e.x, worldY - e.y);
+          if (d <= e.radius + 28 && d < minDist) {
+            clickedEnemy = e;
+            minDist = d;
+          }
         }
       }
 
-      if (clickedEnemy) {
+      if (clickedPickup) {
+        const distToPlayer = Math.hypot(this.player.x - clickedPickup.x, this.player.y - clickedPickup.y);
+        if (distToPlayer <= 52) {
+          // In range: collect immediately!
+          this.map.collectPickup(clickedPickup, this.player);
+          this.player.clearTargets();
+        } else {
+          // Walk over to pick up item
+          this.player.setTargetPickup(clickedPickup);
+          window.effectsManager.addMoveMarker(clickedPickup.x, clickedPickup.y);
+        }
+      } else if (clickedEnemy) {
         this.player.setTargetEnemy(clickedEnemy, this.enemyManager.enemies, this.enemyManager.boss);
         window.effectsManager.addAttackMarker(clickedEnemy.x, clickedEnemy.y, clickedEnemy);
       } else {
         this.player.setMoveTarget(worldX, worldY);
         window.effectsManager.addMoveMarker(worldX, worldY);
       }
-    } else if (this.input.mouse.isDown && !this.player.targetEnemy) {
+    } else if (this.input.mouse.isDown && !this.player.targetEnemy && !this.player.targetPickup) {
       // Continuous dragging to walk to mouse location
       const worldX = this.input.mouse.x + this.camera.x;
       const worldY = this.input.mouse.y + this.camera.y;
       this.player.targetPos = { x: worldX, y: worldY };
     }
 
-    // 1.8 Update Dynamic Cursor (Normal Arrow vs Monster Attack Sword)
+    // 1.8 Update Dynamic Cursor (Normal Arrow vs Loot Gauntlet vs Monster Attack Sword)
     const mWorldX = this.input.mouse.x + this.camera.x;
     const mWorldY = this.input.mouse.y + this.camera.y;
+    let isOverPickup = false;
     let isOverEnemy = false;
 
-    if (this.enemyManager.boss && !this.enemyManager.boss.isDead) {
-      if (Math.hypot(mWorldX - this.enemyManager.boss.x, mWorldY - this.enemyManager.boss.y) <= this.enemyManager.boss.radius + 32) {
-        isOverEnemy = true;
-      }
-    }
-    if (!isOverEnemy) {
-      for (const e of this.enemyManager.enemies) {
-        if (!e.isDead && Math.hypot(mWorldX - e.x, mWorldY - e.y) <= e.radius + 24) {
-          isOverEnemy = true;
-          break;
+    // Check hover over ground pickups
+    if (this.map && Array.isArray(this.map.pickups)) {
+      for (const p of this.map.pickups) {
+        const d = Math.hypot(mWorldX - p.x, mWorldY - p.y);
+        p._isHovered = (d <= 30);
+        if (p._isHovered) {
+          isOverPickup = true;
         }
       }
     }
-    this.canvas.classList.toggle('hover-enemy', isOverEnemy);
+
+    if (!isOverPickup) {
+      if (this.enemyManager.boss && !this.enemyManager.boss.isDead) {
+        if (Math.hypot(mWorldX - this.enemyManager.boss.x, mWorldY - this.enemyManager.boss.y) <= this.enemyManager.boss.radius + 32) {
+          isOverEnemy = true;
+        }
+      }
+      if (!isOverEnemy) {
+        for (const e of this.enemyManager.enemies) {
+          if (!e.isDead && Math.hypot(mWorldX - e.x, mWorldY - e.y) <= e.radius + 24) {
+            isOverEnemy = true;
+            break;
+          }
+        }
+      }
+    }
+
+    this.canvas.classList.toggle('hover-pickup', isOverPickup);
+    this.canvas.classList.toggle('hover-enemy', !isOverPickup && isOverEnemy);
 
     // 2. Player Movement & State
     const moveVec = this.input.getMovementVector();
@@ -1267,20 +1313,23 @@ class Game {
       if (mpText) mpText.innerText = `${Math.ceil(this.player.mp)} / ${this.player.maxMp}`;
     }
 
-    // Gold & Potions
+    // Gold & Potions (Sum of all potions in inventory + overflow, RO style)
     const txtGold = document.getElementById('txtGold');
     if (txtGold) txtGold.innerText = this.player.gold;
 
+    const totalHp = this.player.getTotalHpPotions ? this.player.getTotalHpPotions() : this.player.hpPotions;
+    const totalMp = this.player.getTotalMpPotions ? this.player.getTotalMpPotions() : this.player.mpPotions;
+
     const txtHpPot = document.getElementById('txtHpPotions');
-    if (txtHpPot) txtHpPot.innerText = this.player.hpPotions;
+    if (txtHpPot) txtHpPot.innerText = totalHp;
     const txtMpPot = document.getElementById('txtMpPotions');
-    if (txtMpPot) txtMpPot.innerText = this.player.mpPotions;
+    if (txtMpPot) txtMpPot.innerText = totalMp;
 
     // Mobile Potion badges
     const mHpCount = document.getElementById('mHpPotionCount');
-    if (mHpCount) mHpCount.innerText = this.player.hpPotions;
+    if (mHpCount) mHpCount.innerText = totalHp;
     const mMpCount = document.getElementById('mMpPotionCount');
-    if (mMpCount) mMpCount.innerText = this.player.mpPotions;
+    if (mMpCount) mMpCount.innerText = totalMp;
 
     // Cooldown overlays
     const updateCdOverlay = (elId, cd, maxCd) => {
@@ -1297,11 +1346,13 @@ class Game {
     updateCdOverlay('cdSkill1', this.player.skill1Cd, this.player.skill1CdMax);
     updateCdOverlay('cdSkill2', this.player.skill2Cd, this.player.skill2CdMax);
     updateCdOverlay('cdSkill3', this.player.skill3Cd, this.player.skill3CdMax);
+    updateCdOverlay('cdSkill4', this.player.skill4Cd, this.player.skill4CdMax);
 
     // Mobile action cooldown overlays
     updateCdOverlay('mCdSkill1', this.player.skill1Cd, this.player.skill1CdMax);
     updateCdOverlay('mCdSkill2', this.player.skill2Cd, this.player.skill2CdMax);
     updateCdOverlay('mCdSkill3', this.player.skill3Cd, this.player.skill3CdMax);
+    updateCdOverlay('mCdSkill4', this.player.skill4Cd, this.player.skill4CdMax);
 
     // Boss Bar in HUD (Universal: supports PretaBoss, Buffalo, or ANY creature designated as Boss)
     const bossHud = document.getElementById('bossHealthContainer');

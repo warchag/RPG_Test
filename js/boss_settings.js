@@ -336,6 +336,37 @@ window.ENTITY_TEMPLATES = {
       ground: { title: '🔥 รอยกีบเท้าเพลิงอเวจี (Hell Stomp Cracks)', desc: 'กระทืบกีบเท้าสร้างรอยแยกไฟนรกตกค้างบนพื้นดิน' },
       minions: { title: '💀 เรียกฝูงวิญญาณคุ้มกัน (Spirit Minions Summon)', desc: 'เมื่อเลือดลดถึง 50% เรียกวิญญาณภูตผีมาช่วยปกป้อง' }
     }
+  },
+
+  bosspreat: {
+    id: 'bosspreat',
+    category: 'boss',
+    name: 'พญาเปรตวัดสุทัศน์ (Preta Boss)',
+    badge: 'เวิลด์บอส #1',
+    avatar: '👹',
+    avatarBg: 'radial-gradient(circle, #3b0764 0%, #0f172a 100%)',
+    role: 'เวิลด์บอส #1 • เปรตอเวจี ร่างยักษ์ 3 เฟส',
+    lore: 'บอสเปรตโบราณ ร่างสูงตระหง่าน มือเท่าใบตาล ปากเท่ารูเข็ม กรงเล็บอเวจี ทุบพื้นเพลิงนรก 3 เฟสการต่อสู้ และเสกบริวารวิญญาณ',
+    ranges: {
+      hp: { min: 1000, max: 15000, step: 100 },
+      attack: { min: 20, max: 350, step: 2 },
+      cd: { min: 0.30, max: 2.50, step: 0.05 },
+      speed: { min: 70, max: 300, step: 5 }
+    },
+    defaultConfig: window.defaultPretaBossConfig,
+    presets: {
+      nightmare: { maxHp: 4500, attack: 95, attackCooldownMax: 0.70, speed: 180, minionCount: 4 },
+      balanced: { maxHp: 2800, attack: 72, attackCooldownMax: 0.95, speed: 160, minionCount: 3 },
+      classic: { maxHp: 1800, attack: 45, attackCooldownMax: 1.30, speed: 130, minionCount: 2 }
+    },
+    mechanics: {
+      combos: { title: '🔄 ระบบคอมโบต่อเนื่อง 3 จังหวะ (Combo Striking)', desc: 'ตวัดกรงเล็บซ้าย ➔ กรงเล็บขวา ➔ ฝ่ามือผ่าปฐพีลงมาซ้ำ' },
+      debuffs: { title: '🩸 สถานะผิดปกติอาถรรพ์ (Cursed Debuffs & CC)', desc: 'กรงเล็บเฉือนติดเลือดไหล 10 HP/s นาน 4 วิ + ทุบพื้นติดสโลว์เดินช้าลง 40%' },
+      phases: { title: '⚡ ระบบการต่อสู้ 3 เฟส (3-Phase Boss Battle)', desc: 'เฟส 1 ปกติ ➔ เฟส 2 คลั่งหวีดร้อง (HP ≤ 65%) ➔ เฟส 3 นรกแตกกลืนวิญญาณ (HP ≤ 30%)' },
+      dash: { title: '💨 พุ่งชาร์จฉีกมิติ (Shadow Dash ในเฟส 3)', desc: 'เมื่อผู้เล่นอยู่ระยะกลาง บอสจะพุ่งตัวทะลวงความมืดเข้าประชิดตัวทันที' },
+      ground: { title: '🔥 รอยแยกเพลิงนรกตกค้าง (Burning Ground)', desc: 'ท่าฝ่ามือผ่าปฐพีจะทิ้งหลุมลาวาไฟนรกไว้ 6 วินาที หากเหยียบจะโดนเผา' },
+      minions: { title: '💀 เสกบริวารวิญญาณ (Minion Summon at 50% HP)', desc: 'เมื่อเลือดลดถึง 50% บอสจะคำรามเรียกฝูงผีออกมาล้อมโจมตีผู้เล่น' }
+    }
   }
 };
 
@@ -363,6 +394,13 @@ window.syncEntityRegistryFromAPI = async function() {
         window.ENTITY_REGISTRY[key] = Object.assign({}, window.ENTITY_TEMPLATES[key]);
         if (m.name) window.ENTITY_REGISTRY[key].name = m.name;
         if (m.role) window.ENTITY_REGISTRY[key].role = m.role;
+        if (m.is_boss !== undefined) {
+          const isBoss = !!m.is_boss;
+          window.ENTITY_REGISTRY[key].category = isBoss ? 'boss' : 'monster';
+          if (window.ENTITY_REGISTRY[key].defaultConfig) {
+            window.ENTITY_REGISTRY[key].defaultConfig.isBoss = isBoss;
+          }
+        }
       } else {
         // Custom monster from SQLite
         const isBoss = !!m.is_boss;
@@ -444,8 +482,14 @@ window.entityRegistryReady = window.syncEntityRegistryFromAPI();
 
 class BossSettingsController {
   constructor() {
-    this.currentCategory = 'monster'; // 'monster' or 'boss'
-    this.currentId = 'krasue';
+    if (window.bossSettingsControllerInstance) {
+      return window.bossSettingsControllerInstance;
+    }
+    window.bossSettingsControllerInstance = this;
+
+    // Restore last selected category and entity ID from localStorage if available
+    this.currentCategory = localStorage.getItem('yaksha_balancer_cat') || 'monster';
+    this.currentId = localStorage.getItem('yaksha_balancer_id') || 'krasue';
 
     // In-memory working configs
     this.configs = {};
@@ -466,7 +510,17 @@ class BossSettingsController {
     // 2. Load ALL entity configs from SQLite database upfront
     await this.loadAllConfigsFromDB();
 
-    // 3. Render and switch to default category & entity
+    // 3. Ensure currentId is valid within current category
+    const validCurrent = window.ENTITY_REGISTRY[this.currentId];
+    if (!validCurrent || (this.configs[this.currentId] && !!this.configs[this.currentId].isBoss !== (this.currentCategory === 'boss'))) {
+      const match = Object.values(window.ENTITY_REGISTRY).find(e => {
+        const isB = !!(this.configs[e.id] ? this.configs[e.id].isBoss : (e.category === 'boss'));
+        return this.currentCategory === 'boss' ? isB : !isB;
+      });
+      if (match) this.currentId = match.id;
+    }
+
+    // 4. Render and switch to category & entity
     this.switchCategory(this.currentCategory, this.currentId);
   }
 
@@ -602,41 +656,67 @@ class BossSettingsController {
   }
 
   async loadAllConfigsFromDB() {
-    if (!window.gameDatabase || !window.gameDatabase.loadBossConfig) return;
-    const keys = Object.keys(window.ENTITY_REGISTRY);
+    if (!window.gameDatabase) return;
+    try {
+      let configsMap = {};
+      if (typeof window.gameDatabase.loadAllBossConfigs === 'function') {
+        const batchRes = await window.gameDatabase.loadAllBossConfigs();
+        if (batchRes && batchRes.success && batchRes.configs) {
+          configsMap = batchRes.configs;
+        }
+      }
 
-    for (const k of keys) {
-      try {
-        const res = await window.gameDatabase.loadBossConfig(k);
-        if (res && res.success && res.data) {
-          const entity = window.ENTITY_REGISTRY[k];
-          this.configs[k] = Object.assign({}, entity.defaultConfig, res.data);
+      for (const [k, entity] of Object.entries(window.ENTITY_REGISTRY)) {
+        let savedData = configsMap[k];
+        if (!savedData && (k === 'preta' || k === 'bosspreat' || k === 'boss')) {
+          savedData = configsMap['bosspreat'] || configsMap['preta'] || configsMap['boss'];
+        }
+        if (!savedData && window.gameDatabase.loadBossConfig) {
+          try {
+            const indRes = await window.gameDatabase.loadBossConfig(k);
+            if (indRes && indRes.success && indRes.data) savedData = indRes.data;
+          } catch (e) {}
+        }
 
-          // Sync role in entity registry
-          if (res.data.isBoss !== undefined) {
-            this.configs[k].isBoss = !!res.data.isBoss;
-            entity.category = res.data.isBoss ? 'boss' : 'monster';
+        if (savedData) {
+          this.configs[k] = Object.assign({}, entity.defaultConfig, savedData);
+          if (savedData.isBoss !== undefined) {
+            const isBoss = !!savedData.isBoss;
+            this.configs[k].isBoss = isBoss;
+            entity.category = isBoss ? 'boss' : 'monster';
           }
-
-          // Cache globally
-          if (this.configs[k].isBoss) {
-            window.bossConfigs[k] = Object.assign({}, this.configs[k]);
-            delete window.enemyConfigs[k];
-            if (k === 'preta') window.pretaBossConfig = Object.assign({}, this.configs[k]);
-          } else {
-            window.enemyConfigs[k] = Object.assign({}, this.configs[k]);
-            delete window.bossConfigs[k];
+        } else {
+          if (!this.configs[k]) {
+            this.configs[k] = Object.assign({}, entity.defaultConfig);
+          }
+          if (this.configs[k].isBoss !== undefined) {
+            entity.category = this.configs[k].isBoss ? 'boss' : 'monster';
           }
         }
-      } catch (err) {
-        console.warn(`[Balancer] Error loading SQLite for ${k}:`, err);
+
+        // Cache globally for combat and boss bar engines
+        if (this.configs[k].isBoss) {
+          window.bossConfigs[k] = Object.assign({}, this.configs[k]);
+          delete window.enemyConfigs[k];
+          if (k === 'preta' || k === 'bosspreat' || k === 'boss') {
+            window.pretaBossConfig = Object.assign({}, this.configs[k]);
+          }
+        } else {
+          window.enemyConfigs[k] = Object.assign({}, this.configs[k]);
+          delete window.bossConfigs[k];
+        }
       }
+      console.log('[Balancer] All entity configs loaded from SQLite successfully');
+    } catch (err) {
+      console.warn('[Balancer] Error loading SQLite configs:', err);
     }
-    console.log('[Balancer] All entity configs loaded from SQLite successfully');
   }
 
   switchCategory(cat, targetId = null) {
     this.currentCategory = cat;
+    try {
+      localStorage.setItem('yaksha_balancer_cat', cat);
+    } catch (e) {}
 
     // Toggle active state on category buttons
     if (this.catBtnMonster) this.catBtnMonster.classList.toggle('active', cat === 'monster');
@@ -826,7 +906,7 @@ class BossSettingsController {
     }
   }
 
-  setEntityRole(role) {
+  async setEntityRole(role) {
     const id = this.currentId;
     const entity = window.ENTITY_REGISTRY[id];
     if (!entity) return;
@@ -864,17 +944,31 @@ class BossSettingsController {
     if (isBoss) {
       window.bossConfigs[id] = Object.assign({}, this.configs[id]);
       delete window.enemyConfigs[id];
-      if (id === 'preta') window.pretaBossConfig = Object.assign({}, this.configs[id]);
+      if (id === 'preta' || id === 'bosspreat' || id === 'boss') {
+        window.pretaBossConfig = Object.assign({}, this.configs[id]);
+      }
     } else {
       window.enemyConfigs[id] = Object.assign({}, this.configs[id]);
       delete window.bossConfigs[id];
     }
 
+    // Keep aliases in sync
+    if (id === 'preta' || id === 'bosspreat' || id === 'boss') {
+      ['preta', 'bosspreat', 'boss'].forEach(alias => {
+        if (window.ENTITY_REGISTRY[alias]) {
+          window.ENTITY_REGISTRY[alias].category = role;
+          if (this.configs[alias]) {
+            this.configs[alias] = Object.assign({}, this.configs[id]);
+          }
+        }
+      });
+    }
+
     // 4. Switch category tab to follow the entity so it never disappears!
     this.switchCategory(role, id);
 
-    // 5. Persist to SQLite
-    this.saveToDB(false);
+    // 5. Persist to SQLite and await completion
+    await this.saveToDB(false);
 
     // 6. Show status notification
     if (isBoss) {
@@ -894,6 +988,9 @@ class BossSettingsController {
 
     // 2. Switch current ID
     this.currentId = id;
+    try {
+      localStorage.setItem('yaksha_balancer_id', id);
+    } catch (e) {}
     const entity = window.ENTITY_REGISTRY[id];
     const cfg = this.configs[id] || {};
     const isBoss = !!(cfg.isBoss !== undefined ? cfg.isBoss : (entity.category === 'boss'));
@@ -1140,14 +1237,33 @@ class BossSettingsController {
       return;
     }
 
-    if (showFeedback) this.showStatus(`⏳ กำลังบันทึกการตั้งค่า ${entity.name} ลง SQLite...`, 'info');
+    if (showFeedback) this.showStatus(`⏳ กำลังบันทึกการตั้งค่า ${entity ? entity.name : id} ลง SQLite...`, 'info');
 
     try {
       const res = await window.gameDatabase.saveBossConfig(cfg, id);
+
+      // Keep alias records in sync in SQLite
+      if (id === 'preta' || id === 'bosspreat' || id === 'boss') {
+        const otherAliases = ['preta', 'bosspreat', 'boss'].filter(a => a !== id);
+        for (const a of otherAliases) {
+          try {
+            await window.gameDatabase.saveBossConfig(cfg, a);
+          } catch (e) {}
+        }
+      }
+
+      // Update in-memory customMonsters dictionary if present
+      if (window.customMonsters && window.customMonsters[id]) {
+        window.customMonsters[id].is_boss = cfg.isBoss ? 1 : 0;
+        window.customMonsters[id].hp = cfg.maxHp || cfg.hp;
+        window.customMonsters[id].attack = cfg.attack;
+        window.customMonsters[id].speed = cfg.speed;
+      }
+
       if (res && res.success) {
         const roleLabel = cfg.isBoss ? '👑 บอสประจำฉาก' : '👾 มอนสเตอร์ทั่วไป';
         if (showFeedback) {
-          this.showStatus(`✅ บันทึกค่า ${entity.name} (${roleLabel}) ลง SQLite (game_data.db) สำเร็จ!`, 'success');
+          this.showStatus(`✅ บันทึกค่า ${entity ? entity.name : id} (${roleLabel}) ลง SQLite (game_data.db) สำเร็จ!`, 'success');
         }
         
         // Live apply to existing spawned enemies on map if running
@@ -1172,7 +1288,7 @@ class BossSettingsController {
           }
         });
       }
-      if (em.boss && (type === 'preta' || type === 'boss') && em.boss.applyConfig) {
+      if (em.boss && (type === 'preta' || type === 'bosspreat' || type === 'boss') && em.boss.applyConfig) {
         em.boss.applyConfig(cfg);
       }
     }
@@ -1210,7 +1326,7 @@ class BossSettingsController {
 
 // Instantiate on DOM load or immediately if ready
 function initBossSettingsController() {
-  if (document.getElementById('viewBossConfig')) {
+  if (document.getElementById('viewBossConfig') && !window.bossSettingsController) {
     window.bossSettingsController = new BossSettingsController();
   }
 }

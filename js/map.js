@@ -38,7 +38,7 @@ class GameMap {
           this.colliders = data.colliders || [];
           if (Array.isArray(data.chests)) this.chests = data.chests;
           if (Array.isArray(data.shrines)) this.shrines = data.shrines;
-          if (Array.isArray(data.pickups)) this.pickups = data.pickups;
+          if (Array.isArray(data.pickups)) this.pickups = data.pickups.filter(p => p && p.type !== 'lotus');
           if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
             this.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
           }
@@ -156,23 +156,13 @@ class GameMap {
     chestLocations.forEach(loc => {
       this.chests.push({ x: loc.x, y: loc.y, opened: false });
     });
-
-    // Spawn initial Sacred Lotus flowers (pickups)
-    for (let i = 0; i < 14; i++) {
-      const angle = (Math.PI * 2 / 14) * i;
-      const rad = 250 + Math.random() * 400;
-      this.spawnPickup({
-        type: 'lotus',
-        x: this.width / 2 + Math.cos(angle) * rad,
-        y: this.height / 2 + Math.sin(angle) * rad
-      });
-    }
   }
 
   spawnPickup(item) {
+    if (!item || item.type === 'lotus') return;
     this.pickups.push({
       id: Math.random(),
-      type: item.type, // 'hp_potion', 'mp_potion', 'coin', 'lotus', 'equipment'
+      type: item.type, // 'hp_potion', 'mp_potion', 'coin', 'equipment'
       itemData: item.itemData || null,
       x: item.x,
       y: item.y,
@@ -256,6 +246,19 @@ class GameMap {
           player.hpPotions += 2;
           player.mpPotions += 2;
           player.addExp(80);
+
+          // Chest Equipment Drop (Rare/Epic Guaranteed!)
+          if (window.ItemSystem) {
+            const chestDrop = window.ItemSystem.rollDrop('chest', player.level || 1);
+            if (chestDrop) {
+              this.spawnPickup({
+                type: 'equipment',
+                itemData: chestDrop,
+                x: chest.x + (Math.random() - 0.5) * 16,
+                y: chest.y + 18
+              });
+            }
+          }
         }
       }
     }
@@ -266,34 +269,65 @@ class GameMap {
       p.life -= dt;
       if (p.life <= 0) {
         this.pickups.splice(i, 1);
-        continue;
-      }
-
-      // Check player collection
-      const dist = Math.hypot(player.x - p.x, player.y - p.y);
-      if (dist < 42) {
-        if (p.type === 'coin') {
-          player.gold += p.value || 10;
-          window.soundSystem.playCoin();
-          window.effectsManager.addDamageText(p.x, p.y, `+${p.value || 10} ทอง`, 'normal');
-        } else if (p.type === 'hp_potion') {
-          player.hpPotions = Math.min(player.maxPotions, player.hpPotions + 1);
-          window.soundSystem.playCoin();
-          window.effectsManager.addDamageText(p.x, p.y, '+1 ยาฟื้นเลือด', 'heal_hp');
-        } else if (p.type === 'mp_potion') {
-          player.mpPotions = Math.min(player.maxPotions, player.mpPotions + 1);
-          window.soundSystem.playCoin();
-          window.effectsManager.addDamageText(p.x, p.y, '+1 ยาฟื้นมานา', 'heal_mp');
-        } else if (p.type === 'lotus') {
-          const heal = Math.floor(player.maxHp * 0.25);
-          player.hp = Math.min(player.maxHp, player.hp + heal);
-          player.addExp(30);
-          window.soundSystem.playSkill3();
-          window.effectsManager.addDamageText(p.x, p.y, `บัวทิพย์ +${heal} HP`, 'heal_hp');
-        }
-        this.pickups.splice(i, 1);
       }
     }
+  }
+
+  // Collect a pickup manually when player clicks and reaches it (Ragnarok Online style)
+  collectPickup(p, player) {
+    if (!p || !player) return false;
+    const idx = this.pickups.indexOf(p);
+    if (idx === -1) return false;
+
+    if (p.type === 'coin') {
+      const val = p.value || 10;
+      player.gold += val;
+      window.soundSystem.playCoin();
+      window.effectsManager.addDamageText(p.x, p.y - 20, `+${val} ทอง`, 'normal');
+      window.effectsManager.addAuraBurst(p.x, p.y, '#facc15', 18);
+    } else if (p.type === 'hp_potion') {
+      player.addPotion('hp_potion', 1);
+      window.soundSystem.playCoin();
+      window.effectsManager.addDamageText(p.x, p.y - 20, '+1 น้ำเต้าโอสถเลือด', 'heal_hp');
+      window.effectsManager.addAuraBurst(p.x, p.y, '#ef4444', 18);
+      if (window.inventoryUI && window.inventoryUI.isOpen) {
+        window.inventoryUI.render();
+      }
+    } else if (p.type === 'mp_potion') {
+      player.addPotion('mp_potion', 1);
+      window.soundSystem.playCoin();
+      window.effectsManager.addDamageText(p.x, p.y - 20, '+1 น้ำเต้าอมฤตมานา', 'heal_mp');
+      window.effectsManager.addAuraBurst(p.x, p.y, '#3b82f6', 18);
+      if (window.inventoryUI && window.inventoryUI.isOpen) {
+        window.inventoryUI.render();
+      }
+    } else if (p.type === 'lotus') {
+      const heal = Math.floor(player.maxHp * 0.25);
+      player.hp = Math.min(player.maxHp, player.hp + heal);
+      player.addExp(30);
+      window.soundSystem.playSkill3();
+      window.effectsManager.addDamageText(p.x, p.y - 20, `บัวทิพย์ +${heal} HP`, 'heal_hp');
+      window.effectsManager.addAuraBurst(p.x, p.y, '#ec4899', 24);
+    } else if (p.type === 'equipment' && p.itemData) {
+      const added = player.addItem(p.itemData);
+      if (added) {
+        const rarity = (window.RARITY_TIERS && window.RARITY_TIERS[p.itemData.rarity]) || { color: '#fbbf24' };
+        if (window.soundSystem && window.soundSystem.playPowerUp) {
+          window.soundSystem.playPowerUp();
+        }
+        window.effectsManager.addDamageText(p.x, p.y - 28, `✨ ได้รับ [${p.itemData.name}]!`, 'crit');
+        window.effectsManager.addAuraBurst(p.x, p.y, rarity.color, 30);
+        if (window.inventoryUI && window.inventoryUI.isOpen) {
+          window.inventoryUI.render();
+        }
+      } else {
+        window.effectsManager.addDamageText(p.x, p.y - 25, '⚠️ กระเป๋าเต็ม!', 'normal');
+        return false; // Leave on ground if inventory full
+      }
+    }
+
+    this.pickups.splice(idx, 1);
+    return true;
   }
 
   // Draw Map Ground Tiles
@@ -660,22 +694,152 @@ class GameMap {
     }
   }
 
-  // Render single pickup
+  // Render single pickup (Ragnarok Online style item drop with hover tooltip and rarity halos)
   renderSinglePickup(ctx, camera, p) {
     const now = performance.now() / 1000;
-    const px = p.x - camera.x;
-    const floatY = Math.sin((now - p.spawnTime) * 4) * 4;
-    const py = p.y - camera.y + floatY;
+    const px = Math.round(p.x - camera.x);
+    const floatY = Math.sin((now - (p.spawnTime || 0)) * 3.5) * 4;
+    const py = Math.round(p.y - camera.y + floatY);
 
-    let img = null;
-    if (p.type === 'coin') img = window.assetManager.getImage('item_coin');
-    else if (p.type === 'hp_potion') img = window.assetManager.getImage('item_hp_potion');
-    else if (p.type === 'mp_potion') img = window.assetManager.getImage('item_mp_potion');
-    else if (p.type === 'lotus') img = window.assetManager.getImage('item_lotus');
+    const isHovered = !!p._isHovered;
 
-    if (img) {
-      ctx.drawImage(img, px - img.width / 2, py - img.height / 2, img.width, img.height);
+    // 1. Draw glowing ground halo shadow
+    ctx.save();
+    const haloRadius = (isHovered ? 20 : 15) + Math.sin(now * 5) * 3;
+    const haloGrad = ctx.createRadialGradient(px, py + 12, 2, px, py + 12, haloRadius);
+    const glowCol = (p.type === 'equipment' && p.itemData)
+      ? ((window.RARITY_TIERS && window.RARITY_TIERS[p.itemData.rarity]?.color) || '#f59e0b')
+      : (p.type === 'coin' ? '#eab308' : (p.type === 'hp_potion' ? '#ef4444' : (p.type === 'mp_potion' ? '#3b82f6' : '#ec4899')));
+    
+    haloGrad.addColorStop(0, isHovered ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.45)');
+    haloGrad.addColorStop(0.4, glowCol + '55');
+    haloGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    ctx.fillStyle = haloGrad;
+    ctx.beginPath();
+    ctx.ellipse(px, py + 12, haloRadius, haloRadius * 0.45, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. If Equipment: vertical mystical beam of light
+    if (p.type === 'equipment' && p.itemData) {
+      const beamGrad = ctx.createLinearGradient(px, py - 45, px, py + 10);
+      beamGrad.addColorStop(0, 'rgba(0, 0, 0, 0)');
+      beamGrad.addColorStop(0.5, glowCol + (isHovered ? '88' : '44'));
+      beamGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = beamGrad;
+      ctx.fillRect(px - 10, py - 45, 20, 55);
     }
+
+    // 3. Draw Item Graphic
+    if (p.type === 'equipment' && p.itemData) {
+      let eqImg = p.itemData._img;
+      if (!eqImg && p.itemData.icon) {
+        eqImg = new Image();
+        eqImg.src = p.itemData.icon;
+        p.itemData._img = eqImg;
+      }
+      if (eqImg && eqImg.complete && eqImg.naturalWidth > 0) {
+        // Transparent Keying Cache: Remove solid black background (#000000) dynamically
+        if (!eqImg._transparentCanvas) {
+          try {
+            const oc = document.createElement('canvas');
+            oc.width = eqImg.naturalWidth || eqImg.width || 32;
+            oc.height = eqImg.naturalHeight || eqImg.height || 32;
+            const octx = oc.getContext('2d');
+            octx.drawImage(eqImg, 0, 0);
+            const imgData = octx.getImageData(0, 0, oc.width, oc.height);
+            const d = imgData.data;
+            for (let idx = 0; idx < d.length; idx += 4) {
+              const r = d[idx];
+              const g = d[idx + 1];
+              const b = d[idx + 2];
+              // Key out pure black or near-black background pixels (< 16 rgb)
+              if (r < 18 && g < 18 && b < 18) {
+                d[idx + 3] = 0; // alpha = 0
+              }
+            }
+            octx.putImageData(imgData, 0, 0);
+            eqImg._transparentCanvas = oc;
+          } catch (e) {
+            eqImg._transparentCanvas = eqImg;
+          }
+        }
+        const drawSrc = eqImg._transparentCanvas || eqImg;
+        ctx.drawImage(drawSrc, px - 16, py - 16, 32, 32);
+      } else {
+        const pouchImg = window.assetManager.getImage('icon_util_inventory');
+        if (pouchImg) ctx.drawImage(pouchImg, px - 16, py - 16, 32, 32);
+      }
+    } else {
+      let img = null;
+      if (p.type === 'coin') img = window.assetManager.getImage('item_coin');
+      else if (p.type === 'hp_potion') img = window.assetManager.getImage('item_hp_potion');
+      else if (p.type === 'mp_potion') img = window.assetManager.getImage('item_mp_potion');
+      else if (p.type === 'lotus') img = window.assetManager.getImage('item_lotus');
+
+      if (img) {
+        ctx.drawImage(img, px - img.width / 2, py - img.height / 2, img.width, img.height);
+      }
+    }
+
+    // 4. Hover Selection Bracket & Overhead Name Tooltip (Ragnarok Online style)
+    if (isHovered || (p.type === 'equipment' && p.itemData)) {
+      let labelText = '';
+      let labelColor = '#ffffff';
+      let borderCol = '#f59e0b';
+
+      if (p.type === 'equipment' && p.itemData) {
+        const rar = (window.RARITY_TIERS && window.RARITY_TIERS[p.itemData.rarity]) || { color: '#fbbf24', borderColor: '#f59e0b' };
+        labelText = p.itemData.name;
+        labelColor = rar.color;
+        borderCol = rar.borderColor || rar.color;
+      } else if (p.type === 'coin') {
+        labelText = `🪙 กองเหรียญทอง (+${p.value || 10} ฿)`;
+        labelColor = '#fde047';
+        borderCol = '#eab308';
+      } else if (p.type === 'hp_potion') {
+        labelText = '❤️ ยาฟื้นฟูเลือด';
+        labelColor = '#fca5a5';
+        borderCol = '#ef4444';
+      } else if (p.type === 'mp_potion') {
+        labelText = '💧 ยาฟื้นฟูมานา';
+        labelColor = '#93c5fd';
+        borderCol = '#3b82f6';
+      } else if (p.type === 'lotus') {
+        labelText = '🌸 ดอกบัวทิพย์หิมพานต์';
+        labelColor = '#f472b6';
+        borderCol = '#ec4899';
+      }
+
+      if (labelText) {
+        ctx.font = 'bold 11px "Kanit", sans-serif';
+        const txtWidth = ctx.measureText(labelText).width;
+        const boxW = txtWidth + 16;
+        const boxH = 20;
+        const boxX = px - boxW / 2;
+        const boxY = py - 34;
+
+        // Tooltip Pill Background
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+        ctx.strokeStyle = isHovered ? '#ffffff' : borderCol;
+        ctx.lineWidth = isHovered ? 2 : 1.2;
+        ctx.beginPath();
+        if (typeof ctx.roundRect === 'function') {
+          ctx.roundRect(boxX, boxY, boxW, boxH, 6);
+        } else {
+          ctx.rect(boxX, boxY, boxW, boxH);
+        }
+        ctx.fill();
+        ctx.stroke();
+
+        // Tooltip Text
+        ctx.fillStyle = labelColor;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(labelText, px, boxY + boxH / 2);
+      }
+    }
+
+    ctx.restore();
   }
 
   // Render single prop with tree canopy detection & smooth translucency
@@ -1125,7 +1289,7 @@ class GameMap {
       colliders: this.colliders,
       chests: this.chests || [],
       shrines: this.shrines || [],
-      pickups: this.pickups || [],
+      pickups: (this.pickups || []).filter(p => p && p.type !== 'lotus'),
       spawnPoint: this.spawnPoint || { x: 1600, y: 1600 }
     };
   }
@@ -1138,7 +1302,7 @@ class GameMap {
     if (Array.isArray(data.colliders)) this.colliders = data.colliders;
     if (Array.isArray(data.chests)) this.chests = data.chests;
     if (Array.isArray(data.shrines)) this.shrines = data.shrines;
-    if (Array.isArray(data.pickups)) this.pickups = data.pickups;
+    if (Array.isArray(data.pickups)) this.pickups = data.pickups.filter(p => p && p.type !== 'lotus');
     if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
       this.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
     }

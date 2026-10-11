@@ -66,7 +66,7 @@ const ITEM_TEMPLATES = {
   wp_club_wood: {
     name: 'กระบองไม้ประดู่ลงยันต์',
     slot: 'weapon',
-    icon: '🪵',
+    icon: 'Assets/items/wp_club_spikes.png',
     baseRarity: 'common',
     baseStats: { attack: 10, critRate: 2 },
     lore: 'กระบองไม้เนื้อแข็งแกะสลักอักขระขอมโบราณ ใช้วัดกำลังเริ่มต้นของนักรบหิมพานต์'
@@ -74,7 +74,7 @@ const ITEM_TEMPLATES = {
   wp_club_spikes: {
     name: 'กระบองเหล็กหนามยักษ์',
     slot: 'weapon',
-    icon: '🔨',
+    icon: 'Assets/items/wp_club_spikes.png',
     baseRarity: 'magic',
     baseStats: { attack: 18, critRate: 4, str: 3 },
     lore: 'ตีขึ้นจากเหล็กดำแห่งหุบเขาไกรลาส ติดหนามแหลมคมทุบทำลายเกราะศัตรู'
@@ -82,7 +82,7 @@ const ITEM_TEMPLATES = {
   wp_trident_bronze: {
     name: 'ตรีศูลสำริดหิมพานต์',
     slot: 'weapon',
-    icon: '🔱',
+    icon: 'Assets/items/wp_trident_bronze.png',
     baseRarity: 'rare',
     baseStats: { attack: 30, critRate: 6, str: 6, atkCooldown: -0.03 },
     lore: 'ตรีศูลสามง่ามเนื้อสัมฤทธิ์ประกายเขียวครึ้ม สั่นสะเทือนพลังธาตุแห่งพงไพร'
@@ -90,7 +90,7 @@ const ITEM_TEMPLATES = {
   wp_sword_fafeun: {
     name: 'ดาบฟ้าฟื้นพิชิตมาร',
     slot: 'weapon',
-    icon: '🗡️',
+    icon: 'Assets/items/wp_trident_bronze.png',
     baseRarity: 'epic',
     baseStats: { attack: 48, critRate: 9, str: 10, agi: 5, atkCooldown: -0.06 },
     lore: 'ศาสตราวุธในตำนานตีจากเหล็กไหลและพรายโลหะ เมื่อฟาดฟันบังเกิดสายฟ้าฟาดกึกก้อง'
@@ -98,7 +98,7 @@ const ITEM_TEMPLATES = {
   wp_spear_mokkasak: {
     name: 'หอกโมกขศักดิ์มหากาฬ',
     slot: 'weapon',
-    icon: '⚡',
+    icon: 'Assets/items/wp_trident_bronze.png',
     baseRarity: 'legendary',
     baseStats: { attack: 72, critRate: 14, str: 16, vit: 8, atkCooldown: -0.08 },
     lore: 'ยอดหอกเทวะอันดับหนึ่งแห่งมหากาพย์ ทะลวงผลาญทุกการป้องกัน ไร้สิ่งใดต้านทานได้'
@@ -106,7 +106,7 @@ const ITEM_TEMPLATES = {
   wp_phra_khan_tri: {
     name: 'พระขรรค์ตรีภพปราบอสุรา',
     slot: 'weapon',
-    icon: '✨',
+    icon: 'Assets/items/wp_trident_bronze.png',
     baseRarity: 'legendary',
     baseStats: { attack: 76, critRate: 16, str: 18, agi: 10, atkCooldown: -0.10 },
     lore: 'พระขรรค์ทองคำเทวราช ส่องแสงประกายสีทอง ขจัดวิญญาณบาปและมารร้ายสูญสลาย'
@@ -116,7 +116,7 @@ const ITEM_TEMPLATES = {
   ar_leather_hide: {
     name: 'เกราะหนังสัตว์ป่าดงพญาเย็น',
     slot: 'armor',
-    icon: '🥋',
+    icon: 'Assets/items/ar_leather_hide.png',
     baseRarity: 'common',
     baseStats: { defense: 6, maxHp: 45 },
     lore: 'ฟอกขึ้นจากหนังสัตว์ป่าหนาทนทาน ช่วยผ่อนแรงกระแทกจากกรงเล็บอสูร'
@@ -124,7 +124,7 @@ const ITEM_TEMPLATES = {
   ar_buffalo_plate: {
     name: 'เกราะหนังควายธนูลงอักขระ',
     slot: 'armor',
-    icon: '🛡️',
+    icon: 'Assets/items/ar_buffalo_plate.png',
     baseRarity: 'magic',
     baseStats: { defense: 14, maxHp: 90, bleedResist: 12 },
     lore: 'หนังพญาควายธนูลงอักขระคงกระพันชาตรี คมมีดฟันไม่เข้า แทงไม่ระคายผิว'
@@ -132,7 +132,7 @@ const ITEM_TEMPLATES = {
   ar_naga_scales: {
     name: 'เกราะเกล็ดพญานาคา',
     slot: 'armor',
-    icon: '🐉',
+    icon: 'Assets/items/ar_naga_scales.png',
     baseRarity: 'rare',
     baseStats: { defense: 26, maxHp: 180, bleedResist: 25, vit: 7 },
     lore: 'เกล็ดพญานาคสีมรกตเลื่อมประกายน้ำ เย็นเยียบดุจสายน้ำ ลดทอนความเสียหายร้ายแรง'
@@ -140,7 +140,7 @@ const ITEM_TEMPLATES = {
   ar_suvarn_asura: {
     name: 'เกราะสุวรรณอสุรินทร์',
     slot: 'armor',
-    icon: '👑',
+    icon: 'Assets/items/ar_suvarn_asura.png',
     baseRarity: 'epic',
     baseStats: { defense: 42, maxHp: 320, bleedResist: 40, vit: 14 },
     lore: 'เกราะทองคำของแม่ทัพยักษ์โบราณ สลักลายกนกเปลวเพลิงคุ้มครองกายารอบด้าน'
@@ -148,7 +148,7 @@ const ITEM_TEMPLATES = {
   ar_diamond_gem: {
     name: 'เกราะเพชรนพรัตน์เก็จมณี',
     slot: 'armor',
-    icon: '💎',
+    icon: 'Assets/items/ar_suvarn_asura.png',
     baseRarity: 'legendary',
     baseStats: { defense: 65, maxHp: 520, bleedResist: 55, vit: 22, maxMp: 90 },
     lore: 'สุดยอดเกราะเทวะหลอมรวมนพเก้าประกายแสงสะท้อนมนต์ดำและคำสาปทั้งปวง'
@@ -158,7 +158,7 @@ const ITEM_TEMPLATES = {
   br_cloth_wraps: {
     name: 'ผ้ารัดข้อมือฝ้ายดิบลงเวท',
     slot: 'bracer',
-    icon: '🧤',
+    icon: 'Assets/items/br_tiger_fangs.png',
     baseRarity: 'common',
     baseStats: { attack: 4, speed: 6 },
     lore: 'ผ้าฝ้ายถักทอด้วยมนต์เสน่ห์ ช่วยให้ข้อมือกวัดแกว่งอาวุธได้มั่นคงขึ้น'
@@ -166,7 +166,7 @@ const ITEM_TEMPLATES = {
   br_bronze_guards: {
     name: 'สนับแขนสำริดโบราณ',
     slot: 'bracer',
-    icon: '🥊',
+    icon: 'Assets/items/br_bronze_guards.png',
     baseRarity: 'magic',
     baseStats: { attack: 8, speed: 12, agi: 4 },
     lore: 'สนับแขนโลหะสัมฤทธิ์โบราณ ช่วยเพิ่มพลังกำปั้นและความคล่องตัว'
@@ -174,7 +174,7 @@ const ITEM_TEMPLATES = {
   br_tiger_fangs: {
     name: 'สนับมือเขี้ยวพยัคฆ์สมิง',
     slot: 'bracer',
-    icon: '🐯',
+    icon: 'Assets/items/br_tiger_fangs.png',
     baseRarity: 'rare',
     baseStats: { attack: 16, speed: 18, critRate: 5, agi: 8 },
     lore: 'ประดับด้วยเขี้ยวเสือสมิงอาคม ทำให้การออกอาวุธฉับไวดุจเสือกระโจน'
@@ -182,7 +182,7 @@ const ITEM_TEMPLATES = {
   br_gold_bali: {
     name: 'สนับกรทองคำพญาพาลี',
     slot: 'bracer',
-    icon: '⚜️',
+    icon: 'Assets/items/br_bronze_guards.png',
     baseRarity: 'epic',
     baseStats: { attack: 28, speed: 25, critRate: 8, agi: 14, atkCooldown: -0.05 },
     lore: 'สนับกรสลักรูปพญาพาลีเจ้าเมืองขีดขิน ยืมพละกำลังกึ่งหนึ่งของคู่ต่อสู้มาเป็นของตน'
@@ -190,7 +190,7 @@ const ITEM_TEMPLATES = {
   br_hanuman_bracers: {
     name: 'ปลอกแขนเทพวานรหนุมาน',
     slot: 'bracer',
-    icon: '🌪️',
+    icon: 'Assets/items/br_tiger_fangs.png',
     baseRarity: 'legendary',
     baseStats: { attack: 42, speed: 36, critRate: 12, agi: 22, atkCooldown: -0.08 },
     lore: 'ปลอกแขนทหารเอกพระราม เคลื่อนไหวรวดเร็วดุจสายลม รัวโจมตีไร้ช่องโหว่'
@@ -200,7 +200,7 @@ const ITEM_TEMPLATES = {
   tl_string_sai_sin: {
     name: 'ด้ายสายสิญจน์มงคลเก้า',
     slot: 'talisman',
-    icon: '🧵',
+    icon: 'Assets/items/tl_takrud_tone.png',
     baseRarity: 'common',
     baseStats: { maxMp: 25, spi: 3 },
     lore: 'ด้ายสายสิญจน์ปลุกเสกเก้าพิธี คุ้มกันจิตใจไม่ให้หวั่นเกรงต่อภูตผี'
@@ -208,7 +208,7 @@ const ITEM_TEMPLATES = {
   tl_takrud_tone: {
     name: 'ตะกรุดโทนมหาปราบ',
     slot: 'talisman',
-    icon: '📜',
+    icon: 'Assets/items/tl_takrud_tone.png',
     baseRarity: 'magic',
     baseStats: { maxMp: 50, defense: 8, spi: 6 },
     lore: 'แผ่นตะกั่วลงยันต์มหาปราบม้วนรัดเชือกถัก ป้องกันภัยอันตรายและภูตผีปีศาจ'
@@ -216,7 +216,7 @@ const ITEM_TEMPLATES = {
   tl_mit_mor: {
     name: 'มีดหมอปราบไตรภพ',
     slot: 'talisman',
-    icon: '🗡️',
+    icon: 'Assets/items/tl_holy_conch.png',
     baseRarity: 'rare',
     baseStats: { attack: 14, critRate: 6, bleedResist: 20, spi: 10 },
     lore: 'ด้ามและฝักแกะจากไม้เสาตะเคียนใบมีดจารอักขระพุทธคุณ กำราบวิญญาณร้าย'
@@ -224,7 +224,7 @@ const ITEM_TEMPLATES = {
   tl_pha_yant: {
     name: 'ผ้ายันต์มหาอุตม์แคล้วคลาด',
     slot: 'talisman',
-    icon: '🚩',
+    icon: 'Assets/items/tl_lotus_anodat.png',
     baseRarity: 'epic',
     baseStats: { maxHp: 180, defense: 20, bleedResist: 30, spi: 14, vit: 8 },
     lore: 'ผ้ายันต์ลงหมึกว่านยา ๑๐๘ ชนิด บันดาลให้แคล้วคลาดปลอดภัยจากอาวุธศัตรู'
@@ -232,10 +232,202 @@ const ITEM_TEMPLATES = {
   tl_bia_gae: {
     name: 'เบี้ยแก้สารพัดกันเทวฤทธิ์',
     slot: 'talisman',
-    icon: '📿',
+    icon: 'Assets/items/tl_bia_gae.png',
     baseRarity: 'legendary',
     baseStats: { maxHp: 300, maxMp: 140, defense: 30, critRate: 9, str: 8, agi: 8, vit: 8, spi: 16 },
     lore: 'หอยเบี้ยบรรจุปรอทเสกหุ้มตะกั่วถักเชือกลงรัก ป้องกันคุณไสยมนต์ดำ กลับร้ายกลายเป็นดี'
+  },
+
+  // --- HELMET / HEADWEAR (หมวก / ชฎา / รัดเกล้า) ---
+  hm_cloth_band: {
+    name: 'ผ้าประเจียดโพกศีรษะลงยันต์',
+    slot: 'helmet',
+    icon: 'Assets/items/hm_cloth_band.png',
+    baseRarity: 'common',
+    baseStats: { defense: 4, maxHp: 25 },
+    lore: 'ผ้าประเจียดจารอักขระคาถา มัดผูกกระหม่อมเพื่อความคงกระพันเบื้องต้น'
+  },
+  hm_iron_helm: {
+    name: 'หมวกเกราะเหล็กอสูร',
+    slot: 'helmet',
+    icon: 'Assets/items/hm_iron_helm.png',
+    baseRarity: 'magic',
+    baseStats: { defense: 10, maxHp: 70, vit: 4 },
+    lore: 'หมวกเกราะเหล็กแกร่งสลักรูปหน้ายักษ์ ป้องกันอันตรายส่วนศีรษะจากการโจมตีหนัก'
+  },
+  hm_naga_crown: {
+    name: 'รัดเกล้าเกล็ดพญานาคา',
+    slot: 'helmet',
+    icon: 'Assets/items/hm_yaksha_mask.png',
+    baseRarity: 'rare',
+    baseStats: { defense: 22, maxHp: 150, maxMp: 50, vit: 8 },
+    lore: 'รัดเกล้าหัวพญานาคแผ่พังพาน เสริมพลังสมาธิญาณและปราการเวทมนตร์'
+  },
+  hm_chada_gold: {
+    name: 'ชฎายอดทองคำสุวรรณภูมิ',
+    slot: 'helmet',
+    icon: 'Assets/items/hm_chada_gold.png',
+    baseRarity: 'epic',
+    baseStats: { defense: 38, maxHp: 260, critRate: 5, str: 6, agi: 6, vit: 8, spi: 8 },
+    lore: 'ชฎาทองคำแท้ประดับพลอยทับทิม เครื่องทรงกษัตริย์และแม่ทัพเทวะ สง่างามน่าเกรงขาม'
+  },
+  hm_crown_deva: {
+    name: 'มงกุฎเทวราชตรีภพ',
+    slot: 'helmet',
+    icon: 'Assets/items/hm_crown_deva.png',
+    baseRarity: 'legendary',
+    baseStats: { defense: 58, maxHp: 440, maxMp: 120, critRate: 10, str: 12, agi: 12, vit: 14, spi: 16 },
+    lore: 'มงกุฎแห่งจอมเทพผู้ครองสามภพ ส่องแสงออร่าแห่งปัญญาและอำนาจบารมีไร้เทียมทาน'
+  },
+
+  // --- PANTS / LEGGINGS (กางเกง / สนับเพลา) ---
+  pn_cloth_pha_nung: {
+    name: 'ผ้านุ่งโจงกระเบนไพรกระชับ',
+    slot: 'pants',
+    icon: 'Assets/items/pn_hunter_pants.png',
+    baseRarity: 'common',
+    baseStats: { defense: 3, speed: 5 },
+    lore: 'ผ้านุ่งโจงกระเบนถักทอทะมัดทะแมง เหมาะกับการย่ำบึงป่าดงดิบ'
+  },
+  pn_hunter_pants: {
+    name: 'สนับเพลาหนังเสือพราย',
+    slot: 'pants',
+    icon: 'Assets/items/pn_hunter_pants.png',
+    baseRarity: 'magic',
+    baseStats: { defense: 9, speed: 10, agi: 4 },
+    lore: 'สนับเพลาตัดเย็บจากหนังพยัคฆ์ลายพาดกลอน ช่วยให้ช่วงล่างว่องไวทรงพลัง'
+  },
+  pn_iron_greaves: {
+    name: 'สนับเพลาเหล็กหล่อลงอาคม',
+    slot: 'pants',
+    icon: 'Assets/items/pn_hunter_pants.png',
+    baseRarity: 'rare',
+    baseStats: { defense: 20, maxHp: 100, speed: 14, vit: 6 },
+    lore: 'แผ่นเหล็กประกบต้นขาจรดหน้าแข้ง สลักอักขระกันกระแทกอย่างหนาแน่น'
+  },
+  pn_gold_asura: {
+    name: 'สนับเพลาทองคำอสุรินทร์',
+    slot: 'pants',
+    icon: 'Assets/costumes/pants_deva_gold.png',
+    baseRarity: 'epic',
+    baseStats: { defense: 34, maxHp: 200, speed: 20, vit: 10, agi: 8 },
+    lore: 'สนับเพลาทองคำสลักลายกนกทวยเทพ หนักแน่นแต่ว่องไวดั่งสายฟ้าฟาด'
+  },
+  pn_indra_silk: {
+    name: 'สนับเพลายกพรายทองกนก',
+    slot: 'pants',
+    icon: 'Assets/costumes/pants_deva_gold.png',
+    baseRarity: 'legendary',
+    baseStats: { defense: 54, maxHp: 380, speed: 28, vit: 18, agi: 16, critRate: 6 },
+    lore: 'ผ้านุ่งโจงกระเบนยกทองสลักลายกนกทวยเทพ พร้อมเกราะสนับเพลาทองคำลงยา หนักแน่นแต่ว่องไวดั่งสายฟ้าฟาด'
+  },
+
+  // --- BOOTS / FOOTWEAR (รองเท้า / ฉลองพระบาท) ---
+  bt_straw_sandals: {
+    name: 'เกือกหญ้าถักอาคมแคล้วคลาด',
+    slot: 'boots',
+    icon: 'Assets/items/bt_golden_sabaton.png',
+    baseRarity: 'common',
+    baseStats: { speed: 8 },
+    lore: 'เกือกสานจากหญ้าคาปลุกเสก ก้าวเดินเงียบกริบในดงพงไพร'
+  },
+  bt_leather_boots: {
+    name: 'รองเท้าหนังกระทิงดง',
+    slot: 'boots',
+    icon: 'Assets/items/bt_golden_sabaton.png',
+    baseRarity: 'magic',
+    baseStats: { speed: 16, defense: 6, agi: 3 },
+    lore: 'รองเท้าหนังกระทิงภูเขาหนาแน่น ทนทานต่อโขดหินคมและหนามพิษ'
+  },
+  bt_wind_treads: {
+    name: 'ฉลองพระบาทวายุภักษ์',
+    slot: 'boots',
+    icon: 'Assets/items/bt_golden_sabaton.png',
+    baseRarity: 'rare',
+    baseStats: { speed: 26, defense: 12, agi: 8, atkCooldown: -0.03 },
+    lore: 'ฉลองพระบาทแห่งนกวายุภักษ์ แต่ละย่างก้าวเสมือนลอยเหนือพื้นดิน'
+  },
+  bt_garuda_talons: {
+    name: 'ฉลองพระบาทกรงเล็บพญาครุฑ',
+    slot: 'boots',
+    icon: 'Assets/items/bt_golden_sabaton.png',
+    baseRarity: 'epic',
+    baseStats: { speed: 40, defense: 22, critRate: 6, agi: 15, str: 6 },
+    lore: 'ปลายฉลองพระบาทติดกรงเล็บทองคำพญาครุฑ เสริมแรงกระโดดและจังหวะเตะทำลายล้าง'
+  },
+  bt_celestial_stride: {
+    name: 'ฉลองพระบาททองคำปลายงอนชดช้อย',
+    slot: 'boots',
+    icon: 'Assets/costumes/boots_deva_gold.png',
+    baseRarity: 'legendary',
+    baseStats: { speed: 60, defense: 38, critRate: 10, agi: 25, atkCooldown: -0.06 },
+    lore: 'ยอดฉลองพระบาทแห่งเทวโลก ปลายงอนกนกชดช้อย ผู้สวมใส่เคลื่อนที่เร็วดั่งพายุหมุน ไร้ผู้ใดไล่ทัน'
+  },
+
+  // --- WINGS (ปีกนางฟ้า / ปีกกินรี / ปีกครุฑ) ---
+  wg_kinnari_emerald: {
+    name: 'ปีกกินรีเขียวมรกตหิมพานต์',
+    slot: 'wings',
+    icon: 'Assets/items/wg_garuda_infernal.png',
+    wingStyle: 'emerald',
+    baseRarity: 'rare',
+    baseStats: { speed: 32, maxMp: 120, critRate: 6, agi: 10, spi: 12 },
+    lore: 'ปีกนางกินรีแห่งสระอโนดาต ส่องประกายสีเขียวมรกต กระพือพลิ้วโบยบินดั่งสายลม'
+  },
+  wg_angelic_celestial: {
+    name: 'ปีกนางฟ้าเทวราชสุวรรณภูมิ (Pixel Art)',
+    slot: 'wings',
+    icon: 'Assets/costumes/wings_pixel_icon.png',
+    wingStyle: 'gold',
+    spritesheet: 'Assets/costumes/wings_pixel_spritesheet.png',
+    frameCount: 5,
+    baseRarity: 'legendary',
+    baseStats: { speed: 52, maxHp: 320, maxMp: 240, defense: 28, critRate: 10, allStats: 12 },
+    lore: 'ปีกนางฟ้าชาวสวรรค์สไตล์ Pixel Art แอนิเมชันขนนกทองคำแท้กระพือโบกสะบัดพลิ้วไหว ประดับอัญมณีฟ้าดาราราย'
+  },
+  wg_garuda_infernal: {
+    name: 'ปีกพญาครุฑเพลิงสุริยันต์',
+    slot: 'wings',
+    icon: 'Assets/items/wg_garuda_infernal.png',
+    wingStyle: 'fire',
+    baseRarity: 'legendary',
+    baseStats: { speed: 68, attack: 55, critRate: 16, maxHp: 450, str: 20, agi: 16, vit: 14 },
+    lore: 'ปีกเพลิงสุริยคราสของพญาสุบรรณครุฑราช โบกสะบัดพัดพาเปลวเพลิงแผดเผาอธรรม'
+  },
+  wg_void_shadow: {
+    name: 'ปีกมารทมิฬราหูอมจันทร์',
+    slot: 'wings',
+    icon: 'Assets/costumes/wings_celestial_gold.png',
+    wingStyle: 'void',
+    baseRarity: 'legendary',
+    baseStats: { speed: 64, attack: 65, critRate: 18, atkCooldown: -0.09, bleedResist: 45, str: 18, agi: 22 },
+    lore: 'ปีกสีนิลกาฬแห่งพระราหู บดบังแสงตะวัน ปลดปล่อยคลื่นความมืดกลืนกินสรรพสิ่ง'
+  },
+
+  // --- CONSUMABLES / POTIONS (ยาโอสถฟื้นฟู) ---
+  pot_hp_gourd: {
+    name: 'น้ำเต้าโอสถทิพย์ฟื้นฟูเลือด',
+    slot: 'consumable',
+    category: 'potion',
+    itemType: 'hp_potion',
+    icon: 'Assets/ui/icon_potion_hp.png',
+    baseRarity: 'common',
+    baseStats: {},
+    maxStack: 99,
+    value: 50,
+    lore: 'น้ำเต้าโอสถทิพย์สีชาด ฟื้นฟูพลังชีวิต 45% Max HP ทันทีที่ดื่ม'
+  },
+  pot_mp_gourd: {
+    name: 'น้ำเต้าอมฤตฟื้นฟูมานา',
+    slot: 'consumable',
+    category: 'potion',
+    itemType: 'mp_potion',
+    icon: 'Assets/ui/icon_potion_mp.png',
+    baseRarity: 'common',
+    baseStats: {},
+    maxStack: 99,
+    value: 50,
+    lore: 'น้ำเต้าศิลาแก้วมนตราสีคราม ฟื้นฟูพลังมานา 50% Max MP ทันทีที่ดื่ม'
   }
 };
 
@@ -304,15 +496,21 @@ class ItemSystem {
 
     return {
       id,
+      key: templateKey,
       templateKey,
       name: tmpl.name,
       slot: tmpl.slot,
+      category: tmpl.category || (tmpl.slot === 'consumable' ? 'potion' : 'equip'),
+      itemType: tmpl.itemType || null,
+      count: tmpl.count || 1,
+      maxStack: tmpl.maxStack || (tmpl.slot === 'consumable' ? 99 : 1),
       icon: tmpl.icon,
+      wingStyle: tmpl.wingStyle || null,
       rarity: rarityKey,
       stats: finalStats,
       affixes,
       lore: tmpl.lore,
-      value: Math.round(40 * rarity.multiplier + (Math.random() * 20))
+      value: tmpl.value || Math.round(40 * rarity.multiplier + (Math.random() * 20))
     };
   }
 
@@ -363,3 +561,4 @@ class ItemSystem {
 window.RARITY_TIERS = RARITY_TIERS;
 window.ITEM_TEMPLATES = ITEM_TEMPLATES;
 window.ItemSystem = ItemSystem;
+

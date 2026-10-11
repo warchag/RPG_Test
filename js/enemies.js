@@ -298,7 +298,7 @@ class Enemy {
     }
   }
 
-  takeDamage(amount, isCrit, player) {
+  takeDamage(amount, isCrit, player, knockbackDist = 0) {
     if (this.isDead) return;
 
     this.hp -= amount;
@@ -308,16 +308,21 @@ class Enemy {
     // Provoke monster only when attacked by player
     if (!this.isProvoked) {
       this.isProvoked = true;
-      window.effectsManager.addDamageText(this.x, this.y - this.radius - 22, '💢 โกรธแล้ว!', 'crit');
     }
     this.state = 'chase';
 
-    // Knockback
-    const angle = Math.atan2(this.y - player.y, this.x - player.x);
-    this.x += Math.cos(angle) * (isCrit ? 28 : 16);
-    this.y += Math.sin(angle) * (isCrit ? 28 : 16);
+    // Knockback only if explicitly requested (e.g. heavy skills)
+    if (knockbackDist > 0 && player) {
+      const angle = Math.atan2(this.y - player.y, this.x - player.x);
+      this.x += Math.cos(angle) * knockbackDist;
+      this.y += Math.sin(angle) * knockbackDist;
+    }
 
-    window.soundSystem.playHit();
+    if (isCrit && window.soundSystem && typeof window.soundSystem.playCrit === 'function') {
+      window.soundSystem.playCrit();
+    } else {
+      window.soundSystem.playHit();
+    }
     window.effectsManager.addDamageText(
       this.x,
       this.y - this.radius,
@@ -1729,14 +1734,25 @@ class PretaBoss extends Enemy {
     window.effectsManager.addAuraBurst(this.x, this.y, '#f59e0b', 50);
     window.effectsManager.addDamageText(this.x, this.y - 80, 'พญาเปรตวัดสุทัศน์ พ่ายแพ้แล้ว!', 'crit');
 
-    // Huge drop: Sacred Lotuses
-    for (let i = 0; i < 6; i++) {
+    // Boss drop: Gold Coins & Potions
+    for (let i = 0; i < 5; i++) {
       window.gameMap.spawnPickup({
-        type: 'lotus',
+        type: 'coin',
+        value: 20 + Math.floor(Math.random() * 20),
         x: this.x + (Math.random() - 0.5) * 80,
         y: this.y + (Math.random() - 0.5) * 80
       });
     }
+    window.gameMap.spawnPickup({
+      type: 'hp_potion',
+      x: this.x + (Math.random() - 0.5) * 60,
+      y: this.y + (Math.random() - 0.5) * 60
+    });
+    window.gameMap.spawnPickup({
+      type: 'mp_potion',
+      x: this.x + (Math.random() - 0.5) * 60,
+      y: this.y + (Math.random() - 0.5) * 60
+    });
 
     // Boss Guaranteed Epic/Legendary Equipment Drop!
     if (window.ItemSystem) {

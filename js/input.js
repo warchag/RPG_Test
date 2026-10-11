@@ -13,6 +13,7 @@ class InputManager {
       skill1: false,
       skill2: false,
       skill3: false,
+      skill4: false,
       useHp: false,
       useMp: false
     };
@@ -50,11 +51,20 @@ class InputManager {
       if (e.code === 'Digit1' || e.code === 'KeyJ') this.actions.skill1 = true;
       if (e.code === 'Digit2' || e.code === 'KeyK') this.actions.skill2 = true;
       if (e.code === 'Digit3' || e.code === 'KeyL') this.actions.skill3 = true;
+      if (e.code === 'Digit4' || e.code === 'Semicolon') this.actions.skill4 = true;
       if (e.code === 'KeyQ') this.actions.useHp = true;
       if (e.code === 'KeyE') this.actions.useMp = true;
       if (e.code === 'KeyC') {
         if (window.characterStatsController) {
           window.characterStatsController.toggleModal();
+        }
+      }
+      if (e.code === 'KeyB' || e.key === 'b' || e.key === 'B' || e.code === 'KeyI' || e.key === 'i' || e.key === 'I') {
+        if (!window.inventoryUI && typeof window.initInventoryUI === 'function') {
+          window.initInventoryUI();
+        }
+        if (window.inventoryUI && typeof window.inventoryUI.toggleModal === 'function') {
+          window.inventoryUI.toggleModal();
         }
       }
       if (e.code === 'KeyU' || e.key === 'u' || e.key === 'U') {
@@ -70,6 +80,9 @@ class InputManager {
       if (e.code === 'Escape' || e.key === 'Escape') {
         if (window.game && window.game.isWorldMapOpen) {
           window.game.toggleWorldMap(false);
+        }
+        if (window.game && window.game.player) {
+          window.game.player.clearTargets();
         }
       }
     });
@@ -206,6 +219,7 @@ class InputManager {
     bindBtn('btnSkill1', 'skill1');
     bindBtn('btnSkill2', 'skill2');
     bindBtn('btnSkill3', 'skill3');
+    bindBtn('btnSkill4', 'skill4');
     bindBtn('btnHpPotion', 'useHp');
     bindBtn('btnMpPotion', 'useMp');
   }

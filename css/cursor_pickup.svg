@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" viewBox="0 0 34 34">
+  <defs>
+    <filter id="loot-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="1" dy="1.5" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.85"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#f59e0b" flood-opacity="0.75"/>
+    </filter>
+    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="25%" stop-color="#fef08a"/>
+      <stop offset="60%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <linearGradient id="ruby-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="35%" stop-color="#f87171"/>
+      <stop offset="75%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#7f1d1d"/>
+    </linearGradient>
+  </defs>
+
+  <g filter="url(#loot-glow)">
+    <!-- 1. Forearm Bracer / สนับแขนทองคำสลักกนก -->
+    <path d="M 23 29 L 29 23 L 26 19 L 20 25 Z" 
+          fill="url(#gold-grad)" stroke="#451a03" stroke-width="1.4" stroke-linejoin="round"/>
+    <line x1="22" y1="28" x2="27" y2="22" stroke="#fffbeb" stroke-width="0.9" stroke-linecap="round"/>
+
+    <!-- 2. Wrist Cuff Gold Trim with Ruby Stud / กำไลข้อมือทองคำ -->
+    <path d="M 19 26 L 25 20 L 22 17 L 16 23 Z" 
+          fill="url(#gold-grad)" stroke="#451a03" stroke-width="1.4" stroke-linejoin="round"/>
+    <circle cx="20.5" cy="21.5" r="1.5" fill="url(#ruby-grad)" stroke="#450a0a" stroke-width="0.7"/>
+
+    <!-- 3. Back of Palm / หลังมือถุงมือยักษ์ -->
+    <path d="M 16 23 L 22 17 L 17 12 L 11 18 Z" 
+          fill="url(#gold-grad)" stroke="#451a03" stroke-width="1.4" stroke-linejoin="round"/>
+
+    <!-- 4. Central Sacred Diamond/Ruby Gem / มณีมหาโชคกลางหลังมือ -->
+    <polygon points="16.5,17 18.5,15.5 16.5,14 14.5,15.5" 
+             fill="url(#ruby-grad)" stroke="#450a0a" stroke-width="0.7"/>
+    <circle cx="16.5" cy="15.2" r="0.4" fill="#ffffff"/>
+
+    <!-- 5. Thumb Curving Forward / นิ้วหัวแม่มือกุมหยิบ -->
+    <path d="M 12 19 L 9 20 L 8 18 L 11 16 Z" 
+          fill="url(#gold-grad)" stroke="#451a03" stroke-width="1.2" stroke-linejoin="round"/>
+    <!-- Thumb claw tip -->
+    <polygon points="8,18 6,19 7,17" fill="#fef08a" stroke="#451a03" stroke-width="0.8"/>
+
+    <!-- 6. Index Finger (Picking Hotspot Pointer towards (3,3)) / นิ้วชี้ทองคำปลายชี้หยิบ -->
+    <path d="M 12 14 L 7 9 L 4 4 L 7 5 L 11 11 Z" 
+          fill="url(#gold-grad)" stroke="#451a03" stroke-width="1.4" stroke-linejoin="round"/>
+    <!-- Index Finger Sharp Golden Claw / กรงเล็บทองปลายแหลม -->
+    <polygon points="4,4 3,3 6,5" fill="#ffffff" stroke="#451a03" stroke-width="0.9"/>
+    <!-- Specular light edge on index pointer -->
+    <line x1="4" y1="4" x2="11" y2="12" stroke="#ffffff" stroke-width="0.9" stroke-linecap="round"/>
+
+    <!-- 7. Middle Finger Curled / นิ้วกลางงอเตรียมหยิบ -->
+    <path d="M 14 12 L 10 7 L 8 8 L 12 13 Z" 
+          fill="url(#gold-grad)" stroke="#451a03" stroke-width="1.2" stroke-linejoin="round"/>
+    <polygon points="8,8 7,7 9,9" fill="#fef08a" stroke="#451a03" stroke-width="0.8"/>
+
+    <!-- 8. Ring Finger Curled / นิ้วนางงอสวยงาม -->
+    <path d="M 16 13 L 13 9 L 12 11 L 14 14 Z" 
+          fill="url(#gold-grad)" stroke="#451a03" stroke-width="1.1" stroke-linejoin="round"/>
+
+    <!-- 9. Little Finger Curled / นิ้วก้อย -->
+    <path d="M 17 14 L 15 12 L 14 13 L 16 16 Z" 
+          fill="url(#gold-grad)" stroke="#451a03" stroke-width="1.0" stroke-linejoin="round"/>
+
+    <!-- 10. Holy Golden Sparkle on Claw Tip (Hotspot Indicator at (3,3)) / แสงประกายปลายกรงเล็บ -->
+    <circle cx="3.5" cy="3.5" r="1.3" fill="#ffffff"/>
+    <line x1="1" y1="3.5" x2="6" y2="3.5" stroke="#fef08a" stroke-width="0.8" stroke-linecap="round"/>
+    <line x1="3.5" y1="1" x2="3.5" y2="6" stroke="#fef08a" stroke-width="0.8" stroke-linecap="round"/>
+  </g>
+</svg>

@@ -67,37 +67,103 @@ class EffectsManager {
   }
 
   addDamageText(x, y, text, type = 'normal') {
-    let color = '#fbbf24';
-    let size = 18;
+    const isPureNumber = /^\d+$/.test(String(text).trim());
+    let color = '#ffffff';
+    let size = 23;
     let prefix = '';
+    let isCrit = (type === 'crit');
+    let isRoCrit = isCrit && isPureNumber;
+    let maxLife = 0.88;
+    let vy = -110 - Math.random() * 20;
+    let gravity = 160;
+    let vx = (Math.random() - 0.5) * 32;
+    let strokeColor = '#000000';
 
-    if (type === 'crit') {
-      color = '#f97316';
-      size = 24;
-      prefix = '⚡ ';
+    if (isCrit) {
+      if (isRoCrit) {
+        // Authentic Ragnarok Online Critical Number: Bold Golden-Yellow with Specular Highlight
+        color = '#fff677';
+        size = 31;
+        prefix = '';
+        maxLife = 1.15;
+        vy = -140 - Math.random() * 20;
+        gravity = 175;
+        vx = (Math.random() - 0.5) * 24;
+        strokeColor = '#180202';
+
+        // Spawning RO Classic Golden, Red & Orange Starburst Sparks on Critical!
+        for (let i = 0; i < 8; i++) {
+          const sparkAng = (Math.PI * 2 * i) / 8 + (Math.random() - 0.5) * 0.4;
+          const spd = 75 + Math.random() * 110;
+          this.particles.push({
+            x: x + (Math.random() - 0.5) * 16,
+            y: y - 26 + (Math.random() - 0.5) * 12,
+            vx: Math.cos(sparkAng) * spd,
+            vy: Math.sin(sparkAng) * spd - 35,
+            size: 3.0 + Math.random() * 3.0,
+            color: i % 3 === 0 ? '#ffffff' : (i % 3 === 1 ? '#ffedd5' : '#f59e0b'),
+            life: 0.4 + Math.random() * 0.2,
+            maxLife: 0.6
+          });
+        }
+      } else {
+        // Text notifications that use 'crit' type
+        color = '#f59e0b';
+        size = 22;
+        prefix = '⚡ ';
+        maxLife = 1.05;
+        vy = -120 - Math.random() * 20;
+        gravity = 160;
+        strokeColor = '#1f0400';
+      }
+    } else if (type === 'normal') {
+      // Normal attack on monster: Pure White as explicitly requested!
+      color = '#ffffff';
+      size = 23;
+      maxLife = 0.85;
+      strokeColor = '#000000';
     } else if (type === 'player_damage') {
       color = '#ef4444';
-      size = 20;
+      size = 22;
+      maxLife = 0.85;
+      vy = -90 - Math.random() * 20;
+      gravity = 140;
+      strokeColor = '#2a0505';
     } else if (type === 'heal_hp') {
-      color = '#22c55e';
-      size = 19;
+      color = '#34d399';
+      size = 21;
       prefix = '+';
+      maxLife = 1.0;
+      vy = -70 - Math.random() * 15;
+      gravity = 0; // Gentle upward drift
+      vx = (Math.random() - 0.5) * 10;
+      strokeColor = '#064e3b';
     } else if (type === 'heal_mp') {
       color = '#38bdf8';
-      size = 18;
+      size = 20;
       prefix = '+';
+      maxLife = 1.0;
+      vy = -70 - Math.random() * 15;
+      gravity = 0; // Gentle upward drift
+      vx = (Math.random() - 0.5) * 10;
+      strokeColor = '#0c4a6e';
     }
 
     this.damageTexts.push({
-      x: x + (Math.random() - 0.5) * 20,
-      y: y - 20,
-      vy: -55 - Math.random() * 25,
-      vx: (Math.random() - 0.5) * 30,
+      x: x + (Math.random() - 0.5) * 16,
+      y: y - 22,
+      vy,
+      vx,
+      gravity,
       text: prefix + text,
       color,
+      strokeColor,
       size,
-      alpha: 1.0,
-      life: 0.85
+      isCrit,
+      isRoCrit,
+      type,
+      maxLife,
+      life: maxLife
     });
   }
 
@@ -282,13 +348,16 @@ class EffectsManager {
       }
     }
 
-    // Damage texts
+    // Damage texts (Ragnarok Online Classic Arc Bounce Physics)
     for (let i = this.damageTexts.length - 1; i >= 0; i--) {
       const d = this.damageTexts[i];
       d.x += d.vx * dt;
       d.y += d.vy * dt;
+      if (d.gravity) {
+        d.vy += d.gravity * dt;
+      }
       d.life -= dt;
-      d.alpha = Math.max(0, d.life / 0.85);
+      d.alpha = Math.max(0, d.life / (d.maxLife || 0.85));
       if (d.life <= 0) {
         this.damageTexts.splice(i, 1);
       }
@@ -943,25 +1012,137 @@ class EffectsManager {
       al.render(ctx, camera);
     }
 
-    // Damage texts
-    ctx.font = 'bold 18px "Kanit", "Sarabun", sans-serif';
+    // Damage texts (Ragnarok Online Classic Arc Bounce & Glow Style)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     for (const d of this.damageTexts) {
       ctx.save();
-      ctx.globalAlpha = d.alpha;
-      ctx.font = `bold ${d.size}px "Kanit", sans-serif`;
+      const maxLife = d.maxLife || 0.85;
+      const progress = Math.max(0, Math.min(1, 1 - (d.life / maxLife)));
 
-      // Text stroke for readability
-      ctx.lineWidth = 3.5;
-      ctx.strokeStyle = '#0f172a';
-      ctx.strokeText(d.text, d.x - camera.x, d.y - camera.y);
+      // Classic RO Pop-Bounce scale curve
+      let scale = 1.0;
+      if (progress < 0.15) {
+        // Fast punchy pop up on spawn (0.00s -> 0.15s)
+        const pNorm = progress / 0.15;
+        scale = (d.isRoCrit ? 1.85 : (d.isCrit ? 1.6 : 1.35)) - pNorm * (d.isRoCrit ? 0.85 : (d.isCrit ? 0.6 : 0.35));
+      } else {
+        scale = 1.0;
+      }
 
-      // Fill color
+      // Smooth fadeout at the tail of life
+      const alpha = d.life < 0.22 ? (d.life / 0.22) : 1.0;
+      ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+
+      const screenX = d.x - camera.x;
+      const screenY = d.y - camera.y;
+
+      ctx.translate(screenX, screenY);
+      ctx.scale(scale, scale);
+
+      // If Ragnarok Online Critical Hit: Draw iconic comic "CRITICAL !!" badge banner above the number!
+      if (d.isRoCrit) {
+        this.drawRoCriticalBanner(ctx, 0, -25);
+      }
+
+      ctx.font = `bold ${d.size}px "Kanit", "Sarabun", sans-serif`;
+
+      // Thick crisp dark border (Ragnarok Online style)
+      ctx.lineJoin = 'round';
+      ctx.miterLimit = 2;
+      ctx.lineWidth = d.isRoCrit ? 6.2 : (d.isCrit ? 5.5 : 4.2);
+      ctx.strokeStyle = d.strokeColor || '#000000';
+      ctx.strokeText(d.text, 0, 0);
+
+      // Luminous glow for Critical and Normal Hits
+      if (d.isRoCrit) {
+        ctx.shadowColor = 'rgba(255, 115, 0, 0.95)';
+        ctx.shadowBlur = 14;
+      } else if (d.isCrit) {
+        ctx.shadowColor = 'rgba(249, 115, 22, 0.95)';
+        ctx.shadowBlur = 12;
+      } else if (d.type === 'normal') {
+        // Pure crisp white damage with subtle solid contrast shadow
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.95)';
+        ctx.shadowBlur = 4;
+      } else if (d.type === 'heal_hp') {
+        ctx.shadowColor = 'rgba(52, 211, 153, 0.8)';
+        ctx.shadowBlur = 8;
+      } else if (d.type === 'heal_mp') {
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.8)';
+        ctx.shadowBlur = 8;
+      }
+
       ctx.fillStyle = d.color;
-      ctx.fillText(d.text, d.x - camera.x, d.y - camera.y);
+      ctx.fillText(d.text, 0, 0);
+
       ctx.restore();
     }
+  }
+
+  // --- Ragnarok Online Classic "CRITICAL !!" Comic Callout Banner ---
+  drawRoCriticalBanner(ctx, cx, cy) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    // Slight dynamic tilt (-4.5 degrees)
+    ctx.rotate(-0.06);
+
+    const bw = 38; // Half-width
+    const bh = 8.5; // Half-height
+
+    // Banner Shadow
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 2;
+
+    // Iconic Comic Callout Box with side spikes
+    ctx.beginPath();
+    ctx.moveTo(-bw, 0);
+    ctx.lineTo(-bw + 4, -bh);
+    ctx.lineTo(bw - 4, -bh);
+    ctx.lineTo(bw + 6, 0); // Right spike point
+    ctx.lineTo(bw - 4, bh);
+    ctx.lineTo(-bw + 4, bh);
+    ctx.closePath();
+
+    // Red comic burst gradient
+    const grad = ctx.createLinearGradient(0, -bh, 0, bh);
+    grad.addColorStop(0, '#f43f5e'); // Rose/Crimson bright top
+    grad.addColorStop(0.5, '#e11d48');
+    grad.addColorStop(1, '#9f1239'); // Deep crimson bottom
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Outer bright golden border
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    // Inner dark border
+    ctx.strokeStyle = '#4c0519';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
+    // Crisp text: "CRITICAL !!"
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    ctx.font = '900 10.5px "Impact", "Kanit", "Arial Black", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Black stroke
+    ctx.lineJoin = 'miter';
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = '#1e0505';
+    ctx.strokeText('CRITICAL !!', 0, 0.5);
+
+    // Bright white-gold text fill
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('CRITICAL !!', 0, 0.5);
+
+    ctx.restore();
   }
 
   // --- Visual Icon Helpers ---

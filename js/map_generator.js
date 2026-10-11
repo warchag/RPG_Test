@@ -386,25 +386,6 @@ class ProceduralMapGenerator {
       }
     }
 
-    // 6.7 Sacred Lotus Pickups (Floating drops along shores and shrines)
-    for (let i = 0; i < 16; i++) {
-      const c = Math.floor(Math.random() * (cols - 8)) + 4;
-      const r = Math.floor(Math.random() * (rows - 8)) + 4;
-      const t = map.tiles[r][c];
-      if (t === 0 || t === 5 || t === 3) {
-        const lx = c * tileSize + 20 + Math.random() * 24;
-        const ly = r * tileSize + 20 + Math.random() * 24;
-        if (!map.checkCollision(lx, ly, 16)) {
-          map.pickups.push({
-            type: 'lotus',
-            x: lx,
-            y: ly,
-            spawnTime: performance.now() / 1000 + i * 0.1
-          });
-        }
-      }
-    }
-
     // -------------------------------------------------------------
     // 7. Ecosystem Monster Spawning by Biomes & Safety Checks
     // -------------------------------------------------------------

@@ -73,7 +73,7 @@
       </div>
 
       <!-- Top Right: Minimap & Utilities -->
-      <div class="top-right-group interactive">
+      <div class="top-right-group">
         <!-- Left Side: Sleek Horizontal Utility Dock -->
         <div class="utility-dock">
           <button id="btnQuickSave" class="util-btn"
@@ -87,6 +87,12 @@
             data-tooltip-desc="ดูค่าพลัง อัปสเตตัส STR / AGI / INT / VIT และจัดการอุปกรณ์สวมใส่"
             data-tooltip-badge="คีย์ลัด [C]">
             <img src="Assets/ui/icon_util_char.png" alt="Stats" class="util-btn-img">
+          </button>
+          <button id="btnOpenInventory" class="util-btn"
+            data-tooltip-title="🎒 กระเป๋าสัมภาระ & อุปกรณ์"
+            data-tooltip-desc="เปิดช่องเก็บของ สวมใส่อาวุธ เกราะ สนับแขน และเครื่องรางเพิ่มพลัง"
+            data-tooltip-badge="คีย์ลัด [B] / [I]">
+            <img src="Assets/ui/icon_util_inventory.png" alt="Inventory" class="util-btn-img">
           </button>
           <a href="studio_anim.html" target="_blank" class="util-btn"
             data-tooltip-title="🎬 สตูดิโอแอนิเมชัน"
@@ -177,30 +183,37 @@
         </div>
 
         <!-- Normal Attack Indicator -->
-        <div class="skill-slot" title="เพลงกระบองยักษ์ตรีศูล (Space / คลิกซ้าย)">
+        <div class="skill-slot" title="ฟันกระบองเดี่ยว (Space / คลิกซ้าย)">
           <span class="skill-key">Space</span>
           <img src="Assets/ui/icon_attack.png" class="skill-img" alt="โจมตีปกติ">
         </div>
 
-        <!-- Skill 1: Ground Slam -->
-        <div id="hudSkill1" class="skill-slot" title="ยักษ์ทุบปฐพี [1 / J] - ใช้ 25 MP">
+        <!-- Skill 1: Yaksha Mace 3-Hit Combo -->
+        <div id="hudSkill1" class="skill-slot" title="เพลงกระบองยักษ์ตรีศูล [1 / J] - ใช้ 10 MP">
           <span class="skill-key">1 / J</span>
-          <img src="Assets/ui/icon_skill1.png" class="skill-img" alt="ยักษ์ทุบปฐพี">
+          <img src="Assets/ui/icon_skill_combo.png" class="skill-img" alt="เพลงกระบองยักษ์ตรีศูล">
           <div id="cdSkill1" class="cooldown-overlay"></div>
         </div>
 
-        <!-- Skill 2: Roar Buff -->
-        <div id="hudSkill2" class="skill-slot" title="คำรามก้องฟ้า [2 / K] - ใช้ 30 MP">
+        <!-- Skill 2: Earth Shatter (Ground Slam) -->
+        <div id="hudSkill2" class="skill-slot" title="ยักษ์ทุบปฐพี [2 / K] - ใช้ 25 MP">
           <span class="skill-key">2 / K</span>
-          <img src="Assets/ui/icon_skill2.png" class="skill-img" alt="คำรามก้องฟ้า">
+          <img src="Assets/ui/icon_skill1.png" class="skill-img" alt="ยักษ์ทุบปฐพี">
           <div id="cdSkill2" class="cooldown-overlay"></div>
         </div>
 
-        <!-- Skill 3: Spiritual Renewal (Heal) -->
-        <div id="hudSkill3" class="skill-slot" title="มนต์ฟื้นกายา [3 / L] - ใช้ 35 MP">
+        <!-- Skill 3: Roar Buff -->
+        <div id="hudSkill3" class="skill-slot" title="คำรามก้องฟ้า [3 / L] - ใช้ 30 MP">
           <span class="skill-key">3 / L</span>
-          <img src="Assets/ui/icon_skill3.png" class="skill-img" alt="มนต์ฟื้นกายา">
+          <img src="Assets/ui/icon_skill2.png" class="skill-img" alt="คำรามก้องฟ้า">
           <div id="cdSkill3" class="cooldown-overlay"></div>
+        </div>
+
+        <!-- Skill 4: Spiritual Renewal (Heal) -->
+        <div id="hudSkill4" class="skill-slot" title="มนต์ฟื้นกายา [4 / ;] - ใช้ 35 MP">
+          <span class="skill-key">4 / ;</span>
+          <img src="Assets/ui/icon_skill3.png" class="skill-img" alt="มนต์ฟื้นกายา">
+          <div id="cdSkill4" class="cooldown-overlay"></div>
         </div>
 
         <!-- HP Potion -->
@@ -244,19 +257,23 @@
 
         <!-- Skills and Attack Row -->
         <div class="mobile-skills-row">
-          <button id="btnSkill1" class="m-btn" title="ยักษ์ทุบปฐพี">
-            <img src="Assets/ui/icon_skill1.png" class="m-icon-img" alt="ยักษ์ทุบปฐพี">
+          <button id="btnSkill1" class="m-btn" title="เพลงกระบองยักษ์">
+            <img src="Assets/ui/icon_skill_combo.png" class="m-icon-img" alt="เพลงกระบองยักษ์">
             <div id="mCdSkill1" class="cooldown-overlay"></div>
           </button>
-          <button id="btnSkill2" class="m-btn" title="คำรามก้องฟ้า">
-            <img src="Assets/ui/icon_skill2.png" class="m-icon-img" alt="คำรามก้องฟ้า">
+          <button id="btnSkill2" class="m-btn" title="ยักษ์ทุบปฐพี">
+            <img src="Assets/ui/icon_skill1.png" class="m-icon-img" alt="ยักษ์ทุบปฐพี">
             <div id="mCdSkill2" class="cooldown-overlay"></div>
           </button>
-          <button id="btnSkill3" class="m-btn" title="มนต์ฟื้นกายา">
-            <img src="Assets/ui/icon_skill3.png" class="m-icon-img" alt="มนต์ฟื้นกายา">
+          <button id="btnSkill3" class="m-btn" title="คำรามก้องฟ้า">
+            <img src="Assets/ui/icon_skill2.png" class="m-icon-img" alt="คำรามก้องฟ้า">
             <div id="mCdSkill3" class="cooldown-overlay"></div>
           </button>
-          <button id="btnAttack" class="m-btn m-attack-btn" title="เพลงกระบองยักษ์">
+          <button id="btnSkill4" class="m-btn" title="มนต์ฟื้นกายา">
+            <img src="Assets/ui/icon_skill3.png" class="m-icon-img" alt="มนต์ฟื้นกายา">
+            <div id="mCdSkill4" class="cooldown-overlay"></div>
+          </button>
+          <button id="btnAttack" class="m-btn m-attack-btn" title="ฟันกระบองเดี่ยว">
             <img src="Assets/ui/icon_attack.png" class="m-icon-img" alt="โจมตีปกติ">
           </button>
         </div>
@@ -276,151 +293,134 @@
     <!-- Modal: Character Selection Screen (6 Mythological Champions) -->
     <div id="characterSelectScreen" class="modal-screen" style="display: none;">
       <div class="cs-container">
-        <!-- Header -->
-        <div class="cs-header">
-          <div class="cs-header-tag">⚔️ ดินแดนหิมพานต์ • หน้าต่างเลือกตัวละคร ⚔️</div>
-          <h1 class="cs-header-title">เลือกตัวละครเข้าสู่สมรภูมิ</h1>
-          <p class="cs-header-sub">เลือกตัวละครยักษ์ไทยของท่านเพื่อเข้าเล่นเกม (จัดเตรียมไว้ ๖ ช่อง เพื่อรองรับตัวละครอื่นๆ ในอนาคต)</p>
-        </div>
-
         <div class="cs-content-wrap">
-          <!-- 6 Slots Grid -->
+          <!-- 6 Slots Grid (Ragnarok Online Classic Clean Slots) -->
           <div class="cs-slots-grid">
             <!-- Slot 0: ยักษ์ไทย (ตัวละครจริงของผู้เล่น) -->
             <div class="char-select-slot selected" data-idx="0">
               <div class="cs-slot-canvas-wrap">
-                <canvas id="csCanvasSlot_0" width="140" height="140"></canvas>
+                <canvas id="csCanvasSlot_0" width="160" height="140"></canvas>
                 <span class="cs-slot-badge" style="color: #fde047; border-color: rgba(234, 179, 8, 0.7); background: rgba(120, 53, 15, 0.85);">🛡️ ตัวละครของท่าน</span>
-                <span class="cs-slot-diff">⭐⭐</span>
               </div>
               <div class="cs-slot-name">ยักษ์ไทย</div>
-              <div class="cs-slot-sub">Yaksha Hero (พร้อมเล่น)</div>
-              <div class="cs-slot-pill">กระบองตรีศูล • ทุบปฐพี</div>
+              <div class="cs-slot-sub" id="csSlot0Sub">มหายักษ์อสูร • พร้อมเล่น</div>
             </div>
 
             <!-- Slot 1: ว่าง (รองรับตัวละครในอนาคต) -->
             <div class="char-select-slot slot-empty" data-idx="1">
               <div class="cs-slot-canvas-wrap">
-                <canvas id="csCanvasSlot_1" width="140" height="140"></canvas>
+                <canvas id="csCanvasSlot_1" width="160" height="140"></canvas>
                 <span class="cs-slot-badge" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.4); background: rgba(15, 23, 42, 0.8);">🔒 ช่องว่าง</span>
-                <span class="cs-slot-diff">-</span>
               </div>
               <div class="cs-slot-name" style="color: #94a3b8;">ช่องว่าง #๒</div>
               <div class="cs-slot-sub">รอเปิดตัวในอนาคต</div>
-              <div class="cs-slot-pill" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.3);">รองรับตัวละครใหม่</div>
             </div>
 
             <!-- Slot 2: ว่าง (รองรับตัวละครในอนาคต) -->
             <div class="char-select-slot slot-empty" data-idx="2">
               <div class="cs-slot-canvas-wrap">
-                <canvas id="csCanvasSlot_2" width="140" height="140"></canvas>
+                <canvas id="csCanvasSlot_2" width="160" height="140"></canvas>
                 <span class="cs-slot-badge" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.4); background: rgba(15, 23, 42, 0.8);">🔒 ช่องว่าง</span>
-                <span class="cs-slot-diff">-</span>
               </div>
               <div class="cs-slot-name" style="color: #94a3b8;">ช่องว่าง #๓</div>
               <div class="cs-slot-sub">รอเปิดตัวในอนาคต</div>
-              <div class="cs-slot-pill" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.3);">รองรับตัวละครใหม่</div>
             </div>
 
             <!-- Slot 3: ว่าง (รองรับตัวละครในอนาคต) -->
             <div class="char-select-slot slot-empty" data-idx="3">
               <div class="cs-slot-canvas-wrap">
-                <canvas id="csCanvasSlot_3" width="140" height="140"></canvas>
+                <canvas id="csCanvasSlot_3" width="160" height="140"></canvas>
                 <span class="cs-slot-badge" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.4); background: rgba(15, 23, 42, 0.8);">🔒 ช่องว่าง</span>
-                <span class="cs-slot-diff">-</span>
               </div>
               <div class="cs-slot-name" style="color: #94a3b8;">ช่องว่าง #๔</div>
               <div class="cs-slot-sub">รอเปิดตัวในอนาคต</div>
-              <div class="cs-slot-pill" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.3);">รองรับตัวละครใหม่</div>
             </div>
 
             <!-- Slot 4: ว่าง (รองรับตัวละครในอนาคต) -->
             <div class="char-select-slot slot-empty" data-idx="4">
               <div class="cs-slot-canvas-wrap">
-                <canvas id="csCanvasSlot_4" width="140" height="140"></canvas>
+                <canvas id="csCanvasSlot_4" width="160" height="140"></canvas>
                 <span class="cs-slot-badge" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.4); background: rgba(15, 23, 42, 0.8);">🔒 ช่องว่าง</span>
-                <span class="cs-slot-diff">-</span>
               </div>
               <div class="cs-slot-name" style="color: #94a3b8;">ช่องว่าง #๕</div>
               <div class="cs-slot-sub">รอเปิดตัวในอนาคต</div>
-              <div class="cs-slot-pill" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.3);">รองรับตัวละครใหม่</div>
             </div>
 
             <!-- Slot 5: ว่าง (รองรับตัวละครในอนาคต) -->
             <div class="char-select-slot slot-empty" data-idx="5">
               <div class="cs-slot-canvas-wrap">
-                <canvas id="csCanvasSlot_5" width="140" height="140"></canvas>
+                <canvas id="csCanvasSlot_5" width="160" height="140"></canvas>
                 <span class="cs-slot-badge" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.4); background: rgba(15, 23, 42, 0.8);">🔒 ช่องว่าง</span>
-                <span class="cs-slot-diff">-</span>
               </div>
               <div class="cs-slot-name" style="color: #94a3b8;">ช่องว่าง #๖</div>
               <div class="cs-slot-sub">รอเปิดตัวในอนาคต</div>
-              <div class="cs-slot-pill" style="color: #94a3b8; border-color: rgba(148, 163, 184, 0.2); background: rgba(0,0,0,0.3);">รองรับตัวละครใหม่</div>
             </div>
           </div>
 
-          <!-- Spotlight / Details Card -->
-          <div class="cs-spotlight-card">
-            <div class="cs-spotlight-top">
-              <div>
-                <span id="csSpotlightRole" class="cs-role-tag">🛡️ แทงก์ / จอมพลัง (Heavy Melee)</span>
-                <h2 id="csSpotlightName" class="cs-hero-title">มหายักษ์อสูร</h2>
-                <div id="csSpotlightTitle" class="cs-hero-lore">"จอมพลังแห่งทศกัณฐ์ ผู้พิทักษ์ศิลาแลงและผืนพสุธาหิมพานต์"</div>
-              </div>
-              <div class="cs-diff-box">
-                <span style="font-size: 11px; color: #94a3b8;">ระดับความยาก</span>
-                <span id="csSpotlightDifficulty" style="color: #fde047; font-weight: bold; font-size: 13px;">⭐⭐ (ง่าย)</span>
+          <!-- Spotlight / Character Status Board (Ragnarok Online Classic Status Window) -->
+          <div class="cs-spotlight-card ro-cs-card">
+            <!-- Header -->
+            <div class="ro-cs-header">
+              <span class="ro-cs-status-tag">📜 สถานะตัวละคร (CHARACTER STATUS)</span>
+              <h2 id="csSpotlightName" class="ro-cs-name">ยักษ์ไทย (Yaksha Hero)</h2>
+              <div id="csSpotlightRole" class="ro-cs-job">มหายักษ์อสูร • Base Lv. 1</div>
+            </div>
+
+            <!-- Live Hero Stage Box -->
+            <div class="ro-cs-stage-box">
+              <canvas id="csSpotlightCanvas" width="220" height="170"></canvas>
+              <div class="ro-cs-map-pill">
+                📍 พิกัด: <span id="csSpotlightMap" style="color: #fef08a; font-weight: bold;">วิหารศิลาแลงสุวรรณภูมิ</span>
               </div>
             </div>
 
-            <!-- Big Canvas Preview -->
-            <div class="cs-spotlight-canvas-box">
-              <canvas id="csSpotlightCanvas" width="220" height="220"></canvas>
-              <div class="cs-weapon-tag">
-                ✨ ทรงกาย: <span id="csSpotlightWeapon" style="font-weight: bold; color: #fef08a;">กระบองตรีศูลสุวรรณ</span>
+            <!-- RO Status Board (HP/MP + Core Attributes + Combat Stats) -->
+            <div id="csStatusBoard" class="ro-cs-status-board">
+              <!-- HP / MP Meters -->
+              <div class="ro-cs-meters-group">
+                <div class="ro-cs-meter-row">
+                  <span class="ro-cs-meter-lbl">❤️ HP</span>
+                  <div class="ro-cs-meter-track">
+                    <div id="csHpBar" class="ro-cs-meter-fill ro-cs-hp-fill" style="width: 100%;"></div>
+                  </div>
+                  <span id="csHpText" class="ro-cs-meter-val">260 / 260</span>
+                </div>
+                <div class="ro-cs-meter-row">
+                  <span class="ro-cs-meter-lbl">💧 MP</span>
+                  <div class="ro-cs-meter-track">
+                    <div id="csMpBar" class="ro-cs-meter-fill ro-cs-mp-fill" style="width: 100%;"></div>
+                  </div>
+                  <span id="csMpText" class="ro-cs-meter-val">120 / 120</span>
+                </div>
               </div>
-            </div>
 
-            <!-- Stat Bars -->
-            <div class="cs-stats-panel">
-              <div class="cs-stat-row">
-                <span>⚔️ พละกำลัง (STR - มหาโยธิน)</span>
-                <span id="csStatStrVal" class="cs-stat-num" style="color: #f87171;">16 (+6)</span>
+              <!-- 4 Core Primary Stats Grid (STR / AGI / VIT / SPI) -->
+              <div class="ro-cs-stats-grid">
+                <div class="ro-cs-stat-box">
+                  <span class="ro-cs-stat-title">💪 STR (พลังโจมตี)</span>
+                  <span id="csStatStrVal" class="ro-cs-stat-val" style="color: #f87171;">10 (+0)</span>
+                </div>
+                <div class="ro-cs-stat-box">
+                  <span class="ro-cs-stat-title">⚡ AGI (ความเร็ว)</span>
+                  <span id="csStatAgiVal" class="ro-cs-stat-val" style="color: #38bdf8;">10 (+0)</span>
+                </div>
+                <div class="ro-cs-stat-box">
+                  <span class="ro-cs-stat-title">💎 VIT (พลังป้องกัน)</span>
+                  <span id="csStatVitVal" class="ro-cs-stat-val" style="color: #4ade80;">10 (+0)</span>
+                </div>
+                <div class="ro-cs-stat-box">
+                  <span class="ro-cs-stat-title">🌸 SPI (พลังอาคม)</span>
+                  <span id="csStatSpiVal" class="ro-cs-stat-val" style="color: #c084fc;">10 (+0)</span>
+                </div>
               </div>
-              <div class="cs-stat-track"><div id="csBarStr" class="cs-stat-bar cs-bar-str" style="width: 80%;"></div></div>
 
-              <div class="cs-stat-row">
-                <span>🛡️ กายาเหล็ก (VIT - เพชรหล่อหลอม)</span>
-                <span id="csStatVitVal" class="cs-stat-num" style="color: #4ade80;">14 (+4)</span>
+              <!-- Combat Attributes Summary (ATK, DEF, CRIT, SPD) -->
+              <div class="ro-cs-combat-grid">
+                <div class="ro-cs-combat-pill">⚔️ ATK: <strong id="csStatAtkVal" style="color: #fef08a;">25</strong></div>
+                <div class="ro-cs-combat-pill">🛡️ DEF: <strong id="csStatDefVal" style="color: #86efac;">10</strong></div>
+                <div class="ro-cs-combat-pill">💥 CRIT: <strong id="csStatCritVal" style="color: #fde047;">5%</strong></div>
+                <div class="ro-cs-combat-pill">🏃 SPD: <strong id="csStatSpdVal" style="color: #93c5fd;">140</strong></div>
               </div>
-              <div class="cs-stat-track"><div id="csBarVit" class="cs-stat-bar cs-bar-vit" style="width: 70%;"></div></div>
-
-              <div class="cs-stat-row">
-                <span>⚡ วายุพริ้ว (AGI - เหินเวหา)</span>
-                <span id="csStatAgiVal" class="cs-stat-num" style="color: #38bdf8;">6 (-4)</span>
-              </div>
-              <div class="cs-stat-track"><div id="csBarAgi" class="cs-stat-bar cs-bar-agi" style="width: 30%;"></div></div>
-
-              <div class="cs-stat-row">
-                <span>🔮 อาคมญาณ (SPI - มนตราหิมพานต์)</span>
-                <span id="csStatSpiVal" class="cs-stat-num" style="color: #c084fc;">4 (-6)</span>
-              </div>
-              <div class="cs-stat-track"><div id="csBarSpi" class="cs-stat-bar cs-bar-spi" style="width: 20%;"></div></div>
-            </div>
-
-            <!-- Passive Trait -->
-            <div class="cs-passive-box">
-              <span style="font-size: 15px;">⚜️</span>
-              <div>
-                <strong id="csPassiveTitle" style="color: #fde047;">พรแห่งอสุรา:</strong>
-                <span id="csPassiveDesc" style="color: #cbd5e1; margin-left: 4px;">เมื่อพลังชีวิตต่ำกว่า 30% จะปลดปล่อยเกราะศิลาแลงลดดาเมจ 40% และเพิ่มแรงปะทะ</span>
-              </div>
-            </div>
-
-            <!-- Signature Skills -->
-            <div class="cs-skills-wrap">
-              <div class="cs-skills-title">⚡ ๓ วิชาอาคมประจำกาย (Signature Skills)</div>
-              <div id="csSkillsList" class="cs-skills-list"></div>
             </div>
 
             <!-- Confirm Button -->
@@ -454,21 +454,23 @@
           <div class="help-col">
             <h3>🎮 การควบคุมบน PC</h3>
             <ul>
-              <li><strong>เดิน 8 ทิศ:</strong> W A S D หรือ ปุ่มลูกศร</li>
-              <li><strong>ฟันกระบอง:</strong> Space หรือ คลิกซ้าย</li>
-              <li><strong>ยักษ์ทุบปฐพี:</strong> เลข 1 หรือ J</li>
-              <li><strong>คำรามบัฟพลัง:</strong> เลข 2 หรือ K</li>
-              <li><strong>มนต์ฟื้นกายา:</strong> เลข 3 หรือ L</li>
+              <li><strong>เดิน 8 ทิศ:</strong> W A S D หรือ ปุ่มลูกศร / คลิกเดิน</li>
+              <li><strong>ฟันกระบองเดี่ยว:</strong> Space หรือ คลิกซ้าย</li>
+              <li><strong>เพลงกระบองยักษ์:</strong> เลข 1 หรือ J</li>
+              <li><strong>ยักษ์ทุบปฐพี:</strong> เลข 2 หรือ K</li>
+              <li><strong>คำรามก้องฟ้า:</strong> เลข 3 หรือ L</li>
+              <li><strong>มนต์ฟื้นกายา:</strong> เลข 4 หรือ ;</li>
               <li><strong>ดื่มยา HP/MP:</strong> ปุ่ม Q / E</li>
-              <li><strong>ข้อมูล & อัปสเตตัส:</strong> ปุ่ม C หรือคลิกการ์ดตัวละคร</li>
+              <li><strong>กระเป๋าไอเทม:</strong> ปุ่ม B หรือคลิกกระเป๋า</li>
+              <li><strong>สเตตัสตัวละคร:</strong> ปุ่ม C หรือคลิกการ์ดตัวละคร</li>
             </ul>
           </div>
           <div class="help-col">
             <h3>📱 บนมือถือ / แท็บเล็ต</h3>
             <ul>
               <li><strong>เดิน:</strong> สัมผัสลากอนาล็อกทางซ้าย</li>
-              <li><strong>โจมตี:</strong> ปุ่มดาบสีแดงขนาดใหญ่</li>
-              <li><strong>สกิล 1, 2, 3:</strong> ปุ่มวงกลมรอบปุ่มโจมตี</li>
+              <li><strong>โจมตีปกติ:</strong> ปุ่มกระบองสีทองขนาดใหญ่</li>
+              <li><strong>สกิล 1, 2, 3, 4:</strong> ปุ่มวงกลมรอบปุ่มโจมตี</li>
               <li><strong>ดื่มยา:</strong> ปุ่มขวดยาเหนือสกิล</li>
             </ul>
           </div>
@@ -501,7 +503,7 @@
         <!-- Hero Overview Card -->
         <div class="char-hero-banner">
           <div class="char-avatar-box">
-            <img src="Assets/characters/yak/Idle/rotations/south.png" alt="ยักษ์ไทย">
+            <canvas id="charModalCanvas" width="56" height="56"></canvas>
           </div>
           <div class="char-hero-info">
             <div style="display: flex; justify-content: space-between; align-items: baseline;">
@@ -674,6 +676,151 @@
     </div>
   </div>
 
+  <!-- Inventory & Equipment System Modal -->
+  <div id="inventoryModal" class="modal-screen" style="display: none; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(5px); z-index: 1100;">
+    <div class="ro-inv-dialog">
+      <!-- Header with Dark Fantasy Antique Gold Filigree -->
+      <div class="ro-inv-header">
+        <div class="ro-header-left">
+          <img src="Assets/ui/icon_util_inventory.png" class="ro-header-icon" alt="คลังสัมภาระ">
+          <div>
+            <h2 class="ro-header-title">คลังสัมภาระและอุปกรณ์สวมใส่ (Inventory & Equipment)</h2>
+            <p class="ro-header-sub">หน้าต่างสวมใส่อุปกรณ์คลาสสิก Ragnarok Style • จัดการไอเทมและตรวจสอบพลังยุทธภัณฑ์</p>
+          </div>
+        </div>
+        <button id="btnCloseInventoryModal" class="ro-close-btn" title="ปิดหน้าต่าง [ESC] / [B]">✕</button>
+      </div>
+
+      <!-- Main Layout: 2 Columns (Left: Ragnarok Paperdoll & 8 Slots, Right: 24-Slot Bag & Details) -->
+      <div class="ro-inv-body">
+        
+        <!-- Left Panel: Ragnarok Paperdoll Showcase with 8 Surrounding Slots -->
+        <div class="ro-paperdoll-panel">
+          <div class="ro-panel-title">🛡️ ยุทธภัณฑ์สวมใส่ (Equipment • Alt+Q)</div>
+          
+          <!-- Central Paperdoll Stage: Left Slots + Center Shrine Pedestal + Right Slots -->
+          <div class="ro-paperdoll-stage">
+            
+            <!-- Left 4 Slots (Weapon, Armor, Pants, Talisman) -->
+            <div class="ro-slots-col ro-slots-left">
+              <!-- Slot 1: Weapon (อาวุธ) -->
+              <div class="ro-slot-card">
+                <span class="ro-slot-label">⚔️ อาวุธ</span>
+                <div id="equipSlot_weapon" class="ro-equip-box" data-slot="weapon" title="อาวุธหลัก"></div>
+              </div>
+              <!-- Slot 2: Armor (เกราะอสุรา) -->
+              <div class="ro-slot-card">
+                <span class="ro-slot-label">🛡️ เกราะ</span>
+                <div id="equipSlot_armor" class="ro-equip-box" data-slot="armor" title="เกราะอสุรา"></div>
+              </div>
+              <!-- Slot 3: Pants (สนับเพลา) -->
+              <div class="ro-slot-card">
+                <span class="ro-slot-label">🩳 สนับเพลา</span>
+                <div id="equipSlot_pants" class="ro-equip-box" data-slot="pants" title="สนับเพลา/กางเกง"></div>
+              </div>
+              <!-- Slot 4: Talisman (เครื่องราง) -->
+              <div class="ro-slot-card">
+                <span class="ro-slot-label">📿 เครื่องราง</span>
+                <div id="equipSlot_talisman" class="ro-equip-box" data-slot="talisman" title="เครื่องรางมงคล"></div>
+              </div>
+            </div>
+
+            <!-- Center Character Pedestal Shrine (Assets/ui/inv_paperdoll_bg.png) -->
+            <div class="ro-pedestal-niche">
+              <canvas id="roCharPreviewCanvas" width="170" height="230"></canvas>
+              <div class="ro-pedestal-name-tag" id="roCharNameTitle">ยักษ์ไทย (Yaksha)</div>
+            </div>
+
+            <!-- Right 4 Slots (Helmet, Bracer, Boots, Wings) -->
+            <div class="ro-slots-col ro-slots-right">
+              <!-- Slot 5: Helmet (ศิราภรณ์/หมวก) -->
+              <div class="ro-slot-card">
+                <span class="ro-slot-label">👑 ศิราภรณ์</span>
+                <div id="equipSlot_helmet" class="ro-equip-box" data-slot="helmet" title="หมวก/ศิราภรณ์"></div>
+              </div>
+              <!-- Slot 6: Bracer (สนับแขน) -->
+              <div class="ro-slot-card">
+                <span class="ro-slot-label">🥊 สนับแขน</span>
+                <div id="equipSlot_bracer" class="ro-equip-box" data-slot="bracer" title="สนับแขน/โล่"></div>
+              </div>
+              <!-- Slot 7: Boots (ฉลองพระบาท) -->
+              <div class="ro-slot-card">
+                <span class="ro-slot-label">👢 พระบาท</span>
+                <div id="equipSlot_boots" class="ro-equip-box" data-slot="boots" title="ฉลองพระบาท/รองเท้า"></div>
+              </div>
+              <!-- Slot 8: Wings (ปีกนางฟ้า/เหินเวหา) -->
+              <div class="ro-slot-card">
+                <span class="ro-slot-label">🪽 ปีกสวรรค์</span>
+                <div id="equipSlot_wings" class="ro-equip-box" data-slot="wings" title="ปีกนางฟ้าเหินเวหา"></div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Total Equipment Stats Summary Badge Bar -->
+          <div class="ro-equip-stats-bar">
+            <div class="ro-stats-bar-header">⚡ โบนัสรวมจากอุปกรณ์สวมใส่</div>
+            <div id="invEquipStatsSummary" class="ro-stats-pills-wrap">
+              <!-- Populated dynamically by JS -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Inventory Bag Grid & Compact Item Inspection Card -->
+        <div class="ro-inventory-panel">
+          
+          <!-- Bag Header: Capacity, Gold Coins, Sort Button -->
+          <div class="ro-bag-top-bar">
+            <div class="ro-bag-title-wrap">
+              <span class="ro-bag-title">🎒 คลังสัมภาระ (Bag • Alt+E)</span>
+              <span id="invCapacityText" class="ro-capacity-pill">0 / 999</span>
+            </div>
+            <div class="ro-bag-actions-wrap">
+              <div class="ro-gold-pill" title="เงินพดด้วง">
+                <span class="ro-coin-icon">🪙</span>
+                <span id="invGoldCoinsText">0</span>
+              </div>
+              <button id="btnSortInventory" class="ro-sort-btn" title="จัดเรียงไอเทมตามระดับความหายาก">
+                🔄 จัดเรียง
+              </button>
+            </div>
+          </div>
+
+          <!-- Inventory Category Tabs (จัดหมวดหมู่ไอเทม) -->
+          <div class="ro-bag-tabs" id="invCategoryTabs">
+            <button class="ro-tab-btn active" data-tab="all">
+              <span>🌐</span> ทั้งหมด
+            </button>
+            <button class="ro-tab-btn" data-tab="equip">
+              <span>⚔️</span> อุปกรณ์
+            </button>
+            <button class="ro-tab-btn" data-tab="potion">
+              <span>🧪</span> ยาโอสถ
+            </button>
+            <button class="ro-tab-btn" data-tab="talisman">
+              <span>📿</span> เครื่องราง
+            </button>
+          </div>
+
+          <!-- 24-Slot Bag Grid (4 rows x 6 columns) -->
+          <div id="invGridContainer" class="ro-grid-container">
+            <!-- 24 slots generated by JS -->
+          </div>
+
+          <!-- Slim Quick Action Bar (Equip / Unequip / Discard for selected item) -->
+          <div id="invQuickActionBar" class="ro-quick-action-bar">
+            <!-- Populated dynamically by JS -->
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Floating Inventory Item Tooltip (Ragnarok Online Hover Tooltip) -->
+    <div id="invFloatingTooltip" class="ro-floating-tooltip" style="display: none;"></div>
+  </div>
+
   <!-- Giant World Map Modal (กด M หรือคลิกที่ Minimap) -->
   <div id="worldMapModal" class="modal-screen" style="display: none; z-index: 1200; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(2px);">
     <div class="world-map-dialog">
@@ -725,21 +872,24 @@
   </div>
 
   <!-- Game Scripts (modular architecture) -->
-  <script src="js/audio.js?v=11"></script>
-  <script src="js/assets.js?v=11"></script>
-  <script src="js/effects.js?v=11"></script>
-  <script src="js/weather.js?v=11"></script>
-  <script src="js/map_assets.js?v=11"></script>
-  <script src="js/map_generator.js?v=11"></script>
-  <script src="js/db.js?v=11"></script>
-  <script src="js/map.js?v=11"></script>
-  <script src="js/player.js?v=11"></script>
-  <script src="js/boss_settings.js?v=11"></script>
-  <script src="js/enemies.js?v=11"></script>
-  <script src="js/input.js?v=11"></script>
-  <script src="js/character_select.js?v=11"></script>
-  <script src="js/character_stats.js?v=11"></script>
-  <script src="js/game.js?v=11"></script>
+  <script src="js/audio.js?v=13"></script>
+  <script src="js/assets.js?v=13"></script>
+  <script src="js/effects.js?v=13"></script>
+  <script src="js/weather.js?v=13"></script>
+  <script src="js/map_assets.js?v=13"></script>
+  <script src="js/map_generator.js?v=13"></script>
+  <script src="js/db.js?v=13"></script>
+  <script src="js/items.js?v=13"></script>
+  <script src="js/costumes.js?v=13"></script>
+  <script src="js/map.js?v=13"></script>
+  <script src="js/player.js?v=13"></script>
+  <script src="js/boss_settings.js?v=13"></script>
+  <script src="js/enemies.js?v=13"></script>
+  <script src="js/input.js?v=13"></script>
+  <script src="js/character_select.js?v=13"></script>
+  <script src="js/character_stats.js?v=13"></script>
+  <script src="js/inventory_ui.js?v=13"></script>
+  <script src="js/game.js?v=13"></script>
 
   <!-- Help & Fullscreen Event Handlers -->
   <script>

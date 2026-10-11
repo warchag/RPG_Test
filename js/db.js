@@ -408,6 +408,121 @@ class GameDatabase {
     }
     return { success: false, notFound: true };
   }
+
+  /**
+   * Load ALL Boss/Monster Configurations from SQLite DB in one fast batch request
+   */
+  async loadAllBossConfigs() {
+    try {
+      const res = await fetch(`${this.apiBase}/boss_configs`, {
+        method: 'GET'
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.status === 'success' && json.configs) {
+          this.isConnected = true;
+          // Synchronize to localStorage backup
+          for (const [k, cfg] of Object.entries(json.configs)) {
+            try {
+              localStorage.setItem(`yaksha_boss_config_${k}`, JSON.stringify(cfg));
+            } catch (e) {}
+          }
+          return { success: true, configs: json.configs };
+        }
+      }
+    } catch (err) {
+      console.warn('[GameDatabase] loadAllBossConfigs server error, using fallback:', err);
+    }
+
+    // Fallback: collect from localStorage
+    const localConfigs = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('yaksha_boss_config_')) {
+          const bossKey = key.replace('yaksha_boss_config_', '');
+          try {
+            localConfigs[bossKey] = JSON.parse(localStorage.getItem(key));
+          } catch (e) {}
+        }
+      }
+    } catch (e) {}
+
+    return {
+      success: Object.keys(localConfigs).length > 0,
+      configs: localConfigs,
+      fallback: true
+    };
+  }
+
+  /**
+   * Save player costumes (active & unlocked costumes) to SQLite DB (with localStorage fallback)
+   */
+  async saveCostumes(costumeData, slotName = 'default') {
+    const payload = {
+      slot_name: slotName,
+      active: costumeData.active || {},
+      unlocked: costumeData.unlocked || []
+    };
+
+    try {
+      const res = await fetch(`${this.apiBase}/costumes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      this.isConnected = true;
+      try {
+        localStorage.setItem(`yaksha_costumes_${slotName}`, JSON.stringify(payload));
+      } catch (e) {}
+      return { success: true, result: json };
+    } catch (err) {
+      try {
+        localStorage.setItem(`yaksha_costumes_${slotName}`, JSON.stringify(payload));
+        return { success: true, fallback: true, message: 'เซฟคอสตูมลงเครื่องสำรอง' };
+      } catch (e) {
+        return { success: false, error: err.message };
+      }
+    }
+  }
+
+  /**
+   * Load player costumes from SQLite DB (with localStorage fallback)
+   */
+  async loadCostumes(slotName = 'default') {
+    try {
+      const res = await fetch(`${this.apiBase}/costumes?slot=${encodeURIComponent(slotName)}`, {
+        method: 'GET'
+      });
+
+      if (res.status === 404) {
+        const raw = localStorage.getItem(`yaksha_costumes_${slotName}`);
+        if (raw) return { success: true, data: JSON.parse(raw), fallback: true };
+        return { success: false, notFound: true };
+      }
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json.status === 'success' && json.data) {
+        this.isConnected = true;
+        try {
+          localStorage.setItem(`yaksha_costumes_${slotName}`, JSON.stringify(json.data));
+        } catch (e) {}
+        return { success: true, data: json.data };
+      }
+    } catch (err) {
+      try {
+        const raw = localStorage.getItem(`yaksha_costumes_${slotName}`);
+        if (raw) return { success: true, data: JSON.parse(raw), fallback: true };
+      } catch (e) {}
+    }
+    return { success: false, notFound: true };
+  }
 }
 
 window.GameDatabase = GameDatabase;

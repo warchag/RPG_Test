@@ -115,6 +115,7 @@ class CharacterStatsController {
     this.isOpen = true;
     this.modal.style.display = 'flex';
     this.updateUI();
+    this.startAvatarLoop();
 
     if (window.soundSystem && window.soundSystem.playChest) {
       window.soundSystem.playChest();
@@ -125,6 +126,41 @@ class CharacterStatsController {
     if (!this.modal) return;
     this.isOpen = false;
     this.modal.style.display = 'none';
+    this.stopAvatarLoop();
+  }
+
+  startAvatarLoop() {
+    this.stopAvatarLoop();
+    const loop = () => {
+      if (!this.isOpen) return;
+      this.drawAvatar();
+      this.avatarAnimId = requestAnimationFrame(loop);
+    };
+    this.avatarAnimId = requestAnimationFrame(loop);
+  }
+
+  stopAvatarLoop() {
+    if (this.avatarAnimId) {
+      cancelAnimationFrame(this.avatarAnimId);
+      this.avatarAnimId = null;
+    }
+  }
+
+  drawAvatar() {
+    const canvas = document.getElementById('charModalCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const player = this.getPlayer();
+    if (!player) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const now = performance.now() / 1000;
+    const idleBob = Math.sin(now * 3.2) * 1.2;
+
+    if (player.renderFullCharacter) {
+      player.renderFullCharacter(ctx, 28, 48 + idleBob, 1.15, now, { shadow: false });
+    }
   }
 
   getPlayer() {
@@ -178,23 +214,25 @@ class CharacterStatsController {
     });
 
     // 4. Derived Combat Performance Stats
+    const b = player.equipmentBonuses || {};
+
     const maxHpEl = document.getElementById('derivedMaxHp');
-    if (maxHpEl) maxHpEl.innerText = player.maxHp;
+    if (maxHpEl) maxHpEl.innerHTML = `${player.maxHp} ${b.maxHp ? `<span style="color: #4ade80; font-size: 11px;">(+${b.maxHp})</span>` : ''}`;
 
     const maxMpEl = document.getElementById('derivedMaxMp');
-    if (maxMpEl) maxMpEl.innerText = player.maxMp;
+    if (maxMpEl) maxMpEl.innerHTML = `${player.maxMp} ${b.maxMp ? `<span style="color: #4ade80; font-size: 11px;">(+${b.maxMp})</span>` : ''}`;
 
     const atkEl = document.getElementById('derivedAttack');
-    if (atkEl) atkEl.innerText = player.baseAttack;
+    if (atkEl) atkEl.innerHTML = `${player.baseAttack} ${b.attack ? `<span style="color: #4ade80; font-size: 11px;">(+${b.attack})</span>` : ''}`;
 
     const defEl = document.getElementById('derivedDefense');
-    if (defEl) defEl.innerText = player.baseDefense;
+    if (defEl) defEl.innerHTML = `${player.baseDefense} ${b.defense ? `<span style="color: #4ade80; font-size: 11px;">(+${b.defense})</span>` : ''}`;
 
     const spdEl = document.getElementById('derivedSpeed');
-    if (spdEl) spdEl.innerText = `${Math.round(player.baseSpeed)} px/s`;
+    if (spdEl) spdEl.innerHTML = `${Math.round(player.baseSpeed)} px/s ${b.speed ? `<span style="color: #4ade80; font-size: 11px;">(+${b.speed})</span>` : ''}`;
 
     const critEl = document.getElementById('derivedCrit');
-    if (critEl) critEl.innerText = `${Math.round((player.critRate || 0.15) * 100)}%`;
+    if (critEl) critEl.innerHTML = `${Math.round((player.critRate || 0.15) * 100)}% ${b.critRate ? `<span style="color: #4ade80; font-size: 11px;">(+${b.critRate}%)</span>` : ''}`;
 
     const cdEl = document.getElementById('derivedAtkCd');
     if (cdEl) cdEl.innerText = `${(player.attackCooldownMax || 0.35).toFixed(2)}s`;

@@ -20,6 +20,7 @@ import zlib
 import struct
 import re
 import shutil
+import urllib.parse
 try:
     from http.server import ThreadingHTTPServer as ServerClass, SimpleHTTPRequestHandler
 except ImportError:
@@ -52,6 +53,14 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             slot_name TEXT UNIQUE NOT NULL,
             player_data TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+        CREATE TABLE IF NOT EXISTS player_costumes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            slot_name TEXT UNIQUE NOT NULL,
+            active_costumes TEXT NOT NULL,
+            unlocked_costumes TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -114,7 +123,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path.startswith('/api/boss_config'):
+        if self.path.startswith('/api/boss_configs') or self.path.startswith('/api/boss_config'):
             self.handle_get_boss_config()
         elif self.path.startswith('/api/world_saves'):
             self.handle_list_world_saves()
@@ -122,6 +131,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             self.handle_get_world_save()
         elif self.path.startswith('/api/player'):
             self.handle_get_player()
+        elif self.path.startswith('/api/costumes'):
+            self.handle_get_costumes()
         elif self.path.startswith('/api/map'):
             self.handle_get_map()
         elif self.path.startswith('/api/maps'):
@@ -166,6 +177,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             self.handle_save_world_save()
         elif self.path.startswith('/api/player'):
             self.handle_save_player()
+        elif self.path.startswith('/api/costumes'):
+            self.handle_save_costumes()
         elif self.path.startswith('/api/map'):
             self.handle_save_map()
         elif self.path.startswith('/api/monsters/create'):
@@ -187,19 +200,49 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
     def handle_get_boss_config(self):
         try:
-            boss_key = 'preta'
-            if '?' in self.path:
-                params = dict(q.split('=') for q in self.path.split('?')[1].split('&') if '=' in q)
-                boss_key = params.get('boss', 'preta')
-
             conn = sqlite3.connect(DB_FILE)
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
-            cur.execute('SELECT * FROM boss_config WHERE boss_key = ?', (boss_key,))
+
+            # Check if batch request for ALL configs
+            is_all = self.path.startswith('/api/boss_configs')
+            boss_key = 'preta'
+            if '?' in self.path:
+                query_str = self.path.split('?')[1]
+                params = dict(q.split('=') for q in query_str.split('&') if '=' in q)
+                if 'boss' in params:
+                    boss_key = urllib.parse.unquote(params['boss'])
+                    if boss_key == 'all':
+                        is_all = True
+
+            if is_all:
+                cur.execute('SELECT boss_key, config_data, updated_at FROM boss_config')
+                rows = cur.fetchall()
+                configs = {}
+                for r in rows:
+                    try:
+                        configs[r['boss_key']] = json.loads(r['config_data'])
+                    except Exception:
+                        pass
+                conn.close()
+                self.send_json_response({
+                    'status': 'success',
+                    'configs': configs
+                })
+                return
+
+            # Single boss lookup with alias resolution
+            lookup_keys = [boss_key]
+            if boss_key in ['preta', 'bosspreat', 'boss']:
+                lookup_keys = ['bosspreat', 'preta', 'boss']
+
+            placeholders = ','.join('?' * len(lookup_keys))
+            cur.execute(f'SELECT * FROM boss_config WHERE boss_key IN ({placeholders}) ORDER BY updated_at DESC', tuple(lookup_keys))
             row = cur.fetchone()
+
             if not row:
                 # Check if monster exists in custom_monsters table
-                cur.execute('SELECT * FROM custom_monsters WHERE monster_key = ?', (boss_key,))
+                cur.execute(f'SELECT * FROM custom_monsters WHERE monster_key IN ({placeholders})', tuple(lookup_keys))
                 crow = cur.fetchone()
                 if crow:
                     now_iso = datetime.datetime.now().isoformat()
@@ -228,6 +271,28 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                         'boss_key': boss_key,
                         'data': default_cfg,
                         'updated_at': now_iso
+                    }, code=200)
+                    return
+
+                # Check if monster is in BUILTIN_LIST
+                b_item = next((b for b in BUILTIN_LIST if b['key'] in lookup_keys), None)
+                if b_item:
+                    default_cfg = {
+                        'name': b_item['name'],
+                        'hp': 3000 if b_item.get('is_boss') else 200,
+                        'maxHp': 3000 if b_item.get('is_boss') else 200,
+                        'attack': 75 if b_item.get('is_boss') else 22,
+                        'speed': 160 if b_item.get('is_boss') else 130,
+                        'scale': b_item.get('scale', 1.35),
+                        'isBoss': bool(b_item.get('is_boss', False)),
+                        'isFlying': bool(b_item.get('is_flying', False))
+                    }
+                    conn.close()
+                    self.send_json_response({
+                        'status': 'success',
+                        'boss_key': boss_key,
+                        'data': default_cfg,
+                        'updated_at': datetime.datetime.now().isoformat()
                     }, code=200)
                     return
 
@@ -263,6 +328,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
 
             conn = sqlite3.connect(DB_FILE)
             cur = conn.cursor()
+
+            # 1. Upsert into boss_config
             cur.execute('''
                 INSERT INTO boss_config (boss_key, config_data, updated_at)
                 VALUES (?, ?, ?)
@@ -270,12 +337,39 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     config_data = excluded.config_data,
                     updated_at = excluded.updated_at
             ''', (boss_key, config_json, now_iso))
+
+            # 2. Sync aliases for preta / bosspreat / boss
+            if boss_key in ['preta', 'bosspreat', 'boss']:
+                for alias in ['preta', 'bosspreat', 'boss']:
+                    if alias != boss_key:
+                        cur.execute('''
+                            INSERT INTO boss_config (boss_key, config_data, updated_at)
+                            VALUES (?, ?, ?)
+                            ON CONFLICT(boss_key) DO UPDATE SET
+                                config_data = excluded.config_data,
+                                updated_at = excluded.updated_at
+                        ''', (alias, config_json, now_iso))
+
+            # 3. CRITICAL: If this monster exists in custom_monsters, update its is_boss and stats in custom_monsters table!
+            if isinstance(config_data, dict) and 'isBoss' in config_data:
+                is_boss_int = 1 if config_data['isBoss'] else 0
+                hp_val = config_data.get('maxHp', config_data.get('hp', 200))
+                atk_val = config_data.get('attack', 25)
+                spd_val = config_data.get('speed', 120)
+                cur.execute('''
+                    UPDATE custom_monsters 
+                    SET is_boss = ?, hp = ?, attack = ?, speed = ?, updated_at = ?
+                    WHERE monster_key = ?
+                ''', (is_boss_int, hp_val, atk_val, spd_val, now_iso, boss_key))
+
             conn.commit()
             conn.close()
 
             self.send_json_response({
                 'status': 'success',
                 'message': f'Boss config for "{boss_key}" saved to database successfully',
+                'boss_key': boss_key,
+                'data': config_data,
                 'updated_at': now_iso
             })
         except Exception as e:
@@ -477,6 +571,76 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             })
         except Exception as e:
             print(f"[Player Save Error] {e}")
+            self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
+
+    def handle_get_costumes(self):
+        try:
+            slot = 'default'
+            if '?' in self.path:
+                params = dict(q.split('=') for q in self.path.split('?')[1].split('&') if '=' in q)
+                slot = params.get('slot', 'default')
+
+            conn = sqlite3.connect(DB_FILE)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM player_costumes WHERE slot_name = ?', (slot,))
+            row = cur.fetchone()
+            conn.close()
+
+            if not row:
+                default_data = {
+                    'active': {'wings': None, 'pants': None, 'boots': None},
+                    'unlocked': ['wings_celestial_gold', 'wings_kinnari_emerald', 'pants_deva_gold', 'boots_deva_gold']
+                }
+                self.send_json_response({'status': 'success', 'data': default_data, 'is_default': True})
+                return
+
+            active = json.loads(row['active_costumes']) if row['active_costumes'] else {}
+            unlocked = json.loads(row['unlocked_costumes']) if row['unlocked_costumes'] else []
+
+            self.send_json_response({
+                'status': 'success',
+                'data': {'active': active, 'unlocked': unlocked},
+                'updated_at': row['updated_at']
+            })
+        except Exception as e:
+            self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
+
+    def handle_save_costumes(self):
+        try:
+            length = int(self.headers.get('Content-Length', 0))
+            if length == 0:
+                self.send_json_response({'status': 'error', 'message': 'Empty payload'}, code=400)
+                return
+
+            body = self.rfile.read(length).decode('utf-8')
+            payload = json.loads(body)
+
+            slot = payload.get('slot_name', 'default')
+            active = json.dumps(payload.get('active', {}))
+            unlocked = json.dumps(payload.get('unlocked', []))
+            now_iso = datetime.datetime.now().isoformat()
+
+            conn = sqlite3.connect(DB_FILE)
+            cur = conn.cursor()
+            cur.execute('''
+                INSERT INTO player_costumes (slot_name, active_costumes, unlocked_costumes, updated_at)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(slot_name) DO UPDATE SET
+                    active_costumes = excluded.active_costumes,
+                    unlocked_costumes = excluded.unlocked_costumes,
+                    updated_at = excluded.updated_at
+            ''', (slot, active, unlocked, now_iso))
+            conn.commit()
+            conn.close()
+
+            self.send_json_response({
+                'status': 'success',
+                'message': f'Costumes saved into slot "{slot}"',
+                'slot': slot,
+                'updated_at': now_iso
+            })
+        except Exception as e:
             self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
 
     def handle_get_map(self):
@@ -707,18 +871,39 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             cur = conn.cursor()
             deleted_keys = set(r[0] for r in cur.execute('SELECT monster_key FROM deleted_monsters').fetchall())
 
+            # Load all boss_config entries to override role & stats as single source of truth
+            boss_cfg_map = {}
+            try:
+                for row in cur.execute('SELECT boss_key, config_data FROM boss_config').fetchall():
+                    boss_cfg_map[row[0]] = json.loads(row[1])
+            except Exception:
+                pass
+
             # 1. Built-in registered monsters (exclude deleted)
             monsters = []
             for item in BUILTIN_LIST:
                 if item['key'] in deleted_keys:
                     continue
                 audit = audit_monster_assets(item['key'])
+                bkey = item['key']
+                cfg = boss_cfg_map.get(bkey)
+                if not cfg and bkey in ['bosspreat', 'boss', 'preta']:
+                    cfg = boss_cfg_map.get('bosspreat') or boss_cfg_map.get('preta') or boss_cfg_map.get('boss')
+
+                is_boss_val = bool(cfg.get('isBoss')) if (cfg and 'isBoss' in cfg) else bool(item.get('is_boss', False))
+                hp_val = cfg.get('maxHp', cfg.get('hp', item.get('hp', 200))) if cfg else item.get('hp', 200)
+                atk_val = cfg.get('attack', item.get('attack', 25)) if cfg else item.get('attack', 25)
+                spd_val = cfg.get('speed', item.get('speed', 120)) if cfg else item.get('speed', 120)
+
                 monsters.append({
-                    'key': item['key'],
+                    'key': bkey,
                     'name': item['name'],
-                    'role': item.get('role', 'มอนสเตอร์'),
+                    'role': 'บอสประจำฉาก' if is_boss_val else item.get('role', 'มอนสเตอร์'),
+                    'hp': hp_val,
+                    'attack': atk_val,
+                    'speed': spd_val,
                     'is_builtin': True,
-                    'is_boss': item.get('is_boss', False),
+                    'is_boss': is_boss_val,
                     'is_flying': item.get('is_flying', False),
                     'scale': item.get('scale', 1.35),
                     'sprite_dir': audit.get('sprite_dir', f'monsters/{item["key"]}'),
@@ -736,15 +921,21 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 if k in deleted_keys:
                     continue
                 audit = audit_monster_assets(k)
+                cfg = boss_cfg_map.get(k)
+                is_boss_val = bool(cfg.get('isBoss')) if (cfg and 'isBoss' in cfg) else bool(r['is_boss'])
+                hp_val = cfg.get('maxHp', cfg.get('hp', r['hp'])) if cfg else r['hp']
+                atk_val = cfg.get('attack', r['attack']) if cfg else r['attack']
+                spd_val = cfg.get('speed', r['speed']) if cfg else r['speed']
+
                 monsters.append({
                     'id': r['id'],
                     'key': k,
                     'name': r['name'],
-                    'hp': r['hp'],
-                    'attack': r['attack'],
-                    'speed': r['speed'],
+                    'hp': hp_val,
+                    'attack': atk_val,
+                    'speed': spd_val,
                     'scale': r['scale'],
-                    'is_boss': bool(r['is_boss']),
+                    'is_boss': is_boss_val,
                     'is_flying': bool(r['is_flying']),
                     'is_builtin': False,
                     'sprite_dir': audit.get('sprite_dir', f'monsters/{k}'),
