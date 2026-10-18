@@ -7,11 +7,12 @@ class MapEditor {
   constructor(game) {
     this.game = game;
     this.isActive = (game && game.isAdminMode) || false;
-    this.currentTool = 'tile'; // 'tile', 'prop', 'monster', 'collision'
+    this.currentTool = 'tile'; // 'tile', 'prop', 'monster', 'collision', 'npcs'
     this.selectedTile = 0; // 0: Grass, 1: Dirt, 2: Water Deep, 4: Water Shallow, 5: Sand, 6: Bridge H, 7: Bridge V, 3: Stone
     this.selectedProp = 'prop_tree_bodhi';
     this.selectedMonster = null; // Dynamically set to first available monster, or null if empty
     this.selectedMonsterName = '';
+    this.selectedNpcId = 'npc_hermit_risi';
     this.selectedCollision = 1; // 1: Blocked (Red), 0: Walkable (Green)
     this.showCollisionOverlay = true;
     this.showGrid = true;
@@ -47,6 +48,7 @@ class MapEditor {
         <button class="editor-tab" data-tab="props">🌲 พร็อพ</button>
         <button class="editor-tab" data-tab="monsters">👾 มอนสเตอร์</button>
         <button class="editor-tab" data-tab="spawn">🚩 จุดเกิด</button>
+        <button class="editor-tab" data-tab="npcs">🧙‍♂️ ร้านค้า NPC</button>
         <button class="editor-tab" data-tab="collision">🚫 จุดเดินได้</button>
         <button class="editor-tab" data-tab="weather">🌦️ สภาพอากาศ</button>
       </div>
@@ -99,6 +101,18 @@ class MapEditor {
           <button class="palette-item" data-prop="prop_tree_golden">
             <img src="Assets/map_assets/prop_tree_golden.png" class="palette-img-icon"> ไม้ทองคำ
           </button>
+          <button class="palette-item" data-prop="prop_tree_orange_1" title="ต้นส้มทิพย์พฤกษาโบราณ (พุ่มใหญ่แผ่กว้าง โคนรากไม้หิมพานต์)">
+            <img src="Assets/map_assets/prop_tree_orange_1.png" class="palette-img-icon"> ส้มทิพย์โบราณ
+          </button>
+          <button class="palette-item" data-prop="prop_tree_orange_2" title="ต้นส้มทองสถิตไพร (ต้นสูงสง่า กิ่งก้านชูยอด)">
+            <img src="Assets/map_assets/prop_tree_orange_2.png" class="palette-img-icon"> ส้มทองสถิตไพร
+          </button>
+          <button class="palette-item" data-prop="prop_tree_orange_3" title="ต้นส้มทิพย์ผลิเกสร (พุ่มกลมทึบ แซมดอกส้มสีขาวบริสุทธิ์)">
+            <img src="Assets/map_assets/prop_tree_orange_3.png" class="palette-img-icon"> ส้มทิพย์ผลิเกสร
+          </button>
+          <button class="palette-item" data-prop="prop_tree_orange_4" title="ต้นส้มทิพย์มหาราชดก (พุ่มดกย้อย ผลส้มทองคำหนาแน่น)">
+            <img src="Assets/map_assets/prop_tree_orange_4.png" class="palette-img-icon"> ส้มทิพย์มหาราชดก
+          </button>
           <!-- Rocks -->
           <button class="palette-item" data-prop="prop_rock_large">
             <img src="Assets/map_assets/prop_rock_large.png" class="palette-img-icon"> โขดหินยักษ์
@@ -125,6 +139,10 @@ class MapEditor {
           </button>
           <button class="palette-item" data-prop="prop_wat_phra_kaew" title="พระอุโบสถวัดพระแก้ว แลนด์มาร์กขนาดยักษ์ พร้อมปูลานหินวิหารอัตโนมัติ">
             <img src="Assets/map_assets/prop_wat_phra_kaew.png" class="palette-img-icon"> วัดพระแก้ว
+          </button>
+          <!-- Waterfalls -->
+          <button class="palette-item" data-prop="prop_waterfall" title="น้ำตกทิพย์หิมพานต์ (โขดหินผาน้ำตกทรงอิสระ สายน้ำไหลเคลื่อนไหว 4 เฟรม)">
+            <img src="Assets/map_assets/prop_waterfall_icon.png?v=realistic_v9" class="palette-img-icon"> 🌊 น้ำตกหิมพานต์
           </button>
         </div>
         <div style="margin-top:8px; font-size:11px; color:#94a3b8;">
@@ -179,6 +197,48 @@ class MapEditor {
           </button>
           <button id="btnResetSpawnCenter" class="btn-action" style="width:100%; background:#1e293b; border-color:#64748b; color:#cbd5e1;">
             🔄 รีเซ็ตจุดเกิดเป็นกึ่งกลางแมพ (1600, 1600)
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab Content: NPCs -->
+      <div id="tabNpcs" class="editor-tab-content">
+        <div class="editor-section-title">🧙‍♂️ เลือก NPC ร้านค้าที่ต้องการจัดการ:</div>
+        <div class="editor-palette-grid" style="grid-template-columns: 1fr 1fr; margin-bottom: 8px;">
+          <button class="palette-item active" data-npc-id="npc_hermit_risi" id="btnSelectNpcHermit">
+            <img src="Assets/npcs/portrait_hermit.png" class="palette-img-icon" style="border-radius:4px;"> 🧙‍♂️ ปู่ฤๅษีตาไฟ
+          </button>
+          <button class="palette-item" data-npc-id="npc_peddler_woman" id="btnSelectNpcPeddler">
+            <img src="Assets/npcs/portrait_peddler.png" class="palette-img-icon" style="border-radius:4px;"> 🛍️ แม่ค้าทองสร้อย
+          </button>
+        </div>
+
+        <div style="background: rgba(15, 23, 42, 0.75); border: 1px solid #334155; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:#94a3b8; font-size:12px;">NPC ที่เลือก:</span>
+            <span id="txtNpcSelectedName" style="color:#fde047; font-weight:700; font-size:13px;">ปู่ฤๅษีตาไฟ</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="color:#94a3b8; font-size:12px;">ตำแหน่งยืนปัจจุบัน:</span>
+            <span id="txtNpcCoordDisplay" style="color:#4ade80; font-weight:700; font-size:13px; font-family:monospace;">X: 1510, Y: 1570</span>
+          </div>
+          <div style="display:flex; gap:6px; align-items:center; margin-top:8px;">
+            <span style="color:#94a3b8; font-size:11px;">ตั้งพิกัดตรง:</span>
+            <input type="number" id="inputNpcCoordX" style="width:68px; background:#0f172a; border:1px solid #ca8a04; color:#fde047; padding:3px 6px; border-radius:4px; font-size:12px;" placeholder="X" value="1510">
+            <input type="number" id="inputNpcCoordY" style="width:68px; background:#0f172a; border:1px solid #ca8a04; color:#fde047; padding:3px 6px; border-radius:4px; font-size:12px;" placeholder="Y" value="1570">
+            <button id="btnApplyNpcCoords" class="btn-action btn-gold" style="padding:4px 8px; font-size:11px;">ตกลง</button>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:8px;">
+          <button id="btnToolSetNpc" class="btn-action btn-gold" style="width:100%; font-weight:700;">
+            📍 เปิดใช้เครื่องมือวางตำแหน่ง NPC (คลิกบนแมพ)
+          </button>
+          <button id="btnEditorJumpNpc" class="btn-action" style="width:100%; background:#1e293b; border-color:#38bdf8; color:#38bdf8;">
+            🎯 เลื่อนมุมกล้องไปหา NPC
+          </button>
+          <button id="btnOpenNpcShopEditor" class="btn-action" style="width:100%; background:linear-gradient(135deg, #1e293b, #854d0e); border-color:#fde047; color:#fef08a; font-weight:700;">
+            💰 จัดการสินค้าในร้าน & ราคา (Shop & Prices Config)
           </button>
         </div>
       </div>
@@ -367,6 +427,10 @@ class MapEditor {
           document.getElementById('tabSpawn').classList.add('active');
           this.currentTool = 'spawn';
           this.updateSpawnDisplay();
+        } else if (tabKey === 'npcs') {
+          document.getElementById('tabNpcs').classList.add('active');
+          this.currentTool = 'npcs';
+          this.updateNpcDisplay();
         } else if (tabKey === 'collision') {
           document.getElementById('tabCollision').classList.add('active');
           this.currentTool = 'collision';
@@ -455,6 +519,55 @@ class MapEditor {
     const btnHudCenter = document.getElementById('btnHudJumpCenter');
     if (btnHudCenter) {
       btnHudCenter.addEventListener('click', () => this.jumpToCenter());
+    }
+
+    // NPC Palette Selection & Actions
+    panel.querySelectorAll('#tabNpcs .palette-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        panel.querySelectorAll('#tabNpcs .palette-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.selectedNpcId = btn.dataset.npcId || 'npc_hermit_risi';
+        this.currentTool = 'npcs';
+        this.updateNpcDisplay();
+      });
+    });
+
+    const btnToolSetNpc = document.getElementById('btnToolSetNpc');
+    if (btnToolSetNpc) {
+      btnToolSetNpc.addEventListener('click', () => {
+        this.currentTool = 'npcs';
+        window.effectsManager.addDamageText(this.game.player.x, this.game.player.y - 40, '📍 คลิกซ้ายบนแผ่นแมพเพื่อกำหนดตำแหน่งยืน NPC', 'crit');
+      });
+    }
+
+    const btnJumpNpc = document.getElementById('btnEditorJumpNpc');
+    if (btnJumpNpc) {
+      btnJumpNpc.addEventListener('click', () => this.jumpToNpc());
+    }
+
+    const btnApplyNpc = document.getElementById('btnApplyNpcCoords');
+    if (btnApplyNpc) {
+      btnApplyNpc.addEventListener('click', () => {
+        const inpX = document.getElementById('inputNpcCoordX');
+        const inpY = document.getElementById('inputNpcCoordY');
+        const x = parseFloat(inpX ? inpX.value : 1600);
+        const y = parseFloat(inpY ? inpY.value : 1600);
+        const selectedId = this.selectedNpcId || 'npc_hermit_risi';
+        const npc = (window.npcManager && window.npcManager.npcs) ? window.npcManager.npcs.find(n => n.id === selectedId) : null;
+        if (npc) {
+          npc.x = x;
+          npc.y = y;
+          this.updateNpcDisplay();
+          this.jumpToNpc();
+          window.effectsManager.addAuraBurst(x, y, '#38bdf8', 25);
+          window.effectsManager.addDamageText(x, y - 45, `🧙‍♂️ ตั้งพิกัด [${npc.name}] (X: ${Math.round(x)}, Y: ${Math.round(y)})`, 'crit');
+        }
+      });
+    }
+
+    const btnOpenShopEd = document.getElementById('btnOpenNpcShopEditor');
+    if (btnOpenShopEd) {
+      btnOpenShopEd.addEventListener('click', () => this.openNpcShopEditor());
     }
 
     // Collision Palette Selection
@@ -712,6 +825,7 @@ class MapEditor {
       hud.style.setProperty('display', 'flex', 'important');
     }
     this.updateSpawnDisplay();
+    this.updateNpcDisplay();
     this.syncWeatherUI();
 
     // Center camera on player spawn point if camera is sitting at (0, 0)
@@ -805,16 +919,20 @@ class MapEditor {
         if (Math.hypot(p.x - px, p.y - py) < minDist) return;
       }
 
+      const propScale = this.selectedProp === 'prop_waterfall' ? 0.88 : 1.0;
       map.props.push({
         type: this.selectedProp,
         x: px,
         y: py,
-        scale: 1.0
+        scale: propScale
       });
 
       // Add appropriate collider based on prop type
       if (this.selectedProp.startsWith('prop_tree')) {
         map.colliders.push({ x: px, y: py + 18, r: 20, type: 'circle' });
+      } else if (this.selectedProp === 'prop_waterfall') {
+        // Solid rock cliff & basin collider for isolated waterfall
+        map.colliders.push({ x: px, y: py - 85, w: 205, h: 150, type: 'rect' });
       } else if (this.selectedProp === 'prop_rock_large') {
         map.colliders.push({ x: px, y: py + 8, r: 24, type: 'circle' });
       } else if (this.selectedProp === 'prop_rock_small') {
@@ -886,6 +1004,22 @@ class MapEditor {
       this.updateSpawnDisplay();
       window.effectsManager.addAuraBurst(px, py, '#fde047', 28);
       window.effectsManager.addDamageText(px, py - 45, `🚩 กำหนดจุดเกิดผู้เล่นแล้ว! (X: ${px}, Y: ${py})`, 'crit');
+    } else if (this.currentTool === 'npcs' || this.currentTool === 'npc') {
+      const px = Math.round(this.mouseWorld.x);
+      const py = Math.round(this.mouseWorld.y);
+      if (map.checkCollision(px, py, 14)) {
+        window.effectsManager.addDamageText(px, py - 30, '⚠️ จุดนี้เดินไม่ได้ กรุณาเลือกจุดพื้นดิน!', 'crit');
+        return;
+      }
+      const selectedId = this.selectedNpcId || 'npc_hermit_risi';
+      const npc = (window.npcManager && window.npcManager.npcs) ? window.npcManager.npcs.find(n => n.id === selectedId) : null;
+      if (npc) {
+        npc.x = px;
+        npc.y = py;
+        this.updateNpcDisplay();
+        window.effectsManager.addAuraBurst(px, py, '#38bdf8', 28);
+        window.effectsManager.addDamageText(px, py - 45, `🧙‍♂️ ย้ายตำแหน่ง [${npc.name}] แล้ว! (X: ${px}, Y: ${py})`, 'crit');
+      }
     }
   }
 
@@ -1038,13 +1172,55 @@ class MapEditor {
         ctx.restore();
       }
 
+      // NPC Placement Preview
+      if (this.currentTool === 'npcs') {
+        const mx = this.mouseWorld.x - camera.x;
+        const my = this.mouseWorld.y - camera.y;
+        const selectedId = this.selectedNpcId || 'npc_hermit_risi';
+        const targetNpc = (window.npcManager && window.npcManager.npcs) ? window.npcManager.npcs.find(n => n.id === selectedId) : null;
+        const npcName = targetNpc ? targetNpc.name : 'NPC ร้านค้า';
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.beginPath();
+        ctx.arc(mx, my, 26, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([5, 5]);
+        ctx.beginPath();
+        ctx.arc(mx, my, 26, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.font = 'bold 12px "Kanit", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#7dd3fc';
+        ctx.fillText(`📍 ย้ายตำแหน่ง [${npcName}] (${Math.round(this.mouseWorld.x)}, ${Math.round(this.mouseWorld.y)})`, mx, my - 36);
+        ctx.restore();
+      }
+
       // Prop Placement Preview
       if (this.currentTool === 'prop') {
         const img = window.assetManager.getImage(this.selectedProp);
         if (img) {
           ctx.globalAlpha = 0.65;
-          const bottomOffset = this.selectedProp === 'prop_wat_phra_kaew' ? 10 : 20;
-          ctx.drawImage(img, this.mouseWorld.x - camera.x - img.width / 2, this.mouseWorld.y - camera.y - img.height + bottomOffset);
+          if (this.selectedProp === 'prop_waterfall') {
+            const sheetImg = window.assetManager.getImage('prop_waterfall_sheet') || img;
+            const totalFrames = 4;
+            const fw = sheetImg.width / totalFrames;
+            const fh = sheetImg.height;
+            const scale = 0.88;
+            const drawW = fw * scale;
+            const drawH = fh * scale;
+            const now = performance.now() * 0.001;
+            const frameIdx = Math.floor((now * 5.5) % totalFrames);
+            const srcX = frameIdx * fw;
+            ctx.drawImage(sheetImg, srcX, 0, fw, fh, this.mouseWorld.x - camera.x - drawW / 2, this.mouseWorld.y - camera.y - drawH + 20, drawW, drawH);
+          } else {
+            const bottomOffset = this.selectedProp === 'prop_wat_phra_kaew' ? 10 : 20;
+            ctx.drawImage(img, this.mouseWorld.x - camera.x - img.width / 2, this.mouseWorld.y - camera.y - img.height + bottomOffset);
+          }
         }
       }
 
@@ -1216,6 +1392,43 @@ class MapEditor {
         ctx.restore();
       }
     }
+
+    // 5. Render All Placed NPCs (with Overhead Beacons & Selection Highlighting)
+    if (window.npcManager && window.npcManager.npcs) {
+      for (const npc of window.npcManager.npcs) {
+        if (!npc) continue;
+        const nx = npc.x - camera.x;
+        const ny = npc.y - camera.y;
+        if (!camera.isVisible(npc.x, npc.y, 80)) continue;
+
+        const isSelected = this.selectedNpcId === npc.id;
+        const col = isSelected ? '#38bdf8' : '#34d399';
+
+        ctx.save();
+        // Base beacon circle ring
+        ctx.strokeStyle = col;
+        ctx.fillStyle = isSelected ? 'rgba(56, 189, 248, 0.25)' : 'rgba(52, 211, 153, 0.15)';
+        ctx.lineWidth = isSelected ? 3 : 2;
+        ctx.beginPath();
+        ctx.arc(nx, ny, 26, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Overhead name & title badge
+        ctx.font = 'bold 11px "Kanit", sans-serif';
+        ctx.textAlign = 'center';
+        const label = `${npc.name} (${npc.title || 'ร้านค้า'})`;
+        const tw = ctx.measureText(label).width + 16;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(nx - tw / 2, ny - 48, tw, 20);
+        ctx.strokeStyle = col;
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(nx - tw / 2, ny - 48, tw, 20);
+        ctx.fillStyle = isSelected ? '#7dd3fc' : '#6ee7b7';
+        ctx.fillText(label, nx, ny - 34);
+        ctx.restore();
+      }
+    }
   }
 
   // --- Save / Load & Export / Import ---
@@ -1231,6 +1444,7 @@ class MapEditor {
         shrines: this.game.map.shrines || [],
         pickups: this.game.map.pickups || [],
         spawnPoint: this.game.map.spawnPoint || { x: 1600, y: 1600 },
+        npcs: window.npcManager ? window.npcManager.getNPCData() : [],
         enemies: this.game.enemyManager ? this.game.enemyManager.getEnemyData() : [],
         weather: {
           timeMode: this.game.weather ? this.game.weather.timeMode : 'auto',
@@ -1265,6 +1479,10 @@ class MapEditor {
         if (res && res.success && res.data) {
           if (this.game.loadMapData) {
             this.game.loadMapData(res.data);
+          }
+          if (res.data.npcs && window.npcManager) {
+            window.npcManager.loadNPCData(res.data.npcs);
+            this.updateNpcDisplay();
           }
           if (res.data.spawnPoint && typeof res.data.spawnPoint.x === 'number') {
             this.game.map.spawnPoint = { x: res.data.spawnPoint.x, y: res.data.spawnPoint.y };
@@ -1303,6 +1521,7 @@ class MapEditor {
         shrines: this.game.map.shrines || [],
         pickups: this.game.map.pickups || [],
         spawnPoint: this.game.map.spawnPoint || { x: 1600, y: 1600 },
+        npcs: (customData && customData.npcs) || (window.npcManager ? window.npcManager.getNPCData() : []),
         enemies: this.game.enemyManager ? this.game.enemyManager.getEnemyData() : [],
         weather: {
           timeMode: this.game.weather ? this.game.weather.timeMode : 'auto',
@@ -1326,6 +1545,7 @@ class MapEditor {
               pickups: data.pickups,
               spawnPoint: data.spawnPoint
             };
+            w.npcs = data.npcs;
             w.enemies = data.enemies;
             w.weather = data.weather;
             if (w.player && data.spawnPoint) {
@@ -1372,6 +1592,10 @@ class MapEditor {
       if (data.collisionGrid) this.game.map.collisionGrid = data.collisionGrid;
       if (data.props) this.game.map.props = data.props;
       if (data.colliders) this.game.map.colliders = data.colliders;
+      if (data.npcs && window.npcManager) {
+        window.npcManager.loadNPCData(data.npcs);
+        this.updateNpcDisplay();
+      }
       if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
         this.game.map.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
         if (this.game.player) {
@@ -1496,6 +1720,7 @@ class MapEditor {
       props: this.game.map.props,
       colliders: this.game.map.colliders,
       spawnPoint: this.game.map.spawnPoint || { x: 1600, y: 1600 },
+      npcs: window.npcManager ? window.npcManager.getNPCData() : [],
       enemies: this.game.enemyManager.getEnemyData(),
       weather: {
         timeMode: this.game.weather ? this.game.weather.timeMode : 'auto',
@@ -1527,6 +1752,10 @@ class MapEditor {
           if (data.collisionGrid) this.game.map.collisionGrid = data.collisionGrid;
           if (data.props) this.game.map.props = data.props;
           if (data.colliders) this.game.map.colliders = data.colliders;
+          if (data.npcs && window.npcManager) {
+            window.npcManager.loadNPCData(data.npcs);
+            this.updateNpcDisplay();
+          }
           if (data.spawnPoint && typeof data.spawnPoint.x === 'number') {
             this.game.map.spawnPoint = { x: data.spawnPoint.x, y: data.spawnPoint.y };
             if (this.game.player) {
@@ -1592,6 +1821,388 @@ class MapEditor {
 
     const txtTile = document.getElementById('txtSpawnTileDisplay');
     if (txtTile) txtTile.innerText = `Col: ${col}, Row: ${row}`;
+  }
+
+  updateNpcDisplay() {
+    const selectedId = this.selectedNpcId || 'npc_hermit_risi';
+    const npc = (window.npcManager && window.npcManager.npcs) ? window.npcManager.npcs.find(n => n.id === selectedId) : null;
+    if (!npc) return;
+
+    const txtName = document.getElementById('txtNpcSelectedName');
+    if (txtName) txtName.innerText = `${npc.name} (${npc.title || 'ร้านค้า'})`;
+
+    const txtCoord = document.getElementById('txtNpcCoordDisplay');
+    if (txtCoord) txtCoord.innerText = `X: ${Math.round(npc.x)}, Y: ${Math.round(npc.y)}`;
+
+    const inpX = document.getElementById('inputNpcCoordX');
+    if (inpX) inpX.value = Math.round(npc.x);
+
+    const inpY = document.getElementById('inputNpcCoordY');
+    if (inpY) inpY.value = Math.round(npc.y);
+
+    // Sync active state in palette buttons
+    const panel = document.getElementById('mapEditorPanel');
+    if (panel) {
+      panel.querySelectorAll('#tabNpcs .palette-item').forEach(btn => {
+        if (btn.dataset.npcId === selectedId) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+  }
+
+  jumpToNpc() {
+    if (!this.game || !this.game.camera) return;
+    const selectedId = this.selectedNpcId || 'npc_hermit_risi';
+    const npc = (window.npcManager && window.npcManager.npcs) ? window.npcManager.npcs.find(n => n.id === selectedId) : null;
+    if (!npc) return;
+
+    this.game.camera.x = Math.max(0, Math.min(this.game.map.width - this.game.camera.width, npc.x - this.game.camera.width / 2));
+    this.game.camera.y = Math.max(0, Math.min(this.game.map.height - this.game.camera.height, npc.y - this.game.camera.height / 2));
+
+    if (window.effectsManager) {
+      window.effectsManager.addAuraBurst(npc.x, npc.y, '#38bdf8', 25);
+      window.effectsManager.addDamageText(npc.x, npc.y - 45, `🧙‍♂️ กล้องเลื่อนมายัง [${npc.name}] (${Math.round(npc.x)}, ${Math.round(npc.y)})`, 'crit');
+    }
+  }
+
+  openNpcShopEditor() {
+    const selectedId = this.selectedNpcId || 'npc_hermit_risi';
+    const npc = (window.npcManager && window.npcManager.npcs) ? window.npcManager.npcs.find(n => n.id === selectedId) : null;
+    if (!npc) {
+      alert('ไม่พบข้อมูล NPC ที่เลือก');
+      return;
+    }
+    this.createNpcShopModal();
+    const modal = document.getElementById('npcShopConfigModal');
+    if (!modal) return;
+
+    // Populate NPC details
+    document.getElementById('npcShopModalTitle').innerText = `🛒 จัดการร้านค้า & สินค้า: ${npc.name}`;
+    document.getElementById('npcShopModalSubtitle').innerText = `${npc.title || ''} (ID: ${npc.id})`;
+    document.getElementById('npcShopGreetingInput').value = npc.greeting || '';
+    document.getElementById('npcShopCanSellJunk').checked = npc.canSellAllJunk !== false;
+
+    // Render items table
+    this.renderNpcShopItems(npc);
+    this.populateNpcAddDropdown();
+
+    modal.style.display = 'flex';
+  }
+
+  createNpcShopModal() {
+    if (document.getElementById('npcShopConfigModal')) return;
+
+    const modal = document.createElement('div');
+    modal.id = 'npcShopConfigModal';
+    modal.style.cssText = `
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.78); backdrop-filter: blur(4px);
+      z-index: 100000; display: none; align-items: center; justify-content: center;
+      font-family: 'Kanit', sans-serif;
+    `;
+
+    modal.innerHTML = `
+      <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border: 2px solid #ca8a04; border-radius: 12px; width: 620px; max-width: 95vw; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.8), 0 0 25px rgba(202,138,4,0.3); color: #f8fafc; overflow: hidden;">
+        <!-- Header -->
+        <div style="background: linear-gradient(90deg, #1e293b, #334155); padding: 14px 18px; border-bottom: 1px solid #ca8a04; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div id="npcShopModalTitle" style="font-size: 17px; font-weight: 700; color: #fde047; text-shadow: 0 1px 3px rgba(0,0,0,0.8);">🛒 จัดการร้านค้า & สินค้า</div>
+            <div id="npcShopModalSubtitle" style="font-size: 11px; color: #94a3b8; margin-top: 2px;"></div>
+          </div>
+          <button id="btnCloseNpcShopModal" style="background: transparent; border: none; color: #94a3b8; font-size: 22px; cursor: pointer; line-height: 1; padding: 2px 6px;">&times;</button>
+        </div>
+
+        <!-- Body -->
+        <div style="padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 14px;">
+          <!-- Greeting Text -->
+          <div>
+            <label style="display: block; font-size: 12px; color: #cbd5e1; margin-bottom: 4px; font-weight: 600;">💬 คำทักทายของ NPC (Dialog Greeting):</label>
+            <textarea id="npcShopGreetingInput" rows="2" style="width: 100%; box-sizing: border-box; background: #0b1120; border: 1px solid #475569; border-radius: 6px; color: #f1f5f9; padding: 8px; font-size: 12px; resize: vertical;"></textarea>
+          </div>
+
+          <!-- Can Sell All Junk Checkbox -->
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="npcShopCanSellJunk" style="width: 16px; height: 16px; accent-color: #eab308; cursor: pointer;">
+            <label for="npcShopCanSellJunk" style="font-size: 12px; color: #fef08a; cursor: pointer;">
+              💰 รับซื้อไอเทมขยะ/ชิ้นส่วนมอนสเตอร์จากผู้เล่นทั้งหมด (เปิดปุ่ม "ขายขยะทั้งหมด")
+            </label>
+          </div>
+
+          <!-- Shop Items List -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 13px; font-weight: 600; color: #38bdf8;">📦 รายการสินค้าที่ NPC ขาย & ราคา (พดด้วง/Gold):</span>
+              <span id="npcShopItemCount" style="font-size: 11px; color: #94a3b8;"></span>
+            </div>
+            <div id="npcShopItemsContainer" style="background: #0b1120; border: 1px solid #334155; border-radius: 8px; max-height: 220px; overflow-y: auto; padding: 6px; display: flex; flex-direction: column; gap: 6px;">
+              <!-- Dynamic item rows -->
+            </div>
+          </div>
+
+          <!-- Add Item Row -->
+          <div style="background: rgba(30, 41, 59, 0.6); border: 1px dashed #ca8a04; border-radius: 8px; padding: 10px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <span style="font-size: 12px; color: #fde047; font-weight: 600;">+ เพิ่มสินค้า:</span>
+            <select id="selectNpcAddItem" style="flex: 1; min-width: 180px; background: #0f172a; border: 1px solid #64748b; color: #f8fafc; border-radius: 4px; padding: 5px 8px; font-size: 12px;">
+              <!-- Populated dynamically -->
+            </select>
+            <input type="number" id="inputNpcAddPrice" placeholder="ราคา (Gold)" value="50" min="1" style="width: 90px; background: #0f172a; border: 1px solid #64748b; color: #fde047; border-radius: 4px; padding: 5px 8px; font-size: 12px;">
+            <button id="btnNpcAddItemAction" style="background: linear-gradient(135deg, #ca8a04, #eab308); color: #0f172a; border: none; font-weight: 700; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer;">
+              เพิ่มสินค้า
+            </button>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div style="background: #0f172a; padding: 12px 18px; border-top: 1px solid #334155; display: flex; justify-content: flex-end; gap: 10px;">
+          <button id="btnCancelNpcShopModal" style="background: #334155; color: #cbd5e1; border: 1px solid #475569; border-radius: 6px; padding: 6px 14px; font-size: 12px; cursor: pointer;">
+            ยกเลิก
+          </button>
+          <button id="btnSaveNpcShopModal" style="background: linear-gradient(135deg, #16a34a, #22c55e); color: #fff; border: 1px solid #4ade80; border-radius: 6px; padding: 6px 18px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 10px rgba(34,197,94,0.3);">
+            💾 บันทึกสินค้า & ราคาลงฐานข้อมูล SQLite
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Event listeners
+    const closeModal = () => { modal.style.display = 'none'; };
+    document.getElementById('btnCloseNpcShopModal').addEventListener('click', closeModal);
+    document.getElementById('btnCancelNpcShopModal').addEventListener('click', closeModal);
+
+    document.getElementById('btnNpcAddItemAction').addEventListener('click', () => {
+      const select = document.getElementById('selectNpcAddItem');
+      const inputPrice = document.getElementById('inputNpcAddPrice');
+      const itemKey = select.value;
+      const price = parseInt(inputPrice.value, 10) || 50;
+
+      const selectedId = this.selectedNpcId || 'npc_hermit_risi';
+      const npc = (window.npcManager && window.npcManager.npcs) ? window.npcManager.npcs.find(n => n.id === selectedId) : null;
+      if (!npc) return;
+
+      if (!npc.shopItems) npc.shopItems = [];
+
+      // Check if already in shop
+      const existing = npc.shopItems.find(it => it.key === itemKey);
+      if (existing) {
+        existing.price = price;
+      } else {
+        const tmpl = (window.ITEM_TEMPLATES && window.ITEM_TEMPLATES[itemKey]) ? window.ITEM_TEMPLATES[itemKey] : null;
+        const label = tmpl ? tmpl.name : itemKey;
+        npc.shopItems.push({ key: itemKey, price: price, label: label });
+      }
+
+      this.renderNpcShopItems(npc);
+    });
+
+    document.getElementById('btnSaveNpcShopModal').addEventListener('click', async () => {
+      const selectedId = this.selectedNpcId || 'npc_hermit_risi';
+      const npc = (window.npcManager && window.npcManager.npcs) ? window.npcManager.npcs.find(n => n.id === selectedId) : null;
+      if (!npc) return;
+
+      await this.saveNpcShopConfig(npc);
+      closeModal();
+    });
+  }
+
+  renderNpcShopItems(npc) {
+    const container = document.getElementById('npcShopItemsContainer');
+    const countDisplay = document.getElementById('npcShopItemCount');
+    if (!container) return;
+
+    container.innerHTML = '';
+    const items = npc.shopItems || [];
+    if (countDisplay) countDisplay.innerText = `(ทั้งหมด ${items.length} รายการ)`;
+
+    if (items.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:16px; color:#94a3b8; font-size:12px;">ร้านค้านี้ยังไม่มีสินค้า วางขาย</div>`;
+      return;
+    }
+
+    items.forEach((item, index) => {
+      const tmpl = (window.ITEM_TEMPLATES && window.ITEM_TEMPLATES[item.key]) ? window.ITEM_TEMPLATES[item.key] : null;
+      const name = item.label || (tmpl ? tmpl.name : item.key);
+      const icon = tmpl && tmpl.icon ? tmpl.icon : 'Assets/ui/icon_util_inventory.png';
+      const row = document.createElement('div');
+      row.style.cssText = `
+        display: flex; align-items: center; justify-content: space-between;
+        background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+        padding: 6px 10px; gap: 8px;
+      `;
+
+      row.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+          <img src="${icon}" style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px; background: #0f172a; border: 1px solid #475569;">
+          <div style="min-width: 0; flex: 1;">
+            <div style="font-size: 12px; font-weight: 600; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${name}</div>
+            <div style="font-size: 10px; color: #94a3b8; font-family: monospace;">ID: ${item.key}</div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 11px; color: #ca8a04;">💰 ราคา:</span>
+          <input type="number" class="npc-shop-price-input" data-index="${index}" value="${item.price}" min="1" style="width: 75px; background: #0f172a; border: 1px solid #ca8a04; color: #fde047; border-radius: 4px; padding: 4px 6px; font-size: 12px; font-weight: 700; text-align: right;">
+          <button class="npc-shop-remove-btn" data-index="${index}" style="background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;" title="ลบสินค้าชิ้นนี้ออกจากร้าน">🗑️</button>
+        </div>
+      `;
+
+      // Price change listener
+      const priceInput = row.querySelector('.npc-shop-price-input');
+      priceInput.addEventListener('change', (e) => {
+        const newPrice = parseInt(e.target.value, 10);
+        if (newPrice > 0) {
+          items[index].price = newPrice;
+        }
+      });
+
+      // Remove listener
+      const removeBtn = row.querySelector('.npc-shop-remove-btn');
+      removeBtn.addEventListener('click', () => {
+        items.splice(index, 1);
+        this.renderNpcShopItems(npc);
+      });
+
+      container.appendChild(row);
+    });
+  }
+
+  populateNpcAddDropdown() {
+    const select = document.getElementById('selectNpcAddItem');
+    if (!select || !window.ITEM_TEMPLATES) return;
+
+    select.innerHTML = '';
+    const keys = Object.keys(window.ITEM_TEMPLATES);
+
+    const categories = {
+      'ยาโอสถ & อาหาร & วาร์ป': [],
+      'อาวุธหิมพานต์': [],
+      'ชุดเกราะ & เครื่องประดับ': [],
+      'วัตถุดิบ & ชิ้นส่วนมอนสเตอร์': []
+    };
+
+    keys.forEach(k => {
+      const it = window.ITEM_TEMPLATES[k];
+      if (it.slot === 'consumable' || it.category === 'potion' || it.category === 'food' || it.category === 'scroll') {
+        categories['ยาโอสถ & อาหาร & วาร์ป'].push({ key: k, item: it });
+      } else if (it.slot === 'weapon') {
+        categories['อาวุธหิมพานต์'].push({ key: k, item: it });
+      } else if (it.slot === 'chest' || it.slot === 'helm' || it.slot === 'bracer' || it.slot === 'wings' || it.slot === 'pants' || it.slot === 'boots' || it.slot === 'talisman') {
+        categories['ชุดเกราะ & เครื่องประดับ'].push({ key: k, item: it });
+      } else {
+        categories['วัตถุดิบ & ชิ้นส่วนมอนสเตอร์'].push({ key: k, item: it });
+      }
+    });
+
+    for (const [groupName, itemList] of Object.entries(categories)) {
+      if (itemList.length === 0) continue;
+      const optGroup = document.createElement('optgroup');
+      optGroup.label = groupName;
+      itemList.forEach(({ key, item }) => {
+        const opt = document.createElement('option');
+        opt.value = key;
+        opt.textContent = `${item.name} (${key})`;
+        optGroup.appendChild(opt);
+      });
+      select.appendChild(optGroup);
+    }
+  }
+
+  async saveNpcShopConfig(npc) {
+    try {
+      const greetingInput = document.getElementById('npcShopGreetingInput');
+      const junkCheckbox = document.getElementById('npcShopCanSellJunk');
+
+      if (greetingInput) npc.greeting = greetingInput.value.trim();
+      if (junkCheckbox) npc.canSellAllJunk = junkCheckbox.checked;
+
+      // Also read any un-blurred price inputs before submitting
+      const priceInputs = document.querySelectorAll('#npcShopItemsContainer .npc-shop-price-input');
+      priceInputs.forEach(pInput => {
+        const idx = parseInt(pInput.dataset.index, 10);
+        const val = parseInt(pInput.value, 10);
+        if (npc.shopItems && npc.shopItems[idx] && val > 0) {
+          npc.shopItems[idx].price = val;
+        }
+      });
+
+      // Update in-memory npcManager instance immediately
+      if (window.npcManager && window.npcManager.npcs) {
+        const memNpc = window.npcManager.npcs.find(n => n.id === npc.id);
+        if (memNpc) {
+          memNpc.greeting = npc.greeting;
+          memNpc.canSellAllJunk = npc.canSellAllJunk;
+          memNpc.shopItems = JSON.parse(JSON.stringify(npc.shopItems || []));
+        }
+      }
+
+      // Persist to database
+      if (window.gameDatabase) {
+        const payload = {
+          npc_id: npc.id,
+          name: npc.name,
+          title: npc.title,
+          type: npc.type,
+          x: npc.x,
+          y: npc.y,
+          greeting: npc.greeting,
+          can_sell_all_junk: npc.canSellAllJunk,
+          canSellAllJunk: npc.canSellAllJunk,
+          shop_items: npc.shopItems || [],
+          shopItems: npc.shopItems || [],
+          sprite_sheet_src: npc.spriteSheetSrc,
+          portrait_src: npc.portraitSrc,
+          scale: npc.scale
+        };
+        const res = await window.gameDatabase.saveNpc(payload);
+        if (res && res.success) {
+          // 1. Instantly sync into map state & local storage
+          this.saveToLocalStorage();
+          try {
+            const allNpcs = window.npcManager ? window.npcManager.getNPCData() : [];
+            localStorage.setItem('yaksha_rpg_npcs_cache', JSON.stringify(allNpcs));
+          } catch (_) {}
+          if (this.game && this.game.map) {
+            this.game.map.npcs = window.npcManager ? window.npcManager.getNPCData() : [];
+          }
+
+          // 2. Automatically save map to database so the user does NOT need to manually click save map editor!
+          try {
+            const mapData = {
+              version: 'himavanta_v3',
+              tiles: this.game.map.tiles,
+              collisionGrid: this.game.map.collisionGrid,
+              props: this.game.map.props,
+              colliders: this.game.map.colliders,
+              chests: this.game.map.chests || [],
+              shrines: this.game.map.shrines || [],
+              pickups: this.game.map.pickups || [],
+              spawnPoint: this.game.map.spawnPoint || { x: 1600, y: 1600 },
+              npcs: window.npcManager ? window.npcManager.getNPCData() : [],
+              enemies: this.game.enemyManager ? this.game.enemyManager.getEnemyData() : [],
+              weather: {
+                timeMode: this.game.weather ? this.game.weather.timeMode : 'auto',
+                rainMode: this.game.weather ? this.game.weather.rainMode : 'auto'
+              }
+            };
+            await window.gameDatabase.saveMap(mapData, 'default');
+          } catch (mapErr) {
+            console.warn('[MapEditor] Map auto-save warning:', mapErr);
+          }
+
+          window.effectsManager.addDamageText(npc.x, npc.y - 45, `บันทึกร้านค้า [${npc.name}] สำเร็จเรียบร้อย!`, 'crit');
+          window.effectsManager.addAuraBurst(npc.x, npc.y, '#facc15', 30);
+          alert(`บันทึกการตั้งค่าร้านค้าของ [${npc.name}] เรียบร้อยแล้ว!\n(ระบบซิงค์ทั้งตาราง NPC และข้อมูลแผนที่ให้อัตโนมัติทันที ไม่ต้องกดบันทึกซ้ำ)`);
+          return;
+        } else {
+          throw new Error(res.error || 'บันทึกร้านค้าไม่สำเร็จ');
+        }
+      }
+    } catch (e) {
+      console.error('[MapEditor] Save NPC Config Error:', e);
+      alert('บันทึกร้านค้าไม่สำเร็จ: ' + e.message);
+    }
   }
 }
 

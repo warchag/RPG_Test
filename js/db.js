@@ -42,6 +42,7 @@ class GameDatabase {
       shrines: mapData.shrines || [],
       pickups: mapData.pickups || [],
       spawnPoint: mapData.spawnPoint || { x: 1600, y: 1600 },
+      npcs: mapData.npcs || [],
       enemies: mapData.enemies || [],
       weather: mapData.weather || { timeMode: 'auto', rainMode: 'auto' }
     };
@@ -106,6 +107,82 @@ class GameDatabase {
           return { success: true, data, fallback: true };
         }
       } catch (lsErr) {}
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Load NPC configurations and shop items from SQLite DB
+   */
+  async loadNpcs() {
+    try {
+      const res = await fetch(`${this.apiBase}/npcs`, { method: 'GET' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json.status === 'success' && Array.isArray(json.data)) {
+        this.isConnected = true;
+        try { localStorage.setItem('yaksha_rpg_npcs_cache', JSON.stringify(json.data)); } catch (_) {}
+        return { success: true, data: json.data };
+      }
+      throw new Error(json.message || 'Failed to fetch NPCs');
+    } catch (err) {
+      console.warn('[GameDatabase] loadNpcs network error, checking local cache:', err);
+      try {
+        const raw = localStorage.getItem('yaksha_rpg_npcs_cache');
+        if (raw) return { success: true, data: JSON.parse(raw), fallback: true };
+      } catch (_) {}
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Save a single NPC configuration into SQLite DB
+   */
+  async saveNpc(npcData) {
+    try {
+      const res = await fetch(`${this.apiBase}/npcs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(npcData)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      try {
+        const raw = localStorage.getItem('yaksha_rpg_npcs_cache');
+        const list = raw ? JSON.parse(raw) : [];
+        const nid = npcData.npc_id || npcData.id;
+        const idx = list.findIndex(n => (n.id || n.npc_id) === nid);
+        if (idx >= 0) {
+          list[idx] = Object.assign({}, list[idx], npcData);
+        } else {
+          list.push(npcData);
+        }
+        localStorage.setItem('yaksha_rpg_npcs_cache', JSON.stringify(list));
+      } catch (_) {}
+      return { success: true, result: json };
+    } catch (err) {
+      console.error('[GameDatabase] saveNpc error:', err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  /**
+   * Batch save/update all NPCs into SQLite DB
+   */
+  async saveAllNpcs(npcList) {
+    try {
+      const res = await fetch(`${this.apiBase}/npcs/save_all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(npcList)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      try { localStorage.setItem('yaksha_rpg_npcs_cache', JSON.stringify(npcList)); } catch (_) {}
+      return { success: true, result: json };
+    } catch (err) {
+      console.error('[GameDatabase] saveAllNpcs error:', err);
+      try { localStorage.setItem('yaksha_rpg_npcs_cache', JSON.stringify(npcList)); } catch (_) {}
       return { success: false, error: err.message };
     }
   }

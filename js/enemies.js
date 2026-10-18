@@ -253,6 +253,19 @@ class Enemy {
       }
     }
 
+    // Apply central GameConfig & Zone Tier scaling if available
+    if (window.gameConfig && typeof window.gameConfig.getMonsterConfig === 'function') {
+      const gCfg = window.gameConfig.getMonsterConfig(this.type);
+      if (gCfg) {
+        this.maxHp = gCfg.maxHp;
+        this.hp = this.maxHp;
+        this.attack = gCfg.attack;
+        this.speed = gCfg.speed;
+        this.expReward = gCfg.expReward;
+        this.goldReward = gCfg.goldReward;
+      }
+    }
+
     // Save base original name for role toggling & restorations
     this.baseName = this.name;
 
@@ -410,8 +423,10 @@ class Enemy {
       }
     }
 
-    // Chance for Equipment Drop (35% normal, 75% for buffalo/elite)
-    const equipDropChance = this.type === 'buffalo' ? 0.75 : 0.35;
+    // Chance for Equipment Drop (controlled via window.gameConfig)
+    const equipDropChance = (window.gameConfig && typeof window.gameConfig.getEquipDropChance === 'function')
+      ? window.gameConfig.getEquipDropChance(this.type, this.isBoss)
+      : (this.type === 'buffalo' ? 0.75 : 0.20);
     if (window.ItemSystem && Math.random() < equipDropChance) {
       const dropItem = window.ItemSystem.rollDrop(this.type, player ? player.level : 1);
       if (dropItem) {
@@ -421,6 +436,26 @@ class Enemy {
           x: this.x + (Math.random() - 0.5) * 20,
           y: this.y + (Math.random() - 0.5) * 20
         });
+      }
+    }
+
+    // Chance for Monster Soul Card Drop (controlled via window.gameConfig)
+    const cardDropChance = (window.gameConfig && typeof window.gameConfig.getCardDropChance === 'function')
+      ? window.gameConfig.getCardDropChance(this.type, this.isBoss)
+      : ((this.isBoss || this.type === 'buffalo' || this.type === 'boss') ? 0.40 : 0.08);
+    if (window.ItemSystem && typeof window.ItemSystem.rollCardDrop === 'function' && Math.random() < cardDropChance) {
+      const cardItem = window.ItemSystem.rollCardDrop(this.type, this.isBoss);
+      if (cardItem) {
+        window.gameMap.spawnPickup({
+          type: 'equipment',
+          itemData: cardItem,
+          x: this.x + (Math.random() - 0.5) * 28,
+          y: this.y + (Math.random() - 0.5) * 28
+        });
+        if (window.effectsManager) {
+          window.effectsManager.addDamageText(this.x, this.y - 62, `🃏 การ์ดตก! [${cardItem.name}]`, 'crit');
+          window.effectsManager.addAuraBurst(this.x, this.y, '#c084fc', 26);
+        }
       }
     }
   }

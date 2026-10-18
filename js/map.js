@@ -427,9 +427,19 @@ class GameMap {
           ctx.restore();
         } else if (pat) {
           ctx.save();
-          ctx.translate(-camera.x, -camera.y);
-          ctx.fillStyle = pat;
-          ctx.fillRect(c * this.tileSize, r * this.tileSize, this.tileSize, this.tileSize);
+          if (type === 2 || type === 4) {
+            // Continuous flowing river UV animation (downstream flow + subtle natural drift)
+            const flowSpeed = (type === 2) ? 22 : 15; // Deep water flows slightly faster
+            const flowY = (now * flowSpeed) % 287; // 287px seamless tile texture repeat
+            const driftX = Math.sin(now * 0.9) * 3.5;
+            ctx.translate(-camera.x + driftX, -camera.y + flowY);
+            ctx.fillStyle = pat;
+            ctx.fillRect(c * this.tileSize - driftX, r * this.tileSize - flowY, this.tileSize, this.tileSize);
+          } else {
+            ctx.translate(-camera.x, -camera.y);
+            ctx.fillStyle = pat;
+            ctx.fillRect(c * this.tileSize, r * this.tileSize, this.tileSize, this.tileSize);
+          }
           ctx.restore();
         } else {
           const img = key ? window.assetManager.getImage(key) : null;
@@ -447,17 +457,17 @@ class GameMap {
       }
     }
 
-    // Pass B: Procedural Edge Blending & Animated Water Caustics
+    // Pass B: Procedural Edge Blending & Animated Water Flow Caustics
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const type = this.tiles[r][c];
         const screenX = c * this.tileSize - camera.x;
         const screenY = r * this.tileSize - camera.y;
 
-        // Dynamic wave caustic highlights on river water
+        // Dynamic wave caustic highlights & gentle surface flow on river water
         if (type === 2 || type === 4) {
           const wave = Math.sin(now * 2.2 + r * 0.9 + c * 1.3) * 2.5;
-          const waveAlpha = 0.35 + Math.sin(now * 3.1 + r + c) * 0.15;
+          const waveAlpha = 0.32 + Math.sin(now * 2.8 + r + c) * 0.14;
           ctx.save();
           ctx.strokeStyle = type === 2 ? `rgba(186, 230, 253, ${waveAlpha})` : `rgba(255, 255, 255, ${waveAlpha})`;
           ctx.lineWidth = 1.6;
@@ -465,6 +475,18 @@ class GameMap {
           ctx.moveTo(screenX + 8, screenY + 24 + wave);
           ctx.bezierCurveTo(screenX + 24, screenY + 28 + wave, screenX + 40, screenY + 20 + wave, screenX + 56, screenY + 24 + wave);
           ctx.stroke();
+
+          // Secondary subtle trailing ripple for living water depth
+          const ripplePhase = (now * 1.6 + r * 0.6 + c * 0.4) % Math.PI;
+          const rippleAlpha = Math.sin(ripplePhase) * 0.20;
+          if (rippleAlpha > 0.05) {
+            ctx.strokeStyle = `rgba(255, 255, 255, ${rippleAlpha})`;
+            ctx.lineWidth = 1.1;
+            ctx.beginPath();
+            ctx.moveTo(screenX + 18, screenY + 46 + Math.sin(now * 2.6 + c) * 1.8);
+            ctx.lineTo(screenX + 46, screenY + 44 + Math.sin(now * 2.6 + c) * 1.8);
+            ctx.stroke();
+          }
           ctx.restore();
         }
 
@@ -738,7 +760,7 @@ class GameMap {
         p.itemData._img = eqImg;
       }
       if (eqImg && eqImg.complete && eqImg.naturalWidth > 0) {
-        // Transparent Keying Cache: Remove solid black background (#000000) dynamically
+        // Transparent Keying Cache: Remove solid black background (#000000) only if corner pixel is opaque
         if (!eqImg._transparentCanvas) {
           try {
             const oc = document.createElement('canvas');
@@ -748,16 +770,18 @@ class GameMap {
             octx.drawImage(eqImg, 0, 0);
             const imgData = octx.getImageData(0, 0, oc.width, oc.height);
             const d = imgData.data;
-            for (let idx = 0; idx < d.length; idx += 4) {
-              const r = d[idx];
-              const g = d[idx + 1];
-              const b = d[idx + 2];
-              // Key out pure black or near-black background pixels (< 16 rgb)
-              if (r < 18 && g < 18 && b < 18) {
-                d[idx + 3] = 0; // alpha = 0
+            // Only key out black if top-left corner is opaque (already-transparent PNGs like Monster Cards keep dark interior pixels intact)
+            if (d[3] > 200 && p.itemData.slot !== 'card') {
+              for (let idx = 0; idx < d.length; idx += 4) {
+                const r = d[idx];
+                const g = d[idx + 1];
+                const b = d[idx + 2];
+                if (r < 18 && g < 18 && b < 18) {
+                  d[idx + 3] = 0;
+                }
               }
+              octx.putImageData(imgData, 0, 0);
             }
-            octx.putImageData(imgData, 0, 0);
             eqImg._transparentCanvas = oc;
           } catch (e) {
             eqImg._transparentCanvas = eqImg;
@@ -844,6 +868,72 @@ class GameMap {
 
   // Render single prop with tree canopy detection & smooth translucency
   renderSingleProp(ctx, camera, prop, player) {
+    if (prop.type === 'prop_waterfall') {
+      const sheetImg = window.assetManager.getImage('prop_waterfall_sheet') || window.assetManager.getImage('prop_waterfall');
+      if (!sheetImg) return;
+
+      const px = prop.x - camera.x;
+      const py = prop.y - camera.y;
+      const totalFrames = 4;
+      const fw = sheetImg.width / totalFrames;
+      const fh = sheetImg.height;
+      const scale = (!prop.scale || prop.scale < 0.75) ? 0.88 : prop.scale;
+      const drawW = fw * scale;
+      const drawH = fh * scale;
+      const now = performance.now() * 0.001;
+      const fps = 5.5; // Smooth cascading water flow loop
+      const frameIdx = Math.floor((now * fps) % totalFrames);
+      const srcX = frameIdx * fw;
+      const bottomOffset = 20;
+
+      // Smooth translucency if player walks behind the upper cliff crest
+      let targetAlpha = 1.0;
+      if (player) {
+        const halfW = drawW * 0.42;
+        const crestTop = prop.y - drawH + 25;
+        const crestBottom = prop.y - 95;
+        if (player.x >= prop.x - halfW && player.x <= prop.x + halfW &&
+            player.y >= crestTop && player.y <= crestBottom) {
+          targetAlpha = 0.45;
+        }
+      }
+      if (prop.currentAlpha === undefined) prop.currentAlpha = 1.0;
+      prop.currentAlpha += (targetAlpha - prop.currentAlpha) * 0.22;
+
+      ctx.save();
+      if (prop.currentAlpha < 0.99) {
+        ctx.globalAlpha = prop.currentAlpha;
+      }
+
+      // 1. Natural Ground / Riverbed Contact Shadow under rock formation
+      const shadowGrad = ctx.createRadialGradient(px, py - 10, drawW * 0.12, px, py - 10, drawW * 0.50);
+      shadowGrad.addColorStop(0, 'rgba(15, 23, 42, 0.42)');
+      shadowGrad.addColorStop(0.7, 'rgba(15, 23, 42, 0.22)');
+      shadowGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+      ctx.fillStyle = shadowGrad;
+      ctx.beginPath();
+      ctx.ellipse(px, py - 6, drawW * 0.49, drawH * 0.22, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Draw isolated mossy rock waterfall frame
+      ctx.drawImage(sheetImg, srcX, 0, fw, fh, px - drawW / 2, py - drawH + bottomOffset, drawW, drawH);
+
+      // 3. Subtle mist spray glow at the plunge pool center
+      const splashY = py + bottomOffset - (92 * scale);
+      const pulse = Math.sin(now * 5.0) * 0.08 + 0.22;
+      const splashGrad = ctx.createRadialGradient(px, splashY, 6, px, splashY, drawW * 0.28);
+      splashGrad.addColorStop(0, `rgba(255, 255, 255, ${pulse * 0.45})`);
+      splashGrad.addColorStop(0.55, `rgba(56, 189, 248, ${pulse * 0.22})`);
+      splashGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+      ctx.fillStyle = splashGrad;
+      ctx.beginPath();
+      ctx.ellipse(px, splashY, drawW * 0.28, 18 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+      return;
+    }
+
     const img = window.assetManager.getImage(prop.type);
     if (!img) return;
 
@@ -1033,9 +1123,10 @@ class GameMap {
         const isGolden = p.type === 'prop_tree_golden';
         const isPine = p.type === 'prop_tree_pine';
         const isJungle = p.type === 'prop_tree_jungle';
+        const isOrange = p.type.startsWith('prop_tree_orange');
 
-        const outerCol = isGolden ? '#a16207' : (isPine ? '#14532d' : (isJungle ? '#065f46' : '#166534'));
-        const innerCol = isGolden ? '#facc15' : (isPine ? '#15803d' : (isJungle ? '#10b981' : '#22c55e'));
+        const outerCol = isOrange ? '#c2410c' : (isGolden ? '#a16207' : (isPine ? '#14532d' : (isJungle ? '#065f46' : '#166534')));
+        const innerCol = isOrange ? '#fb923c' : (isGolden ? '#facc15' : (isPine ? '#15803d' : (isJungle ? '#10b981' : '#22c55e')));
 
         // Outer foliage
         ctx.fillStyle = outerCol;
@@ -1077,6 +1168,16 @@ class GameMap {
         ctx.fill();
         ctx.fillStyle = '#fde047';
         ctx.fillRect(px - 0.8, py - 0.8, 1.6, 1.6);
+      } else if (p.type === 'prop_waterfall') {
+        // Glowing cyan waterfall beacon on Minimap
+        ctx.fillStyle = 'rgba(14, 165, 233, 0.4)';
+        ctx.beginPath();
+        ctx.ellipse(px, py - 3, 5.0, 7.0, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(px - 1.5, py - 7, 3, 7);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px - 1, py - 1, 2, 2);
       } else if (p.type === 'prop_wat_phra_kaew') {
         // Grand Wat Phra Kaew Landmark on Minimap
         ctx.fillStyle = 'rgba(15, 23, 42, 0.65)';
@@ -1121,6 +1222,21 @@ class GameMap {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1;
       ctx.stroke();
+    }
+
+    // 5.5 Friendly Village NPCs (Hermit & Merchant - Gilded Cyan Beacon)
+    if (window.npcManager && window.npcManager.npcs) {
+      for (const npc of window.npcManager.npcs) {
+        const nx = npc.x * scale;
+        const ny = npc.y * scale;
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(nx, ny, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
     }
 
     // 6. Treasure Chests (Gilded Chest Icon)

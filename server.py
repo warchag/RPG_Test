@@ -96,12 +96,80 @@ def init_db():
             monster_key TEXT PRIMARY KEY,
             deleted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS npc_configs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            npc_id TEXT UNIQUE NOT NULL,
+            name TEXT NOT NULL,
+            title TEXT,
+            type TEXT,
+            x REAL DEFAULT 1510,
+            y REAL DEFAULT 1570,
+            greeting TEXT,
+            can_sell_all_junk INTEGER DEFAULT 1,
+            shop_items TEXT NOT NULL,
+            sprite_sheet_src TEXT,
+            portrait_src TEXT,
+            scale REAL DEFAULT 1.35,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     ''')
-    for col in ['chests', 'shrines', 'pickups']:
+    for col in ['chests', 'shrines', 'pickups', 'npcs']:
         try:
             cur.execute(f"ALTER TABLE game_maps ADD COLUMN {col} TEXT DEFAULT '[]'")
         except sqlite3.OperationalError:
             pass
+
+    # Seed default NPCs if not present
+    default_npcs = [
+        (
+            'npc_hermit_risi',
+            'ปู่ฤๅษีตาไฟ',
+            'ผู้ปรุงโอสถและมนตราหิมพานต์',
+            'shop_hermit',
+            1510.0,
+            1570.0,
+            'เจริญพรเจ้าหนุ่มยักษ์... ทางนี้มียาโอสถทิพย์ มนต์คาถาวาร์ป และเครื่องรางศักดิ์สิทธิ์ เจ้ามีเงินพดด้วงพอจะแลกเปลี่ยนหรือไม่?',
+            1,
+            json.dumps([
+                {"key": "pot_hp_gourd", "price": 40, "label": "น้ำเต้าโอสถทิพย์ฟื้นฟูเลือด"},
+                {"key": "pot_mp_gourd", "price": 50, "label": "น้ำเต้าอมฤตฟื้นฟูมานา"},
+                {"key": "elixir_wind_speed", "price": 60, "label": "ยาหม่องทิพย์วายุภักษ์ (+35% Spd)"},
+                {"key": "scroll_town_portal", "price": 80, "label": "ม้วนคาถาหวนคืนอาราม (วาร์ปกลับจุดเกิด)"},
+                {"key": "talisman_sacred_thread", "price": 180, "label": "ด้ายสายสิญจน์มงคลเก้า"}
+            ], ensure_ascii=False),
+            'Assets/npcs/npc_hermit_risi.png',
+            'Assets/npcs/portrait_hermit.png',
+            1.35
+        ),
+        (
+            'npc_peddler_woman',
+            'แม่ค้าทองสร้อย',
+            'ตลาดแลกเปลี่ยนหิมพานต์',
+            'shop_peddler',
+            1690.0,
+            1570.0,
+            'สวัสดีจ้ะพ่อพลายยักษ์! ได้อะไรดีๆ จากการปราบอสูรมาบ้างจ๊ะ? เอามาขายให้ฉันได้นะ รับซื้อไม่อั้น ให้ราคางามจ้ะ!',
+            1,
+            json.dumps([
+                {"key": "food_herbal_rice", "price": 25, "label": "ข้าวเหนียวทิพย์สมุนไพร (+150 HP)"},
+                {"key": "drink_magic_coconut", "price": 25, "label": "น้ำมะพร้าวแก้วมนตรา (+80 MP)"},
+                {"key": "pot_hp_gourd", "price": 45, "label": "น้ำเต้าโอสถทิพย์ฟื้นฟูเลือด"},
+                {"key": "pot_mp_gourd", "price": 55, "label": "น้ำเต้าอมฤตฟื้นฟูมานา"},
+                {"key": "wp_iron_club", "price": 220, "label": "กระบองเหล็กหนามยักษ์"}
+            ], ensure_ascii=False),
+            'Assets/npcs/npc_peddler_woman.png',
+            'Assets/npcs/portrait_peddler.png',
+            1.35
+        )
+    ]
+
+    for npc in default_npcs:
+        cur.execute('''
+            INSERT OR IGNORE INTO npc_configs (npc_id, name, title, type, x, y, greeting, can_sell_all_junk, shop_items, sprite_sheet_src, portrait_src, scale)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', npc)
+
     conn.commit()
     conn.close()
     print(f"[Database] SQLite initialized at: {DB_FILE}")
@@ -133,6 +201,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             self.handle_get_player()
         elif self.path.startswith('/api/costumes'):
             self.handle_get_costumes()
+        elif self.path.startswith('/api/npcs'):
+            self.handle_get_npcs()
         elif self.path.startswith('/api/map'):
             self.handle_get_map()
         elif self.path.startswith('/api/maps'):
@@ -179,6 +249,10 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             self.handle_save_player()
         elif self.path.startswith('/api/costumes'):
             self.handle_save_costumes()
+        elif self.path.startswith('/api/npcs/save_all'):
+            self.handle_save_all_npcs()
+        elif self.path.startswith('/api/npcs'):
+            self.handle_save_npc()
         elif self.path.startswith('/api/map'):
             self.handle_save_map()
         elif self.path.startswith('/api/monsters/create'):
@@ -643,6 +717,207 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
 
+    def handle_get_npcs(self):
+        try:
+            conn = sqlite3.connect(DB_FILE)
+            conn.row_factory = sqlite3.Row
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM npc_configs ORDER BY id ASC')
+            rows = cur.fetchall()
+            conn.close()
+
+            npcs = []
+            for r in rows:
+                shop_items = json.loads(r['shop_items']) if r['shop_items'] else []
+                npcs.append({
+                    'id': r['npc_id'],
+                    'npc_id': r['npc_id'],
+                    'name': r['name'],
+                    'title': r['title'],
+                    'type': r['type'],
+                    'x': float(r['x']),
+                    'y': float(r['y']),
+                    'greeting': r['greeting'],
+                    'canSellAllJunk': bool(r['can_sell_all_junk']),
+                    'shopItems': shop_items,
+                    'shop_items': shop_items,
+                    'spriteSheetSrc': r['sprite_sheet_src'],
+                    'portraitSrc': r['portrait_src'],
+                    'scale': float(r['scale'] or 1.35),
+                    'updated_at': r['updated_at']
+                })
+            self.send_json_response({'status': 'success', 'data': npcs})
+        except Exception as e:
+            self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
+
+    def handle_save_npc(self):
+        try:
+            length = int(self.headers.get('Content-Length', 0))
+            if length == 0:
+                self.send_json_response({'status': 'error', 'message': 'Empty payload'}, code=400)
+                return
+
+            body = self.rfile.read(length).decode('utf-8')
+            payload = json.loads(body)
+
+            npc_id = payload.get('npc_id') or payload.get('id')
+            if not npc_id:
+                self.send_json_response({'status': 'error', 'message': 'Missing npc_id'}, code=400)
+                return
+
+            name = payload.get('name')
+            title = payload.get('title')
+            npc_type = payload.get('type')
+            x = float(payload.get('x', 1600))
+            y = float(payload.get('y', 1600))
+            greeting = payload.get('greeting', '')
+            can_junk_val = payload.get('can_sell_all_junk')
+            if can_junk_val is None:
+                can_junk_val = payload.get('canSellAllJunk', True)
+            can_sell_all_junk = 1 if can_junk_val else 0
+
+            raw_items = payload.get('shop_items')
+            if raw_items is None:
+                raw_items = payload.get('shopItems')
+            shop_items = raw_items if isinstance(raw_items, list) else []
+
+            sprite_sheet_src = payload.get('sprite_sheet_src') or payload.get('spriteSheetSrc') or ''
+            portrait_src = payload.get('portrait_src') or payload.get('portraitSrc') or ''
+            scale = float(payload.get('scale', 1.35))
+            shop_items_json = json.dumps(shop_items, ensure_ascii=False)
+            now_iso = datetime.datetime.now().isoformat()
+
+            conn = sqlite3.connect(DB_FILE)
+            cur = conn.cursor()
+            cur.execute('''
+                INSERT INTO npc_configs (npc_id, name, title, type, x, y, greeting, can_sell_all_junk, shop_items, sprite_sheet_src, portrait_src, scale, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(npc_id) DO UPDATE SET
+                    name = COALESCE(excluded.name, npc_configs.name),
+                    title = COALESCE(excluded.title, npc_configs.title),
+                    type = COALESCE(excluded.type, npc_configs.type),
+                    x = excluded.x,
+                    y = excluded.y,
+                    greeting = COALESCE(excluded.greeting, npc_configs.greeting),
+                    can_sell_all_junk = excluded.can_sell_all_junk,
+                    shop_items = excluded.shop_items,
+                    sprite_sheet_src = COALESCE(excluded.sprite_sheet_src, npc_configs.sprite_sheet_src),
+                    portrait_src = COALESCE(excluded.portrait_src, npc_configs.portrait_src),
+                    scale = excluded.scale,
+                    updated_at = excluded.updated_at
+            ''', (npc_id, name, title, npc_type, x, y, greeting, can_sell_all_junk, shop_items_json, sprite_sheet_src, portrait_src, scale, now_iso))
+
+            # Automatically sync updated npcs list into all game_maps records
+            cur.execute('SELECT npc_id, name, title, type, x, y, greeting, can_sell_all_junk, shop_items, sprite_sheet_src, portrait_src, scale FROM npc_configs')
+            all_db_npcs = []
+            for r in cur.fetchall():
+                all_db_npcs.append({
+                    'id': r[0],
+                    'npc_id': r[0],
+                    'name': r[1],
+                    'title': r[2],
+                    'type': r[3],
+                    'x': r[4],
+                    'y': r[5],
+                    'greeting': r[6],
+                    'canSellAllJunk': bool(r[7]),
+                    'shopItems': json.loads(r[8]) if r[8] else [],
+                    'spriteSheetSrc': r[9],
+                    'portraitSrc': r[10],
+                    'scale': r[11]
+                })
+            cur.execute('UPDATE game_maps SET npcs = ?', (json.dumps(all_db_npcs, ensure_ascii=False),))
+            conn.commit()
+            conn.close()
+
+            self.send_json_response({'status': 'success', 'message': f'NPC "{npc_id}" updated in SQLite'})
+        except Exception as e:
+            self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
+
+    def handle_save_all_npcs(self):
+        try:
+            length = int(self.headers.get('Content-Length', 0))
+            if length == 0:
+                self.send_json_response({'status': 'error', 'message': 'Empty payload'}, code=400)
+                return
+
+            body = self.rfile.read(length).decode('utf-8')
+            payload = json.loads(body)
+            npc_list = payload if isinstance(payload, list) else payload.get('npcs', [])
+
+            conn = sqlite3.connect(DB_FILE)
+            cur = conn.cursor()
+            now_iso = datetime.datetime.now().isoformat()
+
+            for npc in npc_list:
+                npc_id = npc.get('npc_id') or npc.get('id')
+                if not npc_id:
+                    continue
+                name = npc.get('name')
+                title = npc.get('title')
+                npc_type = npc.get('type')
+                x = float(npc.get('x', 1600))
+                y = float(npc.get('y', 1600))
+                greeting = npc.get('greeting', '')
+                can_junk_val = npc.get('can_sell_all_junk')
+                if can_junk_val is None:
+                    can_junk_val = npc.get('canSellAllJunk', True)
+                can_sell_all_junk = 1 if can_junk_val else 0
+
+                raw_items = npc.get('shop_items')
+                if raw_items is None:
+                    raw_items = npc.get('shopItems')
+                shop_items = raw_items if isinstance(raw_items, list) else []
+
+                sprite_sheet_src = npc.get('sprite_sheet_src') or npc.get('spriteSheetSrc') or ''
+                portrait_src = npc.get('portrait_src') or npc.get('portraitSrc') or ''
+                scale = float(npc.get('scale', 1.35))
+                shop_items_json = json.dumps(shop_items, ensure_ascii=False)
+
+                cur.execute('''
+                    INSERT INTO npc_configs (npc_id, name, title, type, x, y, greeting, can_sell_all_junk, shop_items, sprite_sheet_src, portrait_src, scale, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(npc_id) DO UPDATE SET
+                        name = COALESCE(excluded.name, npc_configs.name),
+                        title = COALESCE(excluded.title, npc_configs.title),
+                        type = COALESCE(excluded.type, npc_configs.type),
+                        x = excluded.x,
+                        y = excluded.y,
+                        greeting = COALESCE(excluded.greeting, npc_configs.greeting),
+                        can_sell_all_junk = excluded.can_sell_all_junk,
+                        shop_items = excluded.shop_items,
+                        sprite_sheet_src = COALESCE(excluded.sprite_sheet_src, npc_configs.sprite_sheet_src),
+                        portrait_src = COALESCE(excluded.portrait_src, npc_configs.portrait_src),
+                        scale = excluded.scale,
+                        updated_at = excluded.updated_at
+                ''', (npc_id, name, title, npc_type, x, y, greeting, can_sell_all_junk, shop_items_json, sprite_sheet_src, portrait_src, scale, now_iso))
+
+            # Automatically sync updated npcs list into all game_maps records
+            cur.execute('SELECT npc_id, name, title, type, x, y, greeting, can_sell_all_junk, shop_items, sprite_sheet_src, portrait_src, scale FROM npc_configs')
+            all_db_npcs = []
+            for r in cur.fetchall():
+                all_db_npcs.append({
+                    'id': r[0],
+                    'npc_id': r[0],
+                    'name': r[1],
+                    'title': r[2],
+                    'type': r[3],
+                    'x': r[4],
+                    'y': r[5],
+                    'greeting': r[6],
+                    'canSellAllJunk': bool(r[7]),
+                    'shopItems': json.loads(r[8]) if r[8] else [],
+                    'spriteSheetSrc': r[9],
+                    'portraitSrc': r[10],
+                    'scale': r[11]
+                })
+            cur.execute('UPDATE game_maps SET npcs = ?', (json.dumps(all_db_npcs, ensure_ascii=False),))
+            conn.commit()
+            conn.close()
+            self.send_json_response({'status': 'success', 'message': f'{len(npc_list)} NPCs updated in SQLite'})
+        except Exception as e:
+            self.send_json_response({'status': 'error', 'message': str(e)}, code=500)
+
     def handle_get_map(self):
         try:
             slot = 'default'
@@ -655,12 +930,33 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             cur = conn.cursor()
             cur.execute('SELECT * FROM game_maps WHERE slot_name = ?', (slot,))
             row = cur.fetchone()
-            conn.close()
 
             if not row:
-                # Return empty if slot has no saved map yet
+                conn.close()
                 self.send_json_response({'status': 'not_found', 'message': f'No map found in slot "{slot}"'}, code=404)
                 return
+
+            # Always query fresh NPCs from npc_configs to guarantee 100% synchronization
+            cur.execute('SELECT npc_id, name, title, type, x, y, greeting, can_sell_all_junk, shop_items, sprite_sheet_src, portrait_src, scale FROM npc_configs')
+            fresh_npcs = []
+            for r in cur.fetchall():
+                fresh_npcs.append({
+                    'id': r['npc_id'],
+                    'npc_id': r['npc_id'],
+                    'name': r['name'],
+                    'title': r['title'],
+                    'type': r['type'],
+                    'x': r['x'],
+                    'y': r['y'],
+                    'greeting': r['greeting'],
+                    'canSellAllJunk': bool(r['can_sell_all_junk']),
+                    'shopItems': json.loads(r['shop_items']) if r['shop_items'] else [],
+                    'shop_items': json.loads(r['shop_items']) if r['shop_items'] else [],
+                    'spriteSheetSrc': r['sprite_sheet_src'],
+                    'portraitSrc': r['portrait_src'],
+                    'scale': r['scale']
+                })
+            conn.close()
 
             map_data = {
                 'version': row['version'],
@@ -673,6 +969,7 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                 'shrines': json.loads(row['shrines']) if ('shrines' in row.keys() and row['shrines']) else [],
                 'pickups': json.loads(row['pickups']) if ('pickups' in row.keys() and row['pickups']) else [],
                 'spawnPoint': json.loads(row['spawn_point']) if ('spawn_point' in row.keys() and row['spawn_point'] and row['spawn_point'] != '{}') else {'x': 1600, 'y': 1600},
+                'npcs': fresh_npcs if fresh_npcs else (json.loads(row['npcs']) if ('npcs' in row.keys() and row['npcs']) else []),
                 'enemies': json.loads(row['enemies']),
                 'weather': json.loads(row['weather']),
                 'updated_at': row['updated_at']
@@ -715,6 +1012,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             shrines_json = json.dumps(payload.get('shrines', []))
             pickups_json = json.dumps(payload.get('pickups', []))
             spawn_point_json = json.dumps(payload.get('spawnPoint', {'x': 1600, 'y': 1600}))
+            raw_npcs = payload.get('npcs', [])
+            npcs_json = json.dumps(raw_npcs)
             raw_enemies = payload.get('enemies', [])
             conn = sqlite3.connect(DB_FILE)
             cur = conn.cursor()
@@ -734,8 +1033,8 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
             weather_json = json.dumps(payload.get('weather', {'timeMode': 'auto', 'rainMode': 'auto'}))
             now_iso = datetime.datetime.now().isoformat()
             cur.execute('''
-                INSERT INTO game_maps (slot_name, version, tiles, collision_grid, props, colliders, chests, shrines, pickups, spawn_point, enemies, weather, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO game_maps (slot_name, version, tiles, collision_grid, props, colliders, chests, shrines, pickups, spawn_point, enemies, weather, npcs, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(slot_name) DO UPDATE SET
                     version = excluded.version,
                     tiles = excluded.tiles,
@@ -748,8 +1047,20 @@ class GameRequestHandler(SimpleHTTPRequestHandler):
                     spawn_point = excluded.spawn_point,
                     enemies = excluded.enemies,
                     weather = excluded.weather,
+                    npcs = excluded.npcs,
                     updated_at = excluded.updated_at
-            ''', (slot, version, tiles_json, collision_json, props_json, colliders_json, chests_json, shrines_json, pickups_json, spawn_point_json, enemies_json, weather_json, now_iso))
+            ''', (slot, version, tiles_json, collision_json, props_json, colliders_json, chests_json, shrines_json, pickups_json, spawn_point_json, enemies_json, weather_json, npcs_json, now_iso))
+
+            # Sync NPC coordinates and shop items into npc_configs table
+            if isinstance(raw_npcs, list):
+                for npc in raw_npcs:
+                    nid = npc.get('id') or npc.get('npc_id')
+                    if nid:
+                        npc_items = npc.get('shopItems') or npc.get('shop_items')
+                        if npc_items is not None and isinstance(npc_items, list) and len(npc_items) > 0:
+                            cur.execute('UPDATE npc_configs SET x = ?, y = ?, shop_items = ?, updated_at = ? WHERE npc_id = ?', (float(npc.get('x', 1600)), float(npc.get('y', 1600)), json.dumps(npc_items, ensure_ascii=False), now_iso, nid))
+                        elif 'x' in npc and 'y' in npc:
+                            cur.execute('UPDATE npc_configs SET x = ?, y = ?, updated_at = ? WHERE npc_id = ?', (float(npc['x']), float(npc['y']), now_iso, nid))
 
             # Synchronize this newly updated master map and monsters into all world_saves so playing immediately reflects it
             for wrow in cur.execute('SELECT slot_name, world_data FROM world_saves').fetchall():

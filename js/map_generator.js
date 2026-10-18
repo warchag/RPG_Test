@@ -260,12 +260,108 @@ class ProceduralMapGenerator {
       }
       // Do not block Wat Phra Kaew front stairs & center plaza
       if (Math.hypot(wx - templeX, wy - (templeY - 50)) < 240) return false;
+      // Do not block friendly NPCs if present
+      if (window.npcManager && Array.isArray(window.npcManager.npcs)) {
+        for (const n of window.npcManager.npcs) {
+          if (Math.hypot(n.x - wx, n.y - wy) < 70) return false;
+        }
+      }
       // Minimum distance to other existing props
       for (const p of map.props) {
         if (Math.hypot(p.x - wx, p.y - wy) < clearance) return false;
       }
       return true;
     };
+
+    // 6.0 Majestic Himavanta Waterfalls (น้ำตกทิพย์หิมพานต์ พร้อมสายน้ำเคลื่อนไหวและละอองน้ำ)
+    // Landmark Waterfall 1: Grand River Headwater Waterfall (ต้นน้ำศักดิ์สิทธิ์ทางทิศเหนือ)
+    const wfRiverRow = 3;
+    const wfRiverCol = Math.round(riverCenterX(wfRiverRow));
+    const wfRiverX = wfRiverCol * tileSize + 32;
+    const wfRiverY = wfRiverRow * tileSize + 40;
+
+    map.props.push({
+      type: 'prop_waterfall',
+      x: wfRiverX,
+      y: wfRiverY,
+      scale: 0.92
+    });
+    // Impassable cliff rock face collider behind the cascading waterfall
+    map.colliders.push({
+      x: wfRiverX,
+      y: wfRiverY - 85,
+      w: 210,
+      h: 150,
+      type: 'rect'
+    });
+    // Flanking natural granite boulders on riverbank cliff
+    map.props.push({ type: 'prop_rock_large', x: wfRiverX - 135, y: wfRiverY - 25, scale: 1.05 });
+    map.colliders.push({ x: wfRiverX - 135, y: wfRiverY - 17, r: 24, type: 'circle' });
+    map.props.push({ type: 'prop_rock_large', x: wfRiverX + 135, y: wfRiverY - 25, scale: 1.05 });
+    map.colliders.push({ x: wfRiverX + 135, y: wfRiverY - 17, r: 24, type: 'circle' });
+
+    // Landmark Waterfall 2: High Mountain Cliff Waterfall & Spring Pool (น้ำตกผาหินเทือกเขาหิมพานต์)
+    const mtnWfCol = (riverDirection === 1) ? (cols - 7) : 7;
+    const mtnWfRow = 5;
+    const mtnWfX = mtnWfCol * tileSize + 32;
+    const mtnWfY = mtnWfRow * tileSize + 40;
+
+    // Carve shallow mountain spring pool beneath this mountain waterfall
+    for (let dr = -1; dr <= 2; dr++) {
+      for (let dc = -2; dc <= 2; dc++) {
+        const pr = mtnWfRow + dr;
+        const pc = mtnWfCol + dc;
+        if (pr >= 0 && pr < rows && pc >= 0 && pc < cols) {
+          const d = Math.hypot(dc, dr);
+          if (d <= 1.2) {
+            map.tiles[pr][pc] = 4; // Shallow turquoise spring water
+            map.collisionGrid[pr][pc] = 1;
+          } else if (d <= 2.2) {
+            map.tiles[pr][pc] = 5; // White sand / pebbled shoreline
+            map.collisionGrid[pr][pc] = 0;
+          }
+        }
+      }
+    }
+
+    map.props.push({
+      type: 'prop_waterfall',
+      x: mtnWfX,
+      y: mtnWfY,
+      scale: 0.86
+    });
+    map.colliders.push({
+      x: mtnWfX,
+      y: mtnWfY - 80,
+      w: 195,
+      h: 145,
+      type: 'rect'
+    });
+    map.props.push({ type: 'prop_rock_large', x: mtnWfX - 125, y: mtnWfY - 20, scale: 0.95 });
+    map.colliders.push({ x: mtnWfX - 125, y: mtnWfY - 12, r: 22, type: 'circle' });
+    map.props.push({ type: 'prop_rock_small', x: mtnWfX + 120, y: mtnWfY - 15, scale: 1.05 });
+    map.colliders.push({ x: mtnWfX + 120, y: mtnWfY - 11, r: 15, type: 'circle' });
+
+    // Landmark Waterfall 3: Central Riverbank Cascade (น้ำตกคุ้งน้ำกลางป่าหิมพานต์ ใกล้จุดศูนย์กลางแมพ)
+    const midWfRow = Math.floor(rows * 0.38);
+    const midSide = (sanctuaryC > riverCenterX(midWfRow)) ? -1 : 1;
+    const midWfCol = Math.round(riverCenterX(midWfRow) + midSide * (riverHalfWidth(midWfRow) + 0.5));
+    const midWfX = midWfCol * tileSize + 32;
+    const midWfY = midWfRow * tileSize + 32;
+
+    map.props.push({
+      type: 'prop_waterfall',
+      x: midWfX,
+      y: midWfY,
+      scale: 0.88
+    });
+    map.colliders.push({
+      x: midWfX,
+      y: midWfY - 80,
+      w: 200,
+      h: 145,
+      type: 'rect'
+    });
 
     // 6.1 Secondary Forest Shrine (in Southern Wilderness)
     map.shrines.push({
@@ -282,8 +378,21 @@ class ProceduralMapGenerator {
     map.chests.push({ x: isletX + 38, y: isletY + 10, opened: false });
     map.colliders.push({ x: isletX + 38, y: isletY + 10, r: 16, type: 'circle' });
 
-    // 6.3 Diverse Nature Biomes (Bodhi, Pine, Jungle, Golden)
-    const treeTypes = ['prop_tree_bodhi', 'prop_tree_jungle', 'prop_tree_pine', 'prop_tree_golden'];
+    // 6.3 Diverse Nature Biomes (Bodhi, Pine, Jungle, Golden, and Celestial Orange Trees)
+    const orangeTreeTypes = [
+      'prop_tree_orange_1',
+      'prop_tree_orange_2',
+      'prop_tree_orange_3',
+      'prop_tree_orange_4'
+    ];
+    const treeTypes = [
+      'prop_tree_bodhi',
+      'prop_tree_jungle',
+      'prop_tree_pine',
+      'prop_tree_golden',
+      ...orangeTreeTypes
+    ];
+
     const treeClusters = [
       // 1. Deep Ancient Bodhi Forest (North-West)
       { centerC: 8, centerR: 10, count: 14, radius: 260, preferred: 'prop_tree_bodhi' },
@@ -297,7 +406,15 @@ class ProceduralMapGenerator {
       // 5. Southern Wildwoods (South-West)
       { centerC: 10, centerR: rows - 12, count: 14, radius: 260, preferred: 'prop_tree_jungle' },
       // 6. River Meadow Glades
-      { centerC: Math.floor(cols * 0.48), centerR: rows - 10, count: 9, radius: 210, preferred: 'prop_tree_bodhi' }
+      { centerC: Math.floor(cols * 0.48), centerR: rows - 10, count: 9, radius: 210, preferred: 'prop_tree_bodhi' },
+      // 7. Celestial Himavanta Orange Orchard (Western High Plateau)
+      { centerC: 16, centerR: 20, count: 14, radius: 230, preferred: 'prop_tree_orange_1' },
+      // 8. Bountiful Golden Orange Foothill Orchard (South-East / Foothills)
+      { centerC: cols - 16, centerR: rows - 16, count: 12, radius: 240, preferred: 'prop_tree_orange_4' },
+      // 9. Sacred Flowering Orange Grove (Near Temple Sanctuary Grounds)
+      { centerC: (sanctuaryC > cols / 2 ? sanctuaryC - 14 : sanctuaryC + 14), centerR: sanctuaryR + 6, count: 11, radius: 210, preferred: 'prop_tree_orange_3' },
+      // 10. Riverbend Orange & Fruit Glade
+      { centerC: Math.round(cols * 0.35), centerR: Math.round(rows * 0.40), count: 10, radius: 200, preferred: 'prop_tree_orange_2' }
     ];
 
     for (const cluster of treeClusters) {
@@ -309,7 +426,8 @@ class ProceduralMapGenerator {
 
         if (isSafeForProp(wx, wy, 48)) {
           const type = Math.random() < 0.70 ? cluster.preferred : treeTypes[Math.floor(Math.random() * treeTypes.length)];
-          map.props.push({ type, x: wx, y: wy, scale: 1.0 });
+          const scale = 0.95 + Math.random() * 0.12;
+          map.props.push({ type, x: wx, y: wy, scale });
           // Tree trunk bottom collider
           map.colliders.push({ x: wx, y: wy + 18, r: 20, type: 'circle' });
         }

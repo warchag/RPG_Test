@@ -301,7 +301,15 @@ class InventoryUIController {
         slotEl.style.borderColor = rarity.borderColor;
         slotEl.style.boxShadow = `0 0 10px ${rarity.glowColor}, inset 0 0 8px ${rarity.bgColor}`;
 
+        const socketedCount = Array.isArray(item.sockets) ? item.sockets.length : 0;
+        const socketBadgeHtml = socketedCount > 0 ? `
+          <div style="position: absolute; top: -4px; left: -4px; background: rgba(88, 28, 135, 0.92); color: #f3e8ff; border: 1px solid #c084fc; border-radius: 4px; padding: 0 3px; font-size: 8.5px; font-weight: 800; line-height: 1.3; z-index: 4; box-shadow: 0 1px 4px rgba(0,0,0,0.8);" title="ฝังการ์ดแล้ว ${socketedCount} ใบ">
+            🃏${socketedCount}
+          </div>
+        ` : '';
+
         slotEl.innerHTML = `
+          ${socketBadgeHtml}
           <div style="display: flex; align-items: center; justify-content: center; width: 38px; height: 38px;">
             ${this.renderIconHtml(item.icon, 34)}
           </div>
@@ -387,13 +395,17 @@ class InventoryUIController {
     const filteredItems = [];
     allInv.forEach((item, originalIndex) => {
       if (!item) return;
+      const isCard = (item.slot === 'card' || item.category === 'card' || item.itemType === 'monster_card');
+      const isPotion = (item.slot === 'consumable' || item.category === 'potion' || item.itemType === 'hp_potion' || item.itemType === 'mp_potion');
       let match = true;
       if (this.activeCategoryTab === 'equip') {
-        match = item.slot !== 'consumable' && item.slot !== 'talisman';
+        match = !isPotion && !isCard && item.slot !== 'talisman' && item.slot !== 'junk';
       } else if (this.activeCategoryTab === 'potion') {
-        match = item.slot === 'consumable' || item.category === 'potion' || item.itemType === 'hp_potion' || item.itemType === 'mp_potion';
+        match = isPotion;
       } else if (this.activeCategoryTab === 'talisman') {
         match = item.slot === 'talisman';
+      } else if (this.activeCategoryTab === 'card') {
+        match = isCard;
       }
       if (match) {
         filteredItems.push({ item, originalIndex });
@@ -412,6 +424,7 @@ class InventoryUIController {
       if (entry) {
         const item = entry.item;
         const i = entry.originalIndex;
+        const isCard = (item.slot === 'card' || item.category === 'card' || item.itemType === 'monster_card');
         const rarity = (window.RARITY_TIERS && window.RARITY_TIERS[item.rarity]) || {
           name: 'ธรรมดา',
           color: '#cbd5e1',
@@ -433,14 +446,20 @@ class InventoryUIController {
           ? `<span class="ro-item-stack-badge">${Math.min(99, item.count)}</span>` 
           : '';
 
+        const socketCount = Array.isArray(item.sockets) ? item.sockets.length : 0;
+        const socketBadge = socketCount > 0
+          ? `<span style="position: absolute; top: 1px; left: 2px; background: rgba(88, 28, 135, 0.92); border: 1px solid #c084fc; color: #fde047; font-size: 8.5px; font-weight: 700; border-radius: 4px; padding: 0 3px; line-height: 1.2; pointer-events: none;">🃏${socketCount}</span>`
+          : '';
+
         const rarityDot = (item.count && item.count > 1)
           ? ''
           : `<span style="position: absolute; bottom: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: ${rarity.color}; box-shadow: 0 0 5px ${rarity.glowColor}; pointer-events: none;"></span>`;
 
         slotEl.innerHTML = `
           <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
-            ${this.renderIconHtml(item.icon, 26)}
+            ${this.renderIconHtml(item.icon, isCard ? 30 : 26)}
           </span>
+          ${socketBadge}
           ${rarityDot}
           ${countBadge}
         `;
@@ -450,11 +469,13 @@ class InventoryUIController {
         slotEl.addEventListener('mousemove', (e) => this.updateTooltipPos(e));
         slotEl.addEventListener('mouseleave', () => this.hideTooltip());
 
-        // Right-Click instant equip or drink potion
+        // Right-Click instant equip, socket card, or drink potion
         slotEl.addEventListener('contextmenu', (e) => {
           e.preventDefault();
           this.hideTooltip();
-          if (item.slot === 'consumable' || item.category === 'potion') {
+          if (isCard) {
+            this.openCardSocketModal(i);
+          } else if (item.slot === 'consumable' || item.category === 'potion') {
             this.handleUseConsumable(i);
           } else {
             this.handleEquip(i);
@@ -471,7 +492,9 @@ class InventoryUIController {
         // Double click instant action
         slotEl.addEventListener('dblclick', () => {
           this.hideTooltip();
-          if (item.slot === 'consumable' || item.category === 'potion') {
+          if (isCard) {
+            this.openCardSocketModal(i);
+          } else if (item.slot === 'consumable' || item.category === 'potion') {
             this.handleUseConsumable(i);
           } else {
             this.handleEquip(i);
@@ -498,6 +521,8 @@ class InventoryUIController {
     if (!this.tooltip || !item) return;
 
     const player = this.getPlayer();
+    const isCard = (item.slot === 'card' || item.category === 'card' || item.itemType === 'monster_card');
+    const isEquip = window.ItemSystem && window.ItemSystem.isEquipSlot(item.slot);
     const rarity = (window.RARITY_TIERS && window.RARITY_TIERS[item.rarity]) || {
       name: 'ธรรมดา',
       color: '#cbd5e1',
@@ -514,15 +539,16 @@ class InventoryUIController {
       helmet: '👑 ศิราภรณ์/หมวก',
       bracer: '🥊 สนับแขน',
       boots: '👢 พระบาท/เกือก',
-      wings: '🪽 ปีกสวรรค์'
+      wings: '🪽 ปีกสวรรค์',
+      card: '🃏 การ์ดดวงจิตอสูร'
     };
 
-    const currentEquippedItem = (player && player.equipped) ? player.equipped[item.slot] : null;
+    const currentEquippedItem = (!isCard && player && player.equipped) ? player.equipped[item.slot] : null;
 
     // Stat comparison helper
     const buildStatComparisonHtml = (statKey, statVal, label, suffix = '') => {
       let compHtml = '';
-      if (!isEquipped && currentEquippedItem) {
+      if (!isEquipped && !isCard && currentEquippedItem) {
         const curVal = currentEquippedItem.stats ? (currentEquippedItem.stats[statKey] || 0) : 0;
         const diff = statVal - curVal;
         if (diff > 0) {
@@ -561,6 +587,51 @@ class InventoryUIController {
       statsHtml += buildStatComparisonHtml(sKey, sVal, label, suffix);
     }
 
+    // Full Card Artwork Banner for Monster Soul Cards (Ragnarok Online style!)
+    const tmpl = (window.ITEM_TEMPLATES && (window.ITEM_TEMPLATES[item.templateKey || item.key])) || {};
+    const fullArtUrl = item.fullArt || tmpl.fullArt;
+    const specialDesc = item.specialDesc || tmpl.specialDesc;
+    const cardIllustrationHtml = (isCard && fullArtUrl) ? `
+      <div style="display: flex; flex-direction: column; align-items: center; margin: 6px 0 8px 0; padding: 8px; background: radial-gradient(circle, rgba(192, 132, 252, 0.22), rgba(9, 13, 22, 0.92)); border: 1px solid ${rarity.borderColor}; border-radius: 10px;">
+        <img src="${fullArtUrl}" alt="${item.name}" style="width: 108px; height: 151px; object-fit: contain; image-rendering: pixelated; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.85));">
+        ${specialDesc ? `<div style="margin-top: 6px; font-size: 11px; color: #fde047; text-align: center; line-height: 1.35; font-weight: 600;">${specialDesc}</div>` : ''}
+      </div>
+    ` : '';
+
+    // Equipment Socketed Cards Display
+    let socketsHtml = '';
+    if (isEquip) {
+      const maxSocks = item.maxSockets || 2;
+      const socks = Array.isArray(item.sockets) ? item.sockets : [];
+      let slotsRows = '';
+      for (let s = 0; s < maxSocks; s++) {
+        const sc = socks[s];
+        if (sc) {
+          slotsRows += `
+            <div style="display: flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 6px; background: rgba(88, 28, 135, 0.35); border: 1px solid #c084fc; margin-top: 4px;">
+              <img src="${sc.icon || 'Assets/cards/card_tiger.png'}" style="width: 20px; height: 20px; object-fit: contain; image-rendering: pixelated;">
+              <div style="flex: 1; min-width: 0;">
+                <div style="font-size: 11px; font-weight: 700; color: #fde047;">🃏 ${sc.name}</div>
+                ${sc.specialDesc ? `<div style="font-size: 9.5px; color: #e9d5ff; line-height: 1.25;">${sc.specialDesc}</div>` : ''}
+              </div>
+            </div>
+          `;
+        } else {
+          slotsRows += `
+            <div style="display: flex; align-items: center; gap: 6px; padding: 3px 7px; border-radius: 6px; background: rgba(15, 23, 42, 0.65); border: 1px dashed #475569; margin-top: 4px; color: #64748b; font-size: 10.5px;">
+              <span>◇ ช่องฝังการ์ดดวงจิตว่าง [${s + 1}/${maxSocks}]</span>
+            </div>
+          `;
+        }
+      }
+      socketsHtml = `
+        <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(148, 163, 184, 0.2);">
+          <div style="font-size: 10.5px; font-weight: 700; color: #c084fc;">🃏 ช่องฝังการ์ดดวงจิตอสูร (${socks.length}/${maxSocks})</div>
+          ${slotsRows}
+        </div>
+      `;
+    }
+
     this.tooltip.innerHTML = `
       <div class="ro-tt-header">
         <div class="ro-tt-icon-wrap" style="border-color: ${rarity.borderColor}; background: ${rarity.bgColor}; box-shadow: 0 0 8px ${rarity.glowColor};">
@@ -582,16 +653,20 @@ class InventoryUIController {
         </div>
       </div>
 
+      ${cardIllustrationHtml}
+
       <div class="ro-tt-stats-grid">
         ${statsHtml || '<div style="color: #64748b; font-size: 10.5px; grid-column: span 2;">ไม่มีโบนัสสเตตัส</div>'}
       </div>
+
+      ${socketsHtml}
 
       <div class="ro-tt-lore">
         "${item.lore || 'ยุทธภัณฑ์ศักดิ์สิทธิ์แห่งสุวรรณภูมิ'}"
       </div>
 
       <div class="ro-tt-footer-hint">
-        ⚡ ${isEquipped ? 'คลิกขวา หรือ ดับเบิลคลิก เพื่อถอด' : (item.slot === 'consumable' || item.category === 'potion' || item.itemType === 'hp_potion' || item.itemType === 'mp_potion') ? 'คลิกขวา หรือ ดับเบิลคลิก เพื่อดื่มยาโอสถ' : 'คลิกขวา หรือ ดับเบิลคลิก เพื่อสวมใส่'}
+        ⚡ ${isCard ? 'คลิกขวา หรือ ดับเบิลคลิก เพื่อเลือกอุปกรณ์ฝังการ์ดดวงจิต' : isEquipped ? 'คลิกขวา หรือ ดับเบิลคลิก เพื่อถอด' : (item.slot === 'consumable' || item.category === 'potion' || item.itemType === 'hp_potion' || item.itemType === 'mp_potion') ? 'คลิกขวา หรือ ดับเบิลคลิก เพื่อดื่มยาโอสถ' : 'คลิกขวา หรือ ดับเบิลคลิก เพื่อสวมใส่'}
       </div>
     `;
 
@@ -693,8 +768,12 @@ class InventoryUIController {
       helmet: '👑 ศิราภรณ์',
       bracer: '🥊 สนับแขน',
       boots: '👢 พระบาท',
-      wings: '🪽 ปีกสวรรค์'
+      wings: '🪽 ปีกสวรรค์',
+      card: '🃏 การ์ดดวงจิตอสูร'
     };
+
+    const isCard = (item.slot === 'card' || item.category === 'card' || item.itemType === 'monster_card');
+    const socketCount = Array.isArray(item.sockets) ? item.sockets.length : 0;
 
     barEl.innerHTML = `
       <div class="ro-quick-item-info">
@@ -715,8 +794,20 @@ class InventoryUIController {
 
       <div class="ro-quick-action-buttons">
         ${isEquipped ? `
+          ${socketCount > 0 ? `
+            <button id="btnQuickUnsocket" class="ro-action-btn" style="background: linear-gradient(135deg, #7e22ce, #581c87); color: #f3e8ff; border: 1px solid #c084fc;" title="ถอดการ์ดอสูรทั้งหมดกลับเข้ากระเป๋า">
+              🔓 ถอดการ์ด (${socketCount})
+            </button>
+          ` : ''}
           <button id="btnQuickUnequip" class="ro-action-btn ro-action-btn-unequip">
             ✕ ถอดอุปกรณ์
+          </button>
+        ` : isCard ? `
+          <button id="btnQuickSocketCard" class="ro-action-btn" style="background: linear-gradient(135deg, #9333ea, #6b21a8); color: #faf5ff; border: 1px solid #d8b4fe; box-shadow: 0 0 10px rgba(168,85,247,0.4);">
+            🃏 ฝังการ์ดลงอุปกรณ์
+          </button>
+          <button id="btnQuickDiscard" class="ro-action-btn ro-action-btn-discard" title="ทิ้งไอเทม">
+            🗑️
           </button>
         ` : (item.slot === 'consumable' || item.category === 'potion' || item.itemType === 'hp_potion' || item.itemType === 'mp_potion') ? `
           <button id="btnQuickUse" class="ro-action-btn ro-action-btn-use">
@@ -729,6 +820,11 @@ class InventoryUIController {
           <button id="btnQuickEquip" class="ro-action-btn ro-action-btn-equip">
             ⚔️ สวมใส่
           </button>
+          ${socketCount > 0 ? `
+            <button id="btnQuickUnsocket" class="ro-action-btn" style="background: linear-gradient(135deg, #7e22ce, #581c87); color: #f3e8ff; border: 1px solid #c084fc;" title="ถอดการ์ดอสูรทั้งหมดกลับเข้ากระเป๋า">
+              🔓 ถอดการ์ด (${socketCount})
+            </button>
+          ` : ''}
           <button id="btnQuickDiscard" class="ro-action-btn ro-action-btn-discard" title="ทิ้งไอเทม">
             🗑️
           </button>
@@ -742,6 +838,26 @@ class InventoryUIController {
       btnEquip.addEventListener('click', () => {
         this.hideTooltip();
         this.handleEquip(this.selectedItemIndex);
+      });
+    }
+
+    const btnSocketCard = document.getElementById('btnQuickSocketCard');
+    if (btnSocketCard) {
+      btnSocketCard.addEventListener('click', () => {
+        this.hideTooltip();
+        this.openCardSocketModal(this.selectedItemIndex);
+      });
+    }
+
+    const btnUnsocket = document.getElementById('btnQuickUnsocket');
+    if (btnUnsocket) {
+      btnUnsocket.addEventListener('click', () => {
+        this.hideTooltip();
+        if (isEquipped) {
+          this.handleUnsocket('equipped', equippedSlotKey);
+        } else {
+          this.handleUnsocket('inventory', this.selectedItemIndex);
+        }
       });
     }
 
@@ -773,13 +889,16 @@ class InventoryUIController {
   handleUseConsumable(itemIndex) {
     const player = this.getPlayer();
     if (!player || itemIndex === null || itemIndex === undefined) return;
-    const item = player.inventory[itemIndex];
-    if (!item) return;
-
-    if (item.itemType === 'hp_potion' || item.templateKey === 'pot_hp_gourd') {
-      player.useHpPotion();
-    } else if (item.itemType === 'mp_potion' || item.templateKey === 'pot_mp_gourd') {
-      player.useMpPotion();
+    if (player.useConsumableByIndex) {
+      player.useConsumableByIndex(itemIndex);
+    } else {
+      const item = player.inventory[itemIndex];
+      if (!item) return;
+      if (item.itemType === 'hp_potion' || item.templateKey === 'pot_hp_gourd') {
+        player.useHpPotion();
+      } else if (item.itemType === 'mp_potion' || item.templateKey === 'pot_mp_gourd') {
+        player.useMpPotion();
+      }
     }
     this.render();
   }
@@ -854,8 +973,8 @@ class InventoryUIController {
     const player = this.getPlayer();
     if (!player || !player.inventory) return;
 
-    const rarityOrder = { legendary: 0, epic: 1, rare: 2, magic: 3, common: 4 };
-    const slotOrder = { weapon: 0, helmet: 1, armor: 2, bracer: 3, wings: 4, pants: 5, boots: 6, talisman: 7 };
+    const rarityOrder = { mythic: -1, legendary: 0, epic: 1, rare: 2, magic: 3, common: 4 };
+    const slotOrder = { weapon: 0, helmet: 1, armor: 2, bracer: 3, wings: 4, pants: 5, boots: 6, talisman: 7, card: 8 };
 
     player.inventory.sort((a, b) => {
       const rA = rarityOrder[a.rarity] !== undefined ? rarityOrder[a.rarity] : 99;
@@ -875,6 +994,287 @@ class InventoryUIController {
 
     this.selectedItemIndex = null;
     this.render();
+  }
+
+  /**
+   * Unsocket all cards from an equipped or inventory equipment item
+   */
+  handleUnsocket(targetType, targetRef) {
+    const player = this.getPlayer();
+    if (!player || !player.unsocketCardsFromTarget) return;
+
+    const result = player.unsocketCardsFromTarget(targetType, targetRef);
+    if (result && result.ok) {
+      if (window.soundSystem && window.soundSystem.playPowerUp) {
+        window.soundSystem.playPowerUp();
+      }
+      this.render();
+      if (window.charStatsController && window.charStatsController.isOpen) {
+        window.charStatsController.refreshUI();
+      }
+    } else if (result && result.msg) {
+      alert(result.msg);
+    }
+  }
+
+  /**
+   * Open the Monster Soul Card Socketing Modal (#cardSocketModal)
+   * Allows the player to choose any compatible equipped or bag equipment item with free sockets.
+   */
+  openCardSocketModal(cardBagIndex) {
+    const player = this.getPlayer();
+    if (!player || cardBagIndex === null || cardBagIndex === undefined) return;
+    const cardItem = player.inventory[cardBagIndex];
+    if (!cardItem) return;
+
+    const modal = document.getElementById('cardSocketModal');
+    const body = document.getElementById('cardSocketModalBody');
+    const btnClose = document.getElementById('btnCloseCardSocketModal');
+    if (!modal || !body) return;
+
+    if (btnClose) {
+      btnClose.onclick = () => this.closeCardSocketModal();
+    }
+    modal.onclick = (e) => {
+      if (e.target === modal) this.closeCardSocketModal();
+    };
+
+    const allowedSlots = Array.isArray(cardItem.targetSlots) && cardItem.targetSlots.length > 0
+      ? cardItem.targetSlots
+      : ['weapon', 'armor', 'pants', 'helmet', 'bracer', 'boots', 'wings', 'talisman'];
+
+    const slotNames = {
+      weapon: '⚔️ อาวุธ',
+      armor: '🛡️ เกราะอก',
+      pants: '🩳 สนับเพลา',
+      talisman: '📿 เครื่องราง',
+      helmet: '👑 ศิราภรณ์',
+      bracer: '🥊 สนับแขน',
+      boots: '👢 พระบาท',
+      wings: '🪽 ปีกสวรรค์'
+    };
+
+    // Collect compatible equipment from both Equipped and Inventory
+    const candidates = [];
+    if (player.equipped) {
+      for (const slotKey of allowedSlots) {
+        const eqItem = player.equipped[slotKey];
+        if (eqItem && window.ItemSystem && window.ItemSystem.isEquipSlot(eqItem.slot)) {
+          const maxS = eqItem.maxSockets || 2;
+          const usedS = Array.isArray(eqItem.sockets) ? eqItem.sockets.length : 0;
+          candidates.push({
+            targetType: 'equipped',
+            targetRef: slotKey,
+            locationLabel: 'สวมใส่อยู่',
+            item: eqItem,
+            usedS,
+            maxS,
+            isFull: usedS >= maxS
+          });
+        }
+      }
+    }
+
+    if (Array.isArray(player.inventory)) {
+      player.inventory.forEach((invItem, idx) => {
+        if (!invItem || idx === cardBagIndex) return;
+        if (allowedSlots.includes(invItem.slot) && window.ItemSystem && window.ItemSystem.isEquipSlot(invItem.slot)) {
+          const maxS = invItem.maxSockets || 2;
+          const usedS = Array.isArray(invItem.sockets) ? invItem.sockets.length : 0;
+          candidates.push({
+            targetType: 'inventory',
+            targetRef: idx,
+            locationLabel: 'ในกระเป๋า',
+            item: invItem,
+            usedS,
+            maxS,
+            isFull: usedS >= maxS
+          });
+        }
+      });
+    }
+
+    const tmpl = (window.ITEM_TEMPLATES && window.ITEM_TEMPLATES[cardItem.templateKey || cardItem.key]) || {};
+    const fullArtSrc = cardItem.fullArt || tmpl.fullArt || cardItem.icon;
+    const prefixTitle = cardItem.prefixTitle || cardItem.cardPrefix || tmpl.prefixTitle || 'อาคม';
+    const specialDesc = cardItem.specialDesc || tmpl.specialDesc || '';
+    const cardStats = cardItem.stats || tmpl.baseStats || {};
+
+    const statLabels = {
+      attack: '⚔️ ATK',
+      defense: '🛡️ DEF',
+      maxHp: '❤️ Max HP',
+      maxMp: '💧 Max MP',
+      critRate: '💥 Crit',
+      speed: '🏃 Speed',
+      str: '💪 STR',
+      vit: '💎 VIT',
+      agi: '⚡ AGI',
+      spi: '🌸 SPI'
+    };
+
+    const statPillsHtml = Object.entries(cardStats).map(([k, v]) => {
+      const lbl = statLabels[k] || k;
+      const sfx = k === 'critRate' ? '%' : '';
+      return `<span style="display:inline-block; padding:2px 7px; border-radius:5px; background:rgba(15,23,42,0.85); border:1px solid rgba(250,204,21,0.4); color:#fde047; font-size:10.5px; font-weight:700;">${lbl} +${v}${sfx}</span>`;
+    }).join('');
+
+    // Build Candidate Equipment Rows for the Right Column
+    let candidatesHtml = '';
+    if (candidates.length === 0) {
+      candidatesHtml = `
+        <div style="padding: 28px 18px; text-align: center; background: rgba(15,23,42,0.75); border: 1px dashed rgba(148,163,184,0.35); border-radius: 10px; color: #94a3b8; font-size: 12.5px;">
+          ไม่พบอุปกรณ์ในตัวหรือในกระเป๋าที่สามารถฝังการ์ดใบนี้ได้
+        </div>
+      `;
+    } else {
+      candidatesHtml = candidates.map((c, idx) => {
+        const eqRarity = (window.RARITY_TIERS && window.RARITY_TIERS[c.item.rarity]) || { color: '#cbd5e1', borderColor: '#64748b' };
+        const socketBadges = [];
+        for (let s = 0; s < c.maxS; s++) {
+          const sc = c.item.sockets && c.item.sockets[s];
+          if (sc) {
+            socketBadges.push(`
+              <span style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:5px; background:rgba(88,28,135,0.45); border:1px solid #c084fc; color:#f3e8ff; font-size:10.5px; font-weight:700;">
+                🃏 ${sc.name}
+              </span>
+            `);
+          } else {
+            socketBadges.push(`
+              <span style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:5px; background:rgba(15,23,42,0.7); border:1px dashed #475569; color:#94a3b8; font-size:10.5px;">
+                ◇ ช่องว่าง [${s + 1}]
+              </span>
+            `);
+          }
+        }
+        return `
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 12px; background:rgba(15,23,42,0.88); border:1px solid ${c.isFull ? 'rgba(100,116,139,0.4)' : 'rgba(192,132,252,0.45)'}; border-radius:10px;">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0; flex:1;">
+              <div style="width:42px; height:42px; border-radius:8px; background:rgba(30,41,59,0.95); border:1.5px solid ${eqRarity.borderColor}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                ${this.renderIconHtml(c.item.icon, 32)}
+              </div>
+              <div style="min-width:0; flex:1;">
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <span style="font-size:13px; font-weight:800; color:${eqRarity.color};">${c.item.name}</span>
+                  <span style="font-size:10px; padding:1px 6px; border-radius:4px; background:${c.targetType === 'equipped' ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.2)'}; color:${c.targetType === 'equipped' ? '#34d399' : '#60a5fa'}; border:1px solid ${c.targetType === 'equipped' ? 'rgba(16,185,129,0.45)' : 'rgba(59,130,246,0.45)'}; font-weight:700;">
+                    ${c.locationLabel}
+                  </span>
+                  <span style="font-size:10px; color:#94a3b8;">(${slotNames[c.item.slot] || c.item.slot})</span>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:5px;">
+                  ${socketBadges.join('')}
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:5px; align-items:flex-end; flex-shrink:0;">
+              ${c.isFull ? `
+                <span style="font-size:10.5px; color:#f87171; font-weight:700; padding:4px 9px; background:rgba(127,29,29,0.35); border:1px solid rgba(248,113,113,0.4); border-radius:6px;">ช่องเต็ม [${c.usedS}/${c.maxS}]</span>
+              ` : `
+                <button type="button" class="btn-confirm-socket-target" data-cand-idx="${idx}" style="background:linear-gradient(135deg, #9333ea, #6b21a8); color:#faf5ff; border:1px solid #d8b4fe; border-radius:7px; padding:6px 12px; font-size:11.5px; font-weight:800; cursor:pointer; white-space:nowrap; box-shadow:0 0 10px rgba(168,85,247,0.45);">
+                  ✨ ฝังการ์ด [${c.usedS}/${c.maxS}]
+                </button>
+              `}
+              ${c.usedS > 0 ? `
+                <button type="button" class="btn-modal-unsocket-target" data-cand-idx="${idx}" style="background:rgba(30,41,59,0.9); color:#e9d5ff; border:1px solid rgba(192,132,252,0.5); border-radius:6px; padding:3px 9px; font-size:10px; font-weight:700; cursor:pointer; white-space:nowrap;">
+                  🔓 ถอดการ์ดคืน
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Populate #cardSocketModalBody with EXACTLY 2 root grid columns: Left (Card Spotlight) & Right (Equipment List)
+    body.innerHTML = `
+      <!-- Left Column: Card Artwork & Details -->
+      <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:14px 12px; background:linear-gradient(160deg, rgba(88,28,135,0.42), rgba(15,23,42,0.95)); border:1.5px solid rgba(192,132,252,0.55); border-radius:12px; box-shadow:inset 0 0 18px rgba(168,85,247,0.18);">
+        <img src="${fullArtSrc}" alt="${cardItem.name}" style="width:120px; height:168px; object-fit:contain; image-rendering:pixelated; border-radius:8px; border:2px solid #fde047; box-shadow:0 6px 18px rgba(0,0,0,0.85), 0 0 14px rgba(168,85,247,0.55); margin-bottom:10px;">
+        <div style="font-size:14.5px; font-weight:800; color:#f3e8ff; line-height:1.25;">${cardItem.name}</div>
+        <div style="margin-top:4px; font-size:11px; color:#fde047; background:rgba(202,138,4,0.22); border:1px solid rgba(250,204,21,0.45); padding:2px 8px; border-radius:999px; font-weight:700;">
+          ฉายา: [${prefixTitle}]
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:5px; justify-content:center; margin-top:9px;">
+          ${statPillsHtml}
+        </div>
+        ${specialDesc ? `
+          <div style="margin-top:9px; padding:7px 9px; background:rgba(9,13,22,0.75); border:1px solid rgba(250,204,21,0.3); border-radius:8px; font-size:11px; color:#fef08a; line-height:1.4;">
+            ${specialDesc}
+          </div>
+        ` : ''}
+        <div style="margin-top:8px; font-size:10.5px; color:#cbd5e1;">
+          จำนวนที่มี: <strong style="color:#4ade80;">${cardItem.count || 1} ใบ</strong>
+        </div>
+      </div>
+
+      <!-- Right Column: Compatible Equipment Target List -->
+      <div style="display:flex; flex-direction:column; min-width:0;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;">
+          <span style="font-size:13px; font-weight:800; color:#fde047;">⚔️ เลือกอุปกรณ์ที่ต้องการฝังดวงจิตอสูร (${candidates.length} ชิ้น):</span>
+          <span style="font-size:11px; color:#94a3b8;">สูงสุด 2 ช่องต่อชิ้น</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:8px; max-height:360px; overflow-y:auto; padding-right:4px;">
+          ${candidatesHtml}
+        </div>
+      </div>
+    `;
+
+    // Bind socket target buttons
+    const btns = body.querySelectorAll('.btn-confirm-socket-target');
+    btns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cIdx = parseInt(btn.getAttribute('data-cand-idx'), 10);
+        const target = candidates[cIdx];
+        if (!target) return;
+
+        const res = player.socketCardIntoTarget(cardBagIndex, target.item);
+        if (res && (res === true || res.ok)) {
+          if (window.soundSystem && window.soundSystem.playPowerUp) {
+            window.soundSystem.playPowerUp();
+          }
+          this.closeCardSocketModal();
+          this.selectedItemIndex = null;
+          this.render();
+          if (window.charStatsController && window.charStatsController.isOpen) {
+            window.charStatsController.refreshUI();
+          }
+        } else {
+          alert((res && res.msg) || 'ไม่สามารถฝังการ์ดลงในอุปกรณ์นี้ได้');
+        }
+      });
+    });
+
+    // Bind unsocket buttons inside modal
+    const unsocketBtns = body.querySelectorAll('.btn-modal-unsocket-target');
+    unsocketBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cIdx = parseInt(btn.getAttribute('data-cand-idx'), 10);
+        const target = candidates[cIdx];
+        if (!target) return;
+
+        const res = player.unsocketCardsFromTarget(target.item);
+        if (res && (res === true || res.ok)) {
+          if (window.soundSystem && window.soundSystem.playClick) {
+            window.soundSystem.playClick();
+          }
+          // Re-render modal and inventory so the freed sockets appear immediately
+          this.render();
+          this.openCardSocketModal(cardBagIndex);
+          if (window.charStatsController && window.charStatsController.isOpen) {
+            window.charStatsController.refreshUI();
+          }
+        }
+      });
+    });
+
+    modal.style.display = 'flex';
+  }
+
+  closeCardSocketModal() {
+    const modal = document.getElementById('cardSocketModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
   }
 }
 

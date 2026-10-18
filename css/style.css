@@ -45,6 +45,10 @@ body, html {
   cursor: url('cursor_pickup.svg') 3 3, url('cursor_pickup.png') 3 3, pointer;
 }
 
+#gameCanvas.hover-npc {
+  cursor: pointer;
+}
+
 /* --- HUD Overlay --- */
 #hudOverlay {
   position: absolute;
@@ -991,7 +995,7 @@ body, html {
   position: absolute;
   top: 14px;
   left: 14px;
-  width: 290px;
+  width: 325px;
   max-height: calc(100vh - 28px);
   background: rgba(15, 23, 42, 0.94);
   border: 2px solid #eab308;
@@ -1040,28 +1044,48 @@ body, html {
 
 .editor-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
-  background: #0b0f19;
-  padding: 3px;
+  background: #090e1a;
+  padding: 4px;
   border-radius: 8px;
+  border: 1px solid rgba(202, 138, 4, 0.25);
 }
 
 .editor-tab {
-  flex: 1;
-  background: transparent;
-  border: none;
+  flex: 1 1 calc(25% - 4px);
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(51, 65, 85, 0.5);
   color: #94a3b8;
-  padding: 6px 4px;
-  font-size: 12px;
-  font-weight: 600;
+  padding: 6px 3px;
+  font-size: 11.5px;
+  font-family: 'Kanit', sans-serif;
+  font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-sizing: border-box;
+  min-height: 32px;
+  line-height: 1;
+}
+
+.editor-tab:hover {
+  background: rgba(51, 65, 85, 0.9);
+  color: #f8fafc;
+  border-color: rgba(202, 138, 4, 0.5);
 }
 
 .editor-tab.active {
-  background: #ca8a04;
-  color: #ffffff;
+  background: linear-gradient(135deg, #ca8a04 0%, #eab308 100%);
+  color: #0f172a;
+  font-weight: 700;
+  border-color: #fef08a;
+  box-shadow: 0 2px 10px rgba(202, 138, 4, 0.4);
 }
 
 .editor-tab-content {
@@ -3127,5 +3151,426 @@ body, html {
   margin-top: 1px;
   opacity: 0.9;
 }
+
+/* ==========================================================================
+   VILLAGE MERCHANT & NPC SHOP MODAL (THAI DARK FANTASY RPG)
+   ========================================================================== */
+
+#npcShopModal {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(4, 7, 15, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: shopFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes shopFadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.shop-dialog-box {
+  width: 92%;
+  max-width: 680px;
+  max-height: 85vh;
+  background: linear-gradient(170deg, rgba(26, 18, 12, 0.98) 0%, rgba(14, 12, 11, 0.98) 100%);
+  border: 2px solid #ca8a04;
+  outline: 1px solid rgba(253, 224, 71, 0.4);
+  outline-offset: -3px;
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.95), 0 0 30px rgba(202, 138, 4, 0.25);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: 'Kanit', sans-serif;
+  color: #f1f5f9;
+}
+
+/* NPC Profile Header */
+.shop-header {
+  padding: 14px 18px;
+  background: linear-gradient(90deg, rgba(45, 27, 14, 0.85) 0%, rgba(20, 15, 12, 0.6) 100%);
+  border-bottom: 1.5px solid rgba(202, 138, 4, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shop-npc-profile {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-portrait-wrap {
+  width: 62px;
+  height: 62px;
+  border-radius: 10px;
+  background: radial-gradient(circle, rgba(202, 138, 4, 0.25) 0%, rgba(15, 10, 8, 0.9) 80%);
+  border: 1.5px solid #eab308;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), inset 0 0 10px rgba(234, 179, 8, 0.2);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.shop-portrait-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  image-rendering: pixelated;
+}
+
+.shop-npc-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-npc-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fbbf24;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.shop-npc-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fde047;
+  text-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.shop-npc-dialog {
+  font-size: 12px;
+  color: #cbd5e1;
+  font-style: italic;
+  margin-top: 4px;
+  line-height: 1.35;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 8px;
+  border-radius: 6px;
+  border-left: 2px solid #ca8a04;
+}
+
+.shop-close-btn {
+  background: rgba(185, 28, 28, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.shop-close-btn:hover {
+  background: rgba(220, 38, 38, 0.8);
+  color: #fff;
+  transform: scale(1.06);
+}
+
+/* Navigation Bar */
+.shop-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 18px;
+  background: rgba(15, 12, 10, 0.7);
+  border-bottom: 1px solid rgba(202, 138, 4, 0.25);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shop-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.shop-tab-btn {
+  background: rgba(30, 20, 15, 0.6);
+  border: 1px solid rgba(202, 138, 4, 0.35);
+  color: #cbd5e1;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Kanit', sans-serif;
+}
+
+.shop-tab-btn:hover {
+  background: rgba(60, 40, 25, 0.8);
+  color: #fde047;
+  border-color: #ca8a04;
+}
+
+.shop-tab-btn.active {
+  background: linear-gradient(180deg, #ca8a04 0%, #854d0e 100%);
+  color: #ffffff;
+  border-color: #fde047;
+  box-shadow: 0 0 10px rgba(234, 179, 8, 0.4);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.shop-gold-display {
+  font-size: 12px;
+  color: #e2e8f0;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(202, 138, 4, 0.4);
+  padding: 4px 12px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* Shop Body Content */
+.shop-body {
+  padding: 14px 18px;
+  overflow-y: auto;
+  max-height: calc(85vh - 160px);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.shop-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.shop-body::-webkit-scrollbar-track {
+  background: rgba(15, 12, 10, 0.5);
+}
+
+.shop-body::-webkit-scrollbar-thumb {
+  background: #ca8a04;
+  border-radius: 3px;
+}
+
+/* Item Grid */
+.shop-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.shop-card {
+  background: rgba(22, 18, 15, 0.75);
+  border: 1px solid rgba(202, 138, 4, 0.35);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.15s ease;
+}
+
+.shop-card:hover {
+  background: rgba(35, 26, 20, 0.9);
+  border-color: #fde047;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+}
+
+.shop-card-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: radial-gradient(circle, rgba(202, 138, 4, 0.18) 0%, rgba(10, 10, 10, 0.9) 80%);
+  border: 1px solid rgba(202, 138, 4, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+  font-size: 20px;
+}
+
+.shop-card-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 3px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 0 4px;
+  border-radius: 8px;
+  line-height: 1.2;
+}
+
+.shop-item-icon-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.shop-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.shop-card-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fde047;
+  margin-bottom: 2px;
+}
+
+.shop-card-desc {
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.3;
+  margin-bottom: 3px;
+}
+
+.shop-card-price {
+  font-size: 11.5px;
+  color: #94a3b8;
+}
+
+.shop-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.shop-buy-btn {
+  background: linear-gradient(180deg, #ca8a04 0%, #854d0e 100%);
+  border: 1px solid #fde047;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Kanit', sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+.shop-buy-btn:hover:not(.disabled) {
+  background: linear-gradient(180deg, #eab308 0%, #a16207 100%);
+  box-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
+  transform: scale(1.03);
+}
+
+.shop-buy-multi {
+  background: rgba(30, 25, 20, 0.8);
+  border: 1px solid rgba(202, 138, 4, 0.45);
+  color: #fef08a;
+}
+
+.shop-buy-multi:hover:not(.disabled) {
+  background: rgba(60, 45, 30, 0.95);
+  border-color: #fde047;
+}
+
+.shop-buy-btn.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  filter: grayscale(0.8);
+}
+
+/* Sell Tab Styles */
+.shop-sell-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(20, 16, 12, 0.85);
+  border: 1px solid rgba(202, 138, 4, 0.35);
+  padding: 10px 14px;
+  border-radius: 8px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shop-junk-summary {
+  font-size: 12.5px;
+  color: #e2e8f0;
+}
+
+.shop-sell-all-btn {
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%);
+  border: 1.5px solid #4ade80;
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Kanit', sans-serif;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.4);
+}
+
+.shop-sell-all-btn:hover:not(.disabled) {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+  box-shadow: 0 0 14px rgba(74, 222, 128, 0.6);
+  transform: scale(1.03);
+}
+
+.shop-sell-all-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: grayscale(1);
+  box-shadow: none;
+}
+
+.shop-sell-btn {
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
+  border: 1px solid #38bdf8;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Kanit', sans-serif;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+
+.shop-sell-btn:hover {
+  background: linear-gradient(180deg, #0ea5e9 0%, #0284c7 100%);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.5);
+  transform: scale(1.03);
+}
+
+.shop-empty-msg {
+  text-align: center;
+  padding: 40px 20px;
+  color: #94a3b8;
+  font-size: 14px;
+  font-style: italic;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
 
 

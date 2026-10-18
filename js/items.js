@@ -146,12 +146,14 @@ const ITEM_TEMPLATES = {
     lore: 'เกราะทองคำของแม่ทัพยักษ์โบราณ สลักลายกนกเปลวเพลิงคุ้มครองกายารอบด้าน'
   },
   ar_diamond_gem: {
-    name: 'เกราะเพชรนพรัตน์เก็จมณี',
+    name: 'เกราะอกทับทรวงและอินธนูปีกสวรรค์อัครเทวราช',
     slot: 'armor',
-    icon: 'Assets/items/ar_suvarn_asura.png',
+    icon: 'Assets/costumes/armor_celestial_gold_icon.png?v=cuirass_v1',
+    spritesheet: 'Assets/costumes/armor_celestial_gold_sheet.png?v=cuirass_v1',
+    armorStyle: 'celestial_gold',
     baseRarity: 'legendary',
-    baseStats: { defense: 65, maxHp: 520, bleedResist: 55, vit: 22, maxMp: 90 },
-    lore: 'สุดยอดเกราะเทวะหลอมรวมนพเก้าประกายแสงสะท้อนมนต์ดำและคำสาปทั้งปวง'
+    baseStats: { defense: 78, maxHp: 650, bleedResist: 60, vit: 24, str: 16, maxMp: 160, critRate: 10 },
+    lore: 'เกราะอกทับทรวงทองคำบริสุทธิ์และอินธนูไหล่ติดปีกสวรรค์สีขาวขลิบทอง ประดับเพชรฟ้าดารารายกลางอก เข้าเซ็ตคู่กับชฎามงกุฎอัครเทวราชและปีกอัครเทวทูตสวรรค์ 6 ปีก'
   },
 
   // --- BRACERS (สนับแขน) ---
@@ -188,12 +190,14 @@ const ITEM_TEMPLATES = {
     lore: 'สนับกรสลักรูปพญาพาลีเจ้าเมืองขีดขิน ยืมพละกำลังกึ่งหนึ่งของคู่ต่อสู้มาเป็นของตน'
   },
   br_hanuman_bracers: {
-    name: 'ปลอกแขนเทพวานรหนุมาน',
+    name: 'สนับกรปลอกแขนทองคำปีกสวรรค์อัครเทวราช',
     slot: 'bracer',
-    icon: 'Assets/items/br_tiger_fangs.png',
+    icon: 'Assets/costumes/bracer_celestial_gold_icon.png?v=bracer_v1',
+    spritesheet: 'Assets/costumes/bracer_celestial_gold_sheet.png?v=bracer_v1',
+    bracerStyle: 'celestial_gold',
     baseRarity: 'legendary',
-    baseStats: { attack: 42, speed: 36, critRate: 12, agi: 22, atkCooldown: -0.08 },
-    lore: 'ปลอกแขนทหารเอกพระราม เคลื่อนไหวรวดเร็วดุจสายลม รัวโจมตีไร้ช่องโหว่'
+    baseStats: { attack: 52, speed: 40, critRate: 15, agi: 24, str: 18, atkCooldown: -0.09 },
+    lore: 'สนับกรปลอกแขนทองคำบริสุทธิ์สลักลายกนก ประดับเพชรฟ้าดารารายและปีกสวรรค์สีขาวขลิบทองข้างลำแขน เข้าเซ็ตคู่กับชุดอัครเทวราช เสริมความเร็วออกอาวุธดุจสายฟ้าฟาด'
   },
 
   // --- TALISMAN / AMULETS (เครื่องราง) ---
@@ -272,12 +276,14 @@ const ITEM_TEMPLATES = {
     lore: 'ชฎาทองคำแท้ประดับพลอยทับทิม เครื่องทรงกษัตริย์และแม่ทัพเทวะ สง่างามน่าเกรงขาม'
   },
   hm_crown_deva: {
-    name: 'มงกุฎเทวราชตรีภพ',
+    name: 'ชฎามงกุฎอัครเทวราชทองคำประดับเพชรฟ้า',
     slot: 'helmet',
-    icon: 'Assets/items/hm_crown_deva.png',
+    icon: 'Assets/costumes/helmet_celestial_chada_icon.png?v=chada_v1',
+    spritesheet: 'Assets/costumes/helmet_celestial_chada_sheet.png?v=chada_v1',
+    helmetStyle: 'celestial_chada',
     baseRarity: 'legendary',
-    baseStats: { defense: 58, maxHp: 440, maxMp: 120, critRate: 10, str: 12, agi: 12, vit: 14, spi: 16 },
-    lore: 'มงกุฎแห่งจอมเทพผู้ครองสามภพ ส่องแสงออร่าแห่งปัญญาและอำนาจบารมีไร้เทียมทาน'
+    baseStats: { defense: 68, maxHp: 520, maxMp: 240, critRate: 14, attack: 35, str: 16, agi: 16, vit: 18, spi: 20 },
+    lore: 'ชฎามงกุฎทองคำบริสุทธิ์แห่งอัครเทวราช ประดับเพชรฟ้าดารารายและปีกสวรรค์สีขาวบริสุทธิ์ข้างขมับ เข้าเซ็ตคู่กับปีกอัครเทวทูตสวรรค์ 6 ปีก ส่องรัศมีเทวานุภาพเหนือสามภพ'
   },
 
   // --- PANTS / LEGGINGS (กางเกง / สนับเพลา) ---
@@ -314,12 +320,13 @@ const ITEM_TEMPLATES = {
     lore: 'สนับเพลาทองคำสลักลายกนกทวยเทพ หนักแน่นแต่ว่องไวดั่งสายฟ้าฟาด'
   },
   pn_indra_silk: {
-    name: 'สนับเพลายกพรายทองกนก',
+    name: 'สนับเพลายกพรายทองกนกอัครเทวราช',
     slot: 'pants',
-    icon: 'Assets/costumes/pants_deva_gold.png',
+    icon: 'Assets/costumes/pants_deva_gold.png?v=sabatons_v2',
+    spritesheet: 'Assets/costumes/boots_celestial_gold_sheet.png?v=sabatons_v2',
     baseRarity: 'legendary',
     baseStats: { defense: 54, maxHp: 380, speed: 28, vit: 18, agi: 16, critRate: 6 },
-    lore: 'ผ้านุ่งโจงกระเบนยกทองสลักลายกนกทวยเทพ พร้อมเกราะสนับเพลาทองคำลงยา หนักแน่นแต่ว่องไวดั่งสายฟ้าฟาด'
+    lore: 'ผ้านุ่งโจงกระเบนไหมยกทองสีแดงชาดพร้อมชายไหวชายแครงทองคำประดับเพชรฟ้าและเกราะสนับเข่ากนกทวยเทพ'
   },
 
   // --- BOOTS / FOOTWEAR (รองเท้า / ฉลองพระบาท) ---
@@ -356,12 +363,14 @@ const ITEM_TEMPLATES = {
     lore: 'ปลายฉลองพระบาทติดกรงเล็บทองคำพญาครุฑ เสริมแรงกระโดดและจังหวะเตะทำลายล้าง'
   },
   bt_celestial_stride: {
-    name: 'ฉลองพระบาททองคำปลายงอนชดช้อย',
+    name: 'ชุดเกราะขาและฉลองพระบาททองคำปลายงอนติดปีกสวรรค์',
     slot: 'boots',
-    icon: 'Assets/costumes/boots_deva_gold.png',
+    icon: 'Assets/costumes/boots_deva_gold.png?v=sabatons_v2',
+    spritesheet: 'Assets/costumes/boots_celestial_gold_sheet.png?v=sabatons_v2',
+    bootsStyle: 'celestial_gold',
     baseRarity: 'legendary',
-    baseStats: { speed: 60, defense: 38, critRate: 10, agi: 25, atkCooldown: -0.06 },
-    lore: 'ยอดฉลองพระบาทแห่งเทวโลก ปลายงอนกนกชดช้อย ผู้สวมใส่เคลื่อนที่เร็วดั่งพายุหมุน ไร้ผู้ใดไล่ทัน'
+    baseStats: { speed: 68, defense: 45, critRate: 12, agi: 28, vit: 14, atkCooldown: -0.07 },
+    lore: 'ชุดเกราะขาทองคำครบชุดตั้งแต่สนับเพลายกพรายทอง ชายไหวชายแครง สนับเข่า สนับแข้ง จรดฉลองพระบาททองคำปลายงอนติดปีกสวรรค์สีขาวบริสุทธิ์'
   },
 
   // --- WINGS (ปีกนางฟ้า / ปีกกินรี / ปีกครุฑ) ---
@@ -375,24 +384,28 @@ const ITEM_TEMPLATES = {
     lore: 'ปีกนางกินรีแห่งสระอโนดาต ส่องประกายสีเขียวมรกต กระพือพลิ้วโบยบินดั่งสายลม'
   },
   wg_angelic_celestial: {
-    name: 'ปีกนางฟ้าเทวราชสุวรรณภูมิ (Pixel Art)',
+    name: 'ปีกอัครเทวทูตสวรรค์ 6 ปีก (Seraphim 6-Wings)',
     slot: 'wings',
-    icon: 'Assets/costumes/wings_pixel_icon.png',
+    icon: 'Assets/costumes/wings_pixel_icon.png?v=seraphim_v1',
     wingStyle: 'gold',
-    spritesheet: 'Assets/costumes/wings_pixel_spritesheet.png',
+    spritesheet: 'Assets/costumes/wings_pixel_spritesheet.png?v=seraphim_v1',
     frameCount: 5,
     baseRarity: 'legendary',
-    baseStats: { speed: 52, maxHp: 320, maxMp: 240, defense: 28, critRate: 10, allStats: 12 },
-    lore: 'ปีกนางฟ้าชาวสวรรค์สไตล์ Pixel Art แอนิเมชันขนนกทองคำแท้กระพือโบกสะบัดพลิ้วไหว ประดับอัญมณีฟ้าดาราราย'
+    baseStats: { speed: 72, attack: 60, maxHp: 500, maxMp: 350, defense: 45, critRate: 18, allStats: 18 },
+    lore: 'ปีกอัครเทวทูตสวรรค์ 6 ปีก (Seraphim) สีขาวบริสุทธิ์ขลิบทองคำลายกนก ประดับอัญมณีฟ้าดาราราย โปรยปรายขนนกแห่งแสงศักดิ์สิทธิ์ทุกย่างก้าว'
   },
   wg_garuda_infernal: {
-    name: 'ปีกพญาครุฑเพลิงสุริยันต์',
+    name: 'ปีกพญาครุฑเพลิงสุริยันต์ (Pixel Art)',
     slot: 'wings',
     icon: 'Assets/items/wg_garuda_infernal.png',
     wingStyle: 'fire',
+    spritesheet: 'Assets/costumes/wings_garuda_flame_sheet.png',
+    frameCount: 4,
+    frameWidth: 96,
+    frameHeight: 64,
     baseRarity: 'legendary',
     baseStats: { speed: 68, attack: 55, critRate: 16, maxHp: 450, str: 20, agi: 16, vit: 14 },
-    lore: 'ปีกเพลิงสุริยคราสของพญาสุบรรณครุฑราช โบกสะบัดพัดพาเปลวเพลิงแผดเผาอธรรม'
+    lore: 'ปีกเพลิงสุริยคราสของพญาสุบรรณครุฑราช โบกสะบัดพัดพาเปลวเพลิงแผดเผาอธรรม สไตล์ 16-Bit Pixel Art'
   },
   wg_void_shadow: {
     name: 'ปีกมารทมิฬราหูอมจันทร์',
@@ -428,6 +441,174 @@ const ITEM_TEMPLATES = {
     maxStack: 99,
     value: 50,
     lore: 'น้ำเต้าศิลาแก้วมนตราสีคราม ฟื้นฟูพลังมานา 50% Max MP ทันทีที่ดื่ม'
+  },
+  scroll_town_portal: {
+    name: 'ม้วนคาถาหวนคืนอาราม',
+    slot: 'consumable',
+    category: 'scroll',
+    itemType: 'town_portal',
+    icon: 'Assets/items/pixel_weapons_sheet.png',
+    baseRarity: 'uncommon',
+    baseStats: {},
+    maxStack: 99,
+    value: 80,
+    lore: 'ม้วนคัมภีร์ใบลานลงอักขระมนตรา เมื่ออ่านจะเปิดประตูมิติพาวาร์ปกลับสู่วิหารศิลาแลงจุดเกิดทันที'
+  },
+  elixir_wind_speed: {
+    name: 'ยาหม่องทิพย์วายุภักษ์',
+    slot: 'consumable',
+    category: 'potion',
+    itemType: 'speed_potion',
+    icon: 'Assets/ui/icon_potion_mp.png',
+    baseRarity: 'uncommon',
+    baseStats: {},
+    maxStack: 99,
+    value: 60,
+    lore: 'ยาหม่องว่านวิเศษทาฝ่าเท้า เพิ่มความเร็วเคลื่อนที่ +35% นาน 30 วินาที'
+  },
+  food_herbal_rice: {
+    name: 'ข้าวเหนียวทิพย์สมุนไพร',
+    slot: 'consumable',
+    category: 'food',
+    itemType: 'hp_food',
+    icon: 'Assets/ui/icon_potion_hp.png',
+    baseRarity: 'common',
+    baseStats: {},
+    maxStack: 99,
+    value: 25,
+    lore: 'ข้าวเหนียวนึ่งหอมกรุ่นห่อใบตอง ฟื้นฟูเลือด 150 หน่วยทันที'
+  },
+  drink_magic_coconut: {
+    name: 'น้ำมะพร้าวแก้วมนตรา',
+    slot: 'consumable',
+    category: 'food',
+    itemType: 'mp_food',
+    icon: 'Assets/ui/icon_potion_mp.png',
+    baseRarity: 'common',
+    baseStats: {},
+    maxStack: 99,
+    value: 25,
+    lore: 'น้ำมะพร้าวทิพย์เย็นชื่นใจ ดื่มแล้วฟื้นฟูมานา 80 หน่วยทันที'
+  },
+
+  // --- MONSTER DROPS & MATERIALS (ชิ้นส่วนมอนสเตอร์ / ขยะขายร้าน) ---
+  mat_boar_tusk: {
+    name: 'เขี้ยวหมูป่าโลกันตร์',
+    slot: 'junk',
+    category: 'material',
+    itemType: 'monster_drop',
+    icon: 'Assets/items/pixel_weapons_sheet.png',
+    baseRarity: 'common',
+    baseStats: {},
+    maxStack: 99,
+    value: 35,
+    lore: 'เขี้ยวหมูป่าอสูรเนื้อแกร่ง เป็นที่ต้องการของพ่อค้าเพื่อนำไปแกะสลักเครื่องราง ขายได้ราคางาม'
+  },
+  mat_boar_hide: {
+    name: 'หนังหมูป่าหนาทึบ',
+    slot: 'junk',
+    category: 'material',
+    itemType: 'monster_drop',
+    icon: 'Assets/items/pixel_armors_sheet.png',
+    baseRarity: 'common',
+    baseStats: {},
+    maxStack: 99,
+    value: 28,
+    lore: 'แผ่นหนังหมูป่าเหนียวทนทาน ช่างเย็บในหมู่บ้านรับซื้อไม่อั้นเพื่อนำไปฟอกทำเกราะ'
+  },
+  mat_preta_bone: {
+    name: 'กระดูกเปรตอาถรรพ์',
+    slot: 'junk',
+    category: 'material',
+    itemType: 'monster_drop',
+    icon: 'Assets/items/pixel_weapons_sheet.png',
+    baseRarity: 'uncommon',
+    baseStats: {},
+    maxStack: 99,
+    value: 48,
+    lore: 'ชิ้นส่วนกระดูกเปรตหิวกระหายเปี่ยมไออสูร นักปรุงยาและปู่ฤๅษีรับซื้อเพื่อนำไปสกัดยาขับพิษ'
+  },
+  mat_sacred_ash: {
+    name: 'ผงเถ้ากระดูกอสูร',
+    slot: 'junk',
+    category: 'material',
+    itemType: 'monster_drop',
+    icon: 'Assets/items/pixel_weapons_sheet.png',
+    baseRarity: 'common',
+    baseStats: {},
+    maxStack: 99,
+    value: 32,
+    lore: 'เถ้าธุลีที่หลงเหลือจากการกำราบอสูร ขายให้พ่อค้าแม่ค้าแลกเป็นเงินพดด้วงได้ทันที'
+  },
+
+  // --- MONSTER SOUL CARDS (การ์ดดวงจิตอสูรหิมพานต์ ฝังใส่อุปกรณ์) ---
+  card_tiger: {
+    name: 'การ์ดดวงจิตเสือสมิง',
+    slot: 'card',
+    category: 'card',
+    itemType: 'monster_card',
+    icon: 'Assets/cards/card_tiger.png?v=32',
+    fullArt: 'Assets/cards/card_tiger_full.png?v=32',
+    baseRarity: 'epic',
+    targetSlots: ['weapon', 'bracer', 'helmet', 'armor', 'pants', 'boots', 'wings', 'talisman'],
+    prefixTitle: 'พยัคฆ์สมิง',
+    specialKey: 'tiger_crit',
+    specialDesc: '💥 โจมตีคริติคอลรุนแรงขึ้น +25% และมีออร่าเพลิงสมิงเมื่อฟาดฟัน',
+    baseStats: { attack: 18, critRate: 8, str: 5 },
+    maxStack: 99,
+    value: 450,
+    lore: 'แผ่นยันต์ทองคำผนึกวิญญาณเสือสมิงอาคมแห่งดงพญาเย็น เมื่อฝังลงในศาสตราวุธหรือชุดเกราะจะปลุกสัญชาตญาณนักล่ากระหายเลือด'
+  },
+  card_serpent: {
+    name: 'การ์ดดวงจิตพญางูอสูร',
+    slot: 'card',
+    category: 'card',
+    itemType: 'monster_card',
+    icon: 'Assets/cards/card_serpent.png?v=32',
+    fullArt: 'Assets/cards/card_serpent_full.png?v=32',
+    baseRarity: 'epic',
+    targetSlots: ['weapon', 'armor', 'talisman', 'helmet', 'bracer', 'pants', 'boots', 'wings'],
+    prefixTitle: 'พิษพญานาคา',
+    specialKey: 'serpent_lifesteal',
+    specialDesc: '🩸 ดูดซับพลังชีวิต (Lifesteal) ฟื้นฟู 8% ของดาเมจที่โจมตีกลับมาเป็น HP ทันที',
+    baseStats: { attack: 14, maxHp: 120, spi: 6 },
+    maxStack: 99,
+    value: 480,
+    lore: 'ดวงจิตพญางูอสูรเขี้ยวมรกต อาบด้วยพิษอมฤตโบราณ เปลี่ยนหยาดเลือดของศัตรูให้กลายเป็นพลังชีวิตหล่อเลี้ยงผู้สวมใส่'
+  },
+  card_swordsman: {
+    name: 'การ์ดดวงจิตนักรบดาบอาคม',
+    slot: 'card',
+    category: 'card',
+    itemType: 'monster_card',
+    icon: 'Assets/cards/card_swordsman.png?v=32',
+    fullArt: 'Assets/cards/card_swordsman_full.png?v=32',
+    baseRarity: 'epic',
+    targetSlots: ['weapon', 'boots', 'wings', 'bracer', 'helmet', 'armor', 'pants', 'talisman'],
+    prefixTitle: 'ดาบคู่ผีสิง',
+    specialKey: 'swordsman_double',
+    specialDesc: '⚡ มีโอกาส 25% ที่การโจมตีจะปล่อยคลื่นดาบอาคมฟันซ้ำสองฮิต (Double Strike!)',
+    baseStats: { attack: 16, speed: 18, agi: 7 },
+    maxStack: 99,
+    value: 520,
+    lore: 'วิญญาณยอดขุนพลดาบคู่ผู้ไม่ยอมดับสูญ เสริมความเร็วปานพายุและวิชาดาบเงาคู่ให้แก่ผู้ครอบครอง'
+  },
+  card_asura_boss: {
+    name: 'การ์ดดวงจิตท้าวอสูรทมิฬ [BOSS]',
+    slot: 'card',
+    category: 'card',
+    itemType: 'monster_card',
+    icon: 'Assets/cards/card_asura_boss.png?v=32',
+    fullArt: 'Assets/cards/card_asura_boss_full.png?v=32',
+    baseRarity: 'legendary',
+    targetSlots: ['weapon', 'helmet', 'armor', 'bracer', 'wings', 'pants', 'boots', 'talisman'],
+    prefixTitle: 'จอมมารอสุรา',
+    specialKey: 'asura_lightning',
+    specialDesc: '🌩️ เมื่อโจมตีมีโอกาส 30% ผ่าสายฟ้าอสุราสีม่วงทองใส่ศัตรู สร้างดาเมจเพิ่มเติม 55% ATK!',
+    baseStats: { attack: 32, defense: 18, maxHp: 220, critRate: 10, str: 8, spi: 8 },
+    maxStack: 99,
+    value: 1500,
+    lore: 'สุดยอดการ์ดดวงจิตระดับตำนานของจอมมารท้าวอสูรทมิฬ เปี่ยมด้วยอำนาจสายฟ้าอสุราสะท้านสามภพ'
   }
 };
 
@@ -451,6 +632,10 @@ class ItemSystem {
     return RARITY_TIERS[rarityId] || RARITY_TIERS.common;
   }
 
+  static isEquipSlot(slot) {
+    return ['weapon', 'helmet', 'armor', 'bracer', 'wings', 'pants', 'boots', 'talisman'].includes(slot);
+  }
+
   /**
    * Generates a concrete item instance with randomized stat rolls based on rarity.
    */
@@ -458,14 +643,18 @@ class ItemSystem {
     const tmpl = ITEM_TEMPLATES[templateKey];
     if (!tmpl) return null;
 
-    const rarityKey = overrideRarity || tmpl.baseRarity;
+    const isCard = tmpl.slot === 'card' || tmpl.itemType === 'monster_card';
+    const isEquip = this.isEquipSlot(tmpl.slot);
+
+    const rarityKey = isCard ? tmpl.baseRarity : (overrideRarity || tmpl.baseRarity);
     const rarity = this.getRarity(rarityKey);
     const id = 'item_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 5);
 
-    // Roll stats with +/- 15% variation multiplied by rarity
     const finalStats = {};
-    for (const [sKey, sVal] of Object.entries(tmpl.baseStats)) {
-      if (sKey === 'atkCooldown') {
+    for (const [sKey, sVal] of Object.entries(tmpl.baseStats || {})) {
+      if (isCard) {
+        finalStats[sKey] = sVal;
+      } else if (sKey === 'atkCooldown') {
         finalStats[sKey] = Number((sVal * (1 + (rarity.multiplier - 1) * 0.25)).toFixed(2));
       } else {
         const variance = 0.88 + Math.random() * 0.24; // 88% - 112%
@@ -473,52 +662,63 @@ class ItemSystem {
       }
     }
 
-    // Roll additional random affixes depending on rarity
     const affixes = [];
-    const usedAffixKeys = new Set(Object.keys(finalStats));
-    const availableAffixes = RANDOM_AFFIXES.filter(a => !usedAffixKeys.has(a.key));
+    if (isEquip) {
+      const usedAffixKeys = new Set(Object.keys(finalStats));
+      const availableAffixes = RANDOM_AFFIXES.filter(a => !usedAffixKeys.has(a.key));
+      const affixCount = Math.min(rarity.affixCount, availableAffixes.length);
+      const shuffled = [...availableAffixes].sort(() => Math.random() - 0.5);
 
-    const affixCount = Math.min(rarity.affixCount, availableAffixes.length);
-    // Shuffle available affixes
-    const shuffled = [...availableAffixes].sort(() => Math.random() - 0.5);
-
-    for (let i = 0; i < affixCount; i++) {
-      const aff = shuffled[i];
-      const rollVal = Math.round(aff.min + Math.random() * (aff.max - aff.min) * (rarity.multiplier * 0.7));
-      finalStats[aff.key] = (finalStats[aff.key] || 0) + rollVal;
-      affixes.push({
-        key: aff.key,
-        label: aff.label,
-        value: rollVal,
-        suffix: aff.suffix
-      });
+      for (let i = 0; i < affixCount; i++) {
+        const aff = shuffled[i];
+        const rollVal = Math.round(aff.min + Math.random() * (aff.max - aff.min) * (rarity.multiplier * 0.7));
+        finalStats[aff.key] = (finalStats[aff.key] || 0) + rollVal;
+        affixes.push({
+          key: aff.key,
+          label: aff.label,
+          value: rollVal,
+          suffix: aff.suffix
+        });
+      }
     }
 
     return {
       id,
       key: templateKey,
       templateKey,
+      baseName: tmpl.name,
       name: tmpl.name,
       slot: tmpl.slot,
-      category: tmpl.category || (tmpl.slot === 'consumable' ? 'potion' : 'equip'),
+      category: tmpl.category || (tmpl.slot === 'consumable' ? 'potion' : (isCard ? 'card' : 'equip')),
       itemType: tmpl.itemType || null,
       count: tmpl.count || 1,
-      maxStack: tmpl.maxStack || (tmpl.slot === 'consumable' ? 99 : 1),
+      maxStack: tmpl.maxStack || (tmpl.slot === 'consumable' || isCard ? 99 : 1),
       icon: tmpl.icon,
+      fullArt: tmpl.fullArt || null,
+      targetSlots: tmpl.targetSlots || null,
+      prefixTitle: tmpl.prefixTitle || null,
+      specialKey: tmpl.specialKey || null,
+      specialDesc: tmpl.specialDesc || null,
       wingStyle: tmpl.wingStyle || null,
+      helmetStyle: tmpl.helmetStyle || null,
+      armorStyle: tmpl.armorStyle || null,
+      bracerStyle: tmpl.bracerStyle || null,
+      bootsStyle: tmpl.bootsStyle || null,
+      spritesheet: tmpl.spritesheet || null,
       rarity: rarityKey,
       stats: finalStats,
       affixes,
+      maxSockets: isEquip ? 2 : 0,
+      sockets: isEquip ? [] : undefined,
       lore: tmpl.lore,
       value: tmpl.value || Math.round(40 * rarity.multiplier + (Math.random() * 20))
     };
   }
 
   /**
-   * Generates a random drop tailored to the monster tier or chest.
+   * Generates a random equipment drop tailored to the monster tier or chest.
    */
   static rollDrop(sourceType = 'normal', level = 1) {
-    // 1. Select Rarity
     let rWeights;
     if (sourceType === 'boss') {
       rWeights = { rare: 35, epic: 50, legendary: 15 };
@@ -527,7 +727,6 @@ class ItemSystem {
     } else if (sourceType === 'buffalo' || sourceType === 'elite') {
       rWeights = { magic: 45, rare: 40, epic: 15 };
     } else {
-      // Normal monsters
       rWeights = { common: 60, magic: 30, rare: 9, epic: 1 };
     }
 
@@ -543,9 +742,8 @@ class ItemSystem {
       roll -= weight;
     }
 
-    // 2. Select Suitable Item Template
-    const templateKeys = Object.keys(ITEM_TEMPLATES);
-    // Filter templates by slot or thematic preference
+    // Only roll wearable equipment in rollDrop (cards have their own rollCardDrop)
+    const templateKeys = Object.keys(ITEM_TEMPLATES).filter(k => this.isEquipSlot(ITEM_TEMPLATES[k].slot));
     let eligible = templateKeys.filter(k => {
       const tmpl = ITEM_TEMPLATES[k];
       return tmpl.baseRarity === chosenRarity || chosenRarity !== 'legendary';
@@ -556,9 +754,72 @@ class ItemSystem {
 
     return this.createItem(chosenKey, chosenRarity);
   }
+
+  /**
+   * Rolls a Monster Soul Card drop based on the defeated monster type!
+   */
+  static rollCardDrop(enemyType = 'tiger', isBoss = false) {
+    let cardKey = 'card_tiger';
+    const t = String(enemyType || '').toLowerCase();
+    if (isBoss || t === 'boss' || t === 'bosspreat' || t === 'buffalo') {
+      cardKey = Math.random() < 0.75 ? 'card_asura_boss' : 'card_tiger';
+    } else if (t === 'tiger') {
+      cardKey = 'card_tiger';
+    } else if (t === 'serpent' || t === 'krasue') {
+      cardKey = 'card_serpent';
+    } else if (t === 'swordsman' || t === 'monkey' || t === 'imp') {
+      cardKey = 'card_swordsman';
+    } else {
+      const pool = ['card_tiger', 'card_serpent', 'card_swordsman'];
+      cardKey = pool[Math.floor(Math.random() * pool.length)];
+    }
+    return this.createItem(cardKey);
+  }
+
+  /**
+   * Sockets a Monster Soul Card into an Equipment Item (max 2 sockets per item).
+   */
+  static socketCardIntoEquipment(equipItem, cardItem) {
+    if (!equipItem || !cardItem) return false;
+    if (!this.isEquipSlot(equipItem.slot)) return false;
+
+    if (!equipItem.maxSockets || equipItem.maxSockets < 2) equipItem.maxSockets = 2;
+    if (!Array.isArray(equipItem.sockets)) equipItem.sockets = [];
+    if (equipItem.sockets.length >= equipItem.maxSockets) return false;
+
+    const cardTmpl = ITEM_TEMPLATES[cardItem.templateKey || cardItem.key] || cardItem;
+    const socketEntry = {
+      cardKey: cardItem.templateKey || cardItem.key,
+      name: cardTmpl.name || cardItem.name,
+      icon: cardTmpl.icon || cardItem.icon,
+      fullArt: cardTmpl.fullArt || cardItem.fullArt,
+      prefixTitle: cardTmpl.prefixTitle || 'อาคม',
+      specialKey: cardTmpl.specialKey || null,
+      specialDesc: cardTmpl.specialDesc || '',
+      stats: { ...(cardTmpl.baseStats || cardItem.stats || {}) }
+    };
+
+    equipItem.sockets.push(socketEntry);
+    this.updateSocketedItemName(equipItem);
+    return true;
+  }
+
+  static updateSocketedItemName(equipItem) {
+    if (!equipItem) return;
+    if (!equipItem.baseName) {
+      equipItem.baseName = equipItem.name.replace(/\s*\[.*?\].*$/, '');
+    }
+    if (Array.isArray(equipItem.sockets) && equipItem.sockets.length > 0) {
+      const prefixes = equipItem.sockets.map(s => s.prefixTitle || 'อาคม').join('•');
+      equipItem.name = `${equipItem.baseName} [${prefixes}]`;
+    } else {
+      equipItem.name = equipItem.baseName;
+    }
+  }
 }
 
 window.RARITY_TIERS = RARITY_TIERS;
 window.ITEM_TEMPLATES = ITEM_TEMPLATES;
 window.ItemSystem = ItemSystem;
+
 

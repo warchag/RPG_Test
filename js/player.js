@@ -73,65 +73,143 @@ class Player {
       spi: 0
     };
 
-    // Grant starter equipment if empty
+    // Grant starter equipment based on progressionMode ('normal' Lv.1 starter gear vs 'gm_test' full Legendary set)
     if (window.ItemSystem) {
+      const isGmTest = (window.gameConfig && window.gameConfig.config && window.gameConfig.config.progressionMode === 'gm_test');
       const startWp = window.ItemSystem.createItem('wp_club_wood');
       const startAr = window.ItemSystem.createItem('ar_leather_hide');
       const startHm = window.ItemSystem.createItem('hm_cloth_band');
       const startPn = window.ItemSystem.createItem('pn_cloth_pha_nung');
       const startBt = window.ItemSystem.createItem('bt_straw_sandals');
       const startTl = window.ItemSystem.createItem('tl_string_sai_sin');
-      const startWg = window.ItemSystem.createItem('wg_kinnari_emerald');
-      const startPnGold = window.ItemSystem.createItem('pn_indra_silk'); // สนับเพลายกพรายทองกนก
-      const startBtGold = window.ItemSystem.createItem('bt_celestial_stride'); // ฉลองพระบาททองคำปลายงอน
-      const startWgGold = window.ItemSystem.createItem('wg_angelic_celestial'); // ปีกนางฟ้าเทวราชสุวรรณภูมิ
-      if (startWp) this.inventory.push(startWp);
-      if (startAr) this.inventory.push(startAr);
-      if (startHm) this.inventory.push(startHm);
-      if (startPn) this.inventory.push(startPn);
-      if (startBt) this.inventory.push(startBt);
-      if (startTl) this.inventory.push(startTl);
-      if (startWg) this.inventory.push(startWg);
-      if (startPnGold) this.inventory.push(startPnGold);
-      if (startBtGold) this.inventory.push(startBtGold);
-      if (startWgGold) this.inventory.push(startWgGold);
+      const startBr = window.ItemSystem.createItem('br_cloth_wraps');
 
-      // Auto-equip the divine golden Deva costume set so visual wings and armor appear immediately
-      this.equipped.wings = startWgGold || startWg;
-      this.equipped.pants = startPnGold || startPn;
-      this.equipped.boots = startBtGold || startBt;
-      this.equipped.weapon = startWp;
-      this.equipped.armor = startAr;
-      this.equipped.helmet = startHm;
-      this.equipped.talisman = startTl;
+      if (isGmTest) {
+        const startWg = window.ItemSystem.createItem('wg_kinnari_emerald');
+        const startPnGold = window.ItemSystem.createItem('pn_indra_silk');
+        const startBtGold = window.ItemSystem.createItem('bt_celestial_stride');
+        const startWgGold = window.ItemSystem.createItem('wg_angelic_celestial');
+        const startHmGold = window.ItemSystem.createItem('hm_crown_deva');
+        const startArGold = window.ItemSystem.createItem('ar_diamond_gem');
+        const startBrGold = window.ItemSystem.createItem('br_hanuman_bracers');
+        if (startWp) this.inventory.push(startWp);
+        if (startAr) this.inventory.push(startAr);
+        if (startHm) this.inventory.push(startHm);
+        if (startBr) this.inventory.push(startBr);
+        if (startPn) this.inventory.push(startPn);
+        if (startBt) this.inventory.push(startBt);
+        if (startTl) this.inventory.push(startTl);
+        if (startWg) this.inventory.push(startWg);
+        if (startPnGold) this.inventory.push(startPnGold);
+        if (startBtGold) this.inventory.push(startBtGold);
+        if (startWgGold) this.inventory.push(startWgGold);
+        if (startHmGold) this.inventory.push(startHmGold);
+        if (startArGold) this.inventory.push(startArGold);
+        if (startBrGold) this.inventory.push(startBrGold);
+
+        this.equipped.wings = startWgGold || startWg;
+        this.equipped.pants = startPnGold || startPn;
+        this.equipped.boots = startBtGold || startBt;
+        this.equipped.weapon = startWp;
+        this.equipped.armor = startArGold || startAr;
+        this.equipped.bracer = startBrGold || startBr;
+        this.equipped.helmet = startHmGold || startHm;
+        this.equipped.talisman = startTl;
+      } else {
+        // Normal Lv.1 Progression: Equip starter Common gear only
+        this.equipped.weapon = startWp;
+        this.equipped.armor = startAr;
+        this.equipped.helmet = startHm;
+        this.equipped.bracer = startBr;
+        this.equipped.pants = startPn;
+        this.equipped.boots = startBt;
+        this.equipped.talisman = startTl;
+        this.equipped.wings = null;
+      }
 
       // Filter out equipped items from starting inventory
-      this.inventory = this.inventory.filter(item => 
-        item !== this.equipped.wings && 
-        item !== this.equipped.pants && 
+      this.inventory = this.inventory.filter(item =>
+        item !== this.equipped.wings &&
+        item !== this.equipped.pants &&
         item !== this.equipped.boots &&
         item !== this.equipped.weapon &&
         item !== this.equipped.armor &&
+        item !== this.equipped.bracer &&
         item !== this.equipped.helmet &&
         item !== this.equipped.talisman
       );
     }
 
-    // Preload animated pixel art celestial wing spritesheet & frames
+    // Preload animated pixel art celestial 6-Winged Seraphim & Garuda wing spritesheets, 4-dir Chada Helmet, Cuirass, Bracers & Sabatons
     this.wingAssetImg = null;
     this.wingPixelSheet = null;
     this.wingPixelFrames = [];
+    this.wingGarudaSheet = null;
+    this.wingGarudaFrames = [];
+    this.helmetChadaSheet = null;
+    this.helmetChadaFrames = {};
+    this.armorCelestialSheet = null;
+    this.armorCelestialFrames = {};
+    this.bracerCelestialSheet = null;
+    this.bracerCelestialFrames = {};
+    this.bootsCelestialSheet = null;
+    this.bootsCelestialFrames = {};
     if (typeof Image !== 'undefined') {
       this.wingAssetImg = new Image();
-      this.wingAssetImg.src = 'Assets/costumes/wings_celestial_gold.png';
+      this.wingAssetImg.src = 'Assets/costumes/wings_celestial_gold.png?v=seraphim_v1';
 
       this.wingPixelSheet = new Image();
-      this.wingPixelSheet.src = 'Assets/costumes/wings_pixel_spritesheet.png';
+      this.wingPixelSheet.src = 'Assets/costumes/wings_pixel_spritesheet.png?v=seraphim_v1';
 
       for (let i = 0; i < 5; i++) {
         const frameImg = new Image();
-        frameImg.src = `Assets/costumes/wings_pixel_${i}.png`;
+        frameImg.src = `Assets/costumes/wings_pixel_${i}.png?v=seraphim_v1`;
         this.wingPixelFrames.push(frameImg);
+      }
+
+      this.wingGarudaSheet = new Image();
+      this.wingGarudaSheet.src = 'Assets/costumes/wings_garuda_flame_sheet.png';
+
+      for (let i = 0; i < 4; i++) {
+        const gFrame = new Image();
+        gFrame.src = `Assets/costumes/wings_garuda_flame_${i}.png`;
+        this.wingGarudaFrames.push(gFrame);
+      }
+
+      this.helmetChadaSheet = new Image();
+      this.helmetChadaSheet.src = 'Assets/costumes/helmet_celestial_chada_sheet.png?v=chada_v1';
+
+      for (const d of ['south', 'east', 'north', 'west']) {
+        const hImg = new Image();
+        hImg.src = `Assets/costumes/helmet_celestial_chada_${d}.png?v=chada_v1`;
+        this.helmetChadaFrames[d] = hImg;
+      }
+
+      this.armorCelestialSheet = new Image();
+      this.armorCelestialSheet.src = 'Assets/costumes/armor_celestial_gold_sheet.png?v=cuirass_v1';
+
+      for (const d of ['south', 'east', 'north', 'west']) {
+        const aImg = new Image();
+        aImg.src = `Assets/costumes/armor_celestial_gold_${d}.png?v=cuirass_v1`;
+        this.armorCelestialFrames[d] = aImg;
+      }
+
+      this.bracerCelestialSheet = new Image();
+      this.bracerCelestialSheet.src = 'Assets/costumes/bracer_celestial_gold_sheet.png?v=bracer_v1';
+
+      for (const d of ['south', 'east', 'north', 'west']) {
+        const bImg = new Image();
+        bImg.src = `Assets/costumes/bracer_celestial_gold_${d}.png?v=bracer_v1`;
+        this.bracerCelestialFrames[d] = bImg;
+      }
+
+      this.bootsCelestialSheet = new Image();
+      this.bootsCelestialSheet.src = 'Assets/costumes/boots_celestial_gold_sheet.png?v=sabatons_v2';
+
+      for (const d of ['south', 'east', 'north', 'west']) {
+        const sImg = new Image();
+        sImg.src = `Assets/costumes/boots_celestial_gold_${d}.png?v=sabatons_v2`;
+        this.bootsCelestialFrames[d] = sImg;
       }
     }
 
@@ -199,6 +277,8 @@ class Player {
     this.targetPos = null;
     this.targetEnemy = null;
     this.targetPickup = null;
+    this.targetNpc = null;
+    this.speedBuffTimer = 0;
 
     // Migrate any starter/legacy potions into visible inventory slots
     this.syncLegacyPotionsToInventory();
@@ -253,10 +333,18 @@ class Player {
       spi: 0
     };
 
+    this.activeCardSpecials = {
+      tiger_crit: 0,
+      serpent_lifesteal: 0,
+      swordsman_double: 0,
+      asura_lightning: 0
+    };
+
     if (this.equipped) {
       for (const slotKey of ['weapon', 'helmet', 'armor', 'bracer', 'wings', 'pants', 'boots', 'talisman']) {
         const item = this.equipped[slotKey];
-        if (item && item.stats) {
+        if (!item) continue;
+        if (item.stats) {
           for (const [stKey, stVal] of Object.entries(item.stats)) {
             if (stKey === 'allStats') {
               this.equipmentBonuses.str += stVal;
@@ -265,6 +353,21 @@ class Player {
               this.equipmentBonuses.spi += stVal;
             } else if (this.equipmentBonuses[stKey] !== undefined) {
               this.equipmentBonuses[stKey] += stVal;
+            }
+          }
+        }
+        // Add bonuses & specials from any socketed Monster Soul Cards!
+        if (Array.isArray(item.sockets)) {
+          for (const sock of item.sockets) {
+            if (sock && sock.stats) {
+              for (const [ck, cv] of Object.entries(sock.stats)) {
+                if (this.equipmentBonuses[ck] !== undefined) {
+                  this.equipmentBonuses[ck] += cv;
+                }
+              }
+            }
+            if (sock && sock.specialKey && this.activeCardSpecials[sock.specialKey] !== undefined) {
+              this.activeCardSpecials[sock.specialKey] += 1;
             }
           }
         }
@@ -481,15 +584,30 @@ class Player {
     } else {
       this.mpPotions = 0;
     }
+
+    // Grant starter Monster Soul Cards once so player can immediately test socketing!
+    try {
+      if (window.ItemSystem && !localStorage.getItem('yaksha_starter_cards_v1')) {
+        localStorage.setItem('yaksha_starter_cards_v1', '1');
+        const c1 = window.ItemSystem.createItem('card_tiger');
+        const c2 = window.ItemSystem.createItem('card_serpent');
+        if (c1) this.inventory.push(c1);
+        if (c2) this.inventory.push(c2);
+      }
+    } catch (e) {}
   }
 
   addItem(item) {
     if (!this.inventory) this.inventory = [];
 
-    // If stackable item (e.g. potion)
+    // If stackable item (e.g. potion or monster card)
     if (item.maxStack && item.maxStack > 1) {
       for (const it of this.inventory) {
-        if (it && (it.templateKey === item.templateKey || it.itemType === item.itemType)) {
+        if (!it) continue;
+        const isSameTemplate = (it.templateKey && item.templateKey)
+          ? (it.templateKey === item.templateKey)
+          : (it.itemType && it.itemType === item.itemType);
+        if (isSameTemplate) {
           const space = (it.maxStack || 99) - (it.count || 1);
           if (space > 0) {
             const add = Math.min(space, item.count || 1);
@@ -504,6 +622,99 @@ class Player {
     if (this.inventory.length >= 999) return false;
     this.inventory.push(item);
     return true;
+  }
+
+  /**
+   * Sockets a Monster Soul Card from inventory (at cardBagIndex) into an equipment item (equipped or in bag).
+   * Supports calling as socketCardIntoTarget(cardBagIndex, targetItem) OR socketCardIntoTarget(cardBagIndex, targetType, targetRef).
+   */
+  socketCardIntoTarget(cardBagIndex, targetTypeOrItem, targetRef) {
+    if (!this.inventory || cardBagIndex < 0 || cardBagIndex >= this.inventory.length) {
+      return { ok: false, msg: 'ไม่พบการ์ดในกระเป๋า' };
+    }
+    const cardItem = this.inventory[cardBagIndex];
+    if (!cardItem || (cardItem.slot !== 'card' && cardItem.itemType !== 'monster_card')) {
+      return { ok: false, msg: 'ไอเทมที่เลือกไม่ใช่การ์ดดวงจิตอสูร' };
+    }
+
+    let targetItem = null;
+    if (targetTypeOrItem && typeof targetTypeOrItem === 'object') {
+      targetItem = targetTypeOrItem;
+    } else if (targetTypeOrItem === 'equipped' && this.equipped) {
+      targetItem = this.equipped[targetRef];
+    } else if (targetTypeOrItem === 'inventory' && Array.isArray(this.inventory)) {
+      targetItem = this.inventory[targetRef];
+    }
+
+    if (!targetItem || !window.ItemSystem) {
+      return { ok: false, msg: 'ไม่พบอุปกรณ์ที่ต้องการฝังการ์ด' };
+    }
+
+    const ok = window.ItemSystem.socketCardIntoEquipment(targetItem, cardItem);
+    if (!ok) {
+      return { ok: false, msg: 'อุปกรณ์นี้มีช่องฝังการ์ดเต็มแล้ว [2/2]' };
+    }
+
+    cardItem.count = (cardItem.count || 1) - 1;
+    if (cardItem.count <= 0) {
+      this.inventory.splice(cardBagIndex, 1);
+    }
+
+    this.computeStats();
+    if (window.soundSystem && window.soundSystem.playLevelUp) {
+      window.soundSystem.playLevelUp();
+    }
+    if (window.effectsManager) {
+      window.effectsManager.addDamageText(this.x, this.y - 48, `🃏 ฝัง [${cardItem.name}] สำเร็จ!`, 'crit');
+      window.effectsManager.addAuraBurst(this.x, this.y, '#c084fc', 28);
+    }
+    if (window.game && window.game.scheduleSave) {
+      window.game.scheduleSave(400);
+    }
+    return { ok: true, item: targetItem };
+  }
+
+  /**
+   * Removes all socketed Monster Soul Cards from an equipment item and returns them to the player's bag.
+   * Supports calling as unsocketCardsFromTarget(targetItem) OR unsocketCardsFromTarget(targetType, targetRef).
+   */
+  unsocketCardsFromTarget(targetTypeOrItem, targetRef) {
+    let targetItem = null;
+    if (targetTypeOrItem && typeof targetTypeOrItem === 'object') {
+      targetItem = targetTypeOrItem;
+    } else if (targetTypeOrItem === 'equipped' && this.equipped) {
+      targetItem = this.equipped[targetRef];
+    } else if (targetTypeOrItem === 'inventory' && Array.isArray(this.inventory)) {
+      targetItem = this.inventory[targetRef];
+    }
+
+    if (!targetItem || !Array.isArray(targetItem.sockets) || targetItem.sockets.length === 0) {
+      return { ok: false, msg: 'อุปกรณ์นี้ยังไม่ได้ฝังการ์ดดวงจิต' };
+    }
+    if (!window.ItemSystem) return { ok: false, msg: 'ระบบไอเทมยังไม่พร้อม' };
+
+    for (const sock of targetItem.sockets) {
+      if (sock && sock.cardKey) {
+        const restoredCard = window.ItemSystem.createItem(sock.cardKey);
+        if (restoredCard) {
+          this.addItem(restoredCard);
+        }
+      }
+    }
+    targetItem.sockets = [];
+    window.ItemSystem.updateSocketedItemName(targetItem);
+    this.computeStats();
+
+    if (window.soundSystem && window.soundSystem.playClick) {
+      window.soundSystem.playClick();
+    }
+    if (window.effectsManager) {
+      window.effectsManager.addDamageText(this.x, this.y - 45, `🔓 ถอดการ์ดดวงจิตคืนกระเป๋าแล้ว!`, 'heal_mp');
+    }
+    if (window.game && window.game.scheduleSave) {
+      window.game.scheduleSave(400);
+    }
+    return { ok: true, item: targetItem };
   }
 
   // Allocate 1 or more stat points to a specific stat ('str', 'vit', 'agi', 'spi')
@@ -656,6 +867,122 @@ class Player {
     return false;
   }
 
+  useConsumableByIndex(index) {
+    if (!Array.isArray(this.inventory) || index < 0 || index >= this.inventory.length) return false;
+    const item = this.inventory[index];
+    if (!item) return false;
+
+    const key = item.templateKey || item.key;
+    const itemType = item.itemType;
+    let used = false;
+
+    // 1. HP Potion / Gourd
+    if (itemType === 'hp_potion' || key === 'pot_hp_gourd') {
+      if (this.hp < this.maxHp) {
+        const heal = Math.floor(this.maxHp * 0.45);
+        this.hp = Math.min(this.maxHp, this.hp + heal);
+        if (window.soundSystem && window.soundSystem.playPotion) window.soundSystem.playPotion();
+        if (window.effectsManager) {
+          window.effectsManager.addDamageText(this.x, this.y - 30, `+${heal} HP`, 'heal_hp');
+          window.effectsManager.addAuraBurst(this.x, this.y, '#22c55e', 18);
+        }
+        used = true;
+      } else {
+        if (window.effectsManager) window.effectsManager.addDamageText(this.x, this.y - 30, 'พลังชีวิตเต็มแล้ว', 'normal');
+        return false;
+      }
+    }
+    // 2. MP Potion / Gourd
+    else if (itemType === 'mp_potion' || key === 'pot_mp_gourd') {
+      if (this.mp < this.maxMp) {
+        const mana = Math.floor(this.maxMp * 0.5);
+        this.mp = Math.min(this.maxMp, this.mp + mana);
+        if (window.soundSystem && window.soundSystem.playPotion) window.soundSystem.playPotion();
+        if (window.effectsManager) {
+          window.effectsManager.addDamageText(this.x, this.y - 30, `+${mana} MP`, 'heal_mp');
+          window.effectsManager.addAuraBurst(this.x, this.y, '#38bdf8', 18);
+        }
+        used = true;
+      } else {
+        if (window.effectsManager) window.effectsManager.addDamageText(this.x, this.y - 30, 'มานาเต็มแล้ว', 'normal');
+        return false;
+      }
+    }
+    // 3. Herbal Sticky Rice (Food +150 HP)
+    else if (key === 'food_herbal_rice' || itemType === 'hp_food') {
+      if (this.hp < this.maxHp) {
+        const heal = 150;
+        this.hp = Math.min(this.maxHp, this.hp + heal);
+        if (window.soundSystem && window.soundSystem.playPowerUp) window.soundSystem.playPowerUp();
+        else if (window.soundSystem && window.soundSystem.playPotion) window.soundSystem.playPotion();
+        if (window.effectsManager) {
+          window.effectsManager.addDamageText(this.x, this.y - 30, `+${heal} HP (อิ่มทิพย์)`, 'heal_hp');
+          window.effectsManager.addAuraBurst(this.x, this.y, '#84cc16', 16);
+        }
+        used = true;
+      } else {
+        if (window.effectsManager) window.effectsManager.addDamageText(this.x, this.y - 30, 'พลังชีวิตเต็มแล้ว', 'normal');
+        return false;
+      }
+    }
+    // 4. Magic Coconut Water (Drink +80 MP)
+    else if (key === 'drink_magic_coconut' || itemType === 'mp_food') {
+      if (this.mp < this.maxMp) {
+        const mana = 80;
+        this.mp = Math.min(this.maxMp, this.mp + mana);
+        if (window.soundSystem && window.soundSystem.playPowerUp) window.soundSystem.playPowerUp();
+        else if (window.soundSystem && window.soundSystem.playPotion) window.soundSystem.playPotion();
+        if (window.effectsManager) {
+          window.effectsManager.addDamageText(this.x, this.y - 30, `+${mana} MP (สดชื่น)`, 'heal_mp');
+          window.effectsManager.addAuraBurst(this.x, this.y, '#06b6d4', 16);
+        }
+        used = true;
+      } else {
+        if (window.effectsManager) window.effectsManager.addDamageText(this.x, this.y - 30, 'มานาเต็มแล้ว', 'normal');
+        return false;
+      }
+    }
+    // 5. Wind Speed Elixir (+35% speed for 30s)
+    else if (key === 'elixir_wind_speed' || itemType === 'speed_potion') {
+      this.speedBuffTimer = 30.0;
+      if (window.soundSystem && window.soundSystem.playDash) window.soundSystem.playDash();
+      else if (window.soundSystem && window.soundSystem.playPowerUp) window.soundSystem.playPowerUp();
+      if (window.effectsManager) {
+        window.effectsManager.addDamageText(this.x, this.y - 32, `⚡ วายุภักษ์ (+35% Spd 30วิ)`, 'crit');
+        window.effectsManager.addAuraBurst(this.x, this.y, '#38bdf8', 26);
+      }
+      used = true;
+    }
+    // 6. Town Portal Scroll (วาร์ปกลับจุดเกิด 1600, 1600)
+    else if (key === 'scroll_town_portal' || itemType === 'town_portal') {
+      this.x = 1600;
+      this.y = 1600;
+      this.clearTargets();
+      if (window.soundSystem && window.soundSystem.playGong) window.soundSystem.playGong(1.4);
+      else if (window.soundSystem && window.soundSystem.playLevelUp) window.soundSystem.playLevelUp();
+      if (window.effectsManager) {
+        window.effectsManager.addDamageText(this.x, this.y - 45, `📍 วาร์ปกลับสู่อารามหิมพานต์!`, 'crit');
+        window.effectsManager.addAuraBurst(this.x, this.y, '#a855f7', 35);
+      }
+      used = true;
+    }
+
+    if (used) {
+      item.count = (item.count || 1) - 1;
+      if (item.count <= 0) {
+        this.inventory.splice(index, 1);
+      }
+      if (window.inventoryUI && window.inventoryUI.isOpen) {
+        window.inventoryUI.render();
+      }
+      if (window.game && window.game.scheduleSave) {
+        window.game.scheduleSave(600);
+      }
+      return true;
+    }
+    return false;
+  }
+
   takeDamage(amount) {
     if (this.invulnerableTime > 0 || this.isDead) return 0;
 
@@ -742,14 +1069,49 @@ class Player {
       }
     }
 
-    // Damage enemies (No knockback on normal attack)
+    // Damage enemies (No knockback on normal attack) + Socketed Monster Soul Card Special Effects!
+    const specials = this.activeCardSpecials || {};
     for (const enemy of hitTargets) {
       const isCrit = Math.random() < (this.critRate || 0.15);
       const strBonus = 1.0 + ((this.str - 10) * 0.015);
-      const totalMult = strBonus * (isCrit ? 1.85 : 1.0) * (this.roarBuffTime > 0 ? 1.75 : 1.0);
+      const critMult = isCrit ? (1.85 + (specials.tiger_crit || 0) * 0.25) : 1.0;
+      const totalMult = strBonus * critMult * (this.roarBuffTime > 0 ? 1.75 : 1.0);
       const dmg = Math.floor(this.attack * totalMult * (0.94 + Math.random() * 0.14));
 
       enemy.takeDamage(dmg, isCrit, this, 0);
+
+      // 1. Serpent Card Lifesteal (8% per card)
+      if ((specials.serpent_lifesteal || 0) > 0 && this.hp < this.maxHp) {
+        const stealAmt = Math.max(2, Math.round(dmg * 0.08 * specials.serpent_lifesteal));
+        this.hp = Math.min(this.maxHp, this.hp + stealAmt);
+        if (window.effectsManager) {
+          window.effectsManager.addDamageText(this.x, this.y - 38, `+${stealAmt} HP (ดูดเลือดนาคา)`, 'heal_hp');
+        }
+      }
+
+      // 2. Swordsman Card Double Strike (25% chance per card)
+      if ((specials.swordsman_double || 0) > 0 && !enemy.isDead && Math.random() < Math.min(0.65, specials.swordsman_double * 0.25)) {
+        const extraDmg = Math.max(5, Math.round(dmg * 0.55));
+        setTimeout(() => {
+          if (enemy && !enemy.isDead) {
+            enemy.takeDamage(extraDmg, true, this, 0);
+            if (window.effectsManager) {
+              window.effectsManager.addDamageText(enemy.x, enemy.y - 44, '⚡ ดาบคู่ผีสิง!', 'crit');
+              window.effectsManager.addAuraBurst(enemy.x, enemy.y, '#38bdf8', 12);
+            }
+          }
+        }, 110);
+      }
+
+      // 3. Asura Boss Card Lightning Proc (30% chance per card)
+      if ((specials.asura_lightning || 0) > 0 && !enemy.isDead && Math.random() < Math.min(0.75, specials.asura_lightning * 0.30)) {
+        const boltDmg = Math.max(12, Math.round(this.attack * 0.55 * specials.asura_lightning));
+        enemy.takeDamage(boltDmg, true, this, 20);
+        if (window.effectsManager) {
+          window.effectsManager.addDamageText(enemy.x, enemy.y - 54, `🌩️ สายฟ้าท้าวอสูร!`, 'crit');
+          window.effectsManager.addAuraBurst(enemy.x, enemy.y, '#c084fc', 20);
+        }
+      }
     }
 
     return true;
@@ -996,12 +1358,14 @@ class Player {
     this.targetPos = { x, y };
     this.targetEnemy = null;
     this.targetPickup = null;
+    this.targetNpc = null;
   }
 
   setTargetEnemy(enemy, enemies, boss) {
     this.targetEnemy = enemy;
     this.targetPos = null;
     this.targetPickup = null;
+    this.targetNpc = null;
 
     // Check if already in attack range -> attack immediately!
     const dist = Math.hypot(enemy.x - this.x, enemy.y - this.y);
@@ -1019,12 +1383,29 @@ class Player {
     this.targetPickup = pickup;
     this.targetEnemy = null;
     this.targetPos = null;
+    this.targetNpc = null;
+  }
+
+  setTargetNpc(npc) {
+    this.targetNpc = npc;
+    this.targetEnemy = null;
+    this.targetPickup = null;
+    this.targetPos = null;
+
+    const dist = Math.hypot(npc.x - this.x, npc.y - this.y);
+    if (dist <= 75) {
+      if (window.npcManager) {
+        window.npcManager.interact(npc, this);
+      }
+      this.targetNpc = null;
+    }
   }
 
   clearTargets() {
     this.targetPos = null;
     this.targetEnemy = null;
     this.targetPickup = null;
+    this.targetNpc = null;
   }
 
   performMove(dirX, dirY, dt, map) {
@@ -1098,15 +1479,25 @@ class Player {
       this.lungeVy = 0;
     }
 
-    // Roar buff update
+    // Roar & Elixir Speed Buff updates
+    let speedMult = 1.0;
     if (this.roarBuffTime > 0) {
       this.roarBuffTime -= dt;
-      this.speed = this.baseSpeed * 1.4;
+      speedMult *= 1.4;
       this.attack = this.baseAttack * 1.75;
     } else {
-      this.speed = this.baseSpeed;
       this.attack = this.baseAttack;
     }
+
+    if (this.speedBuffTimer > 0) {
+      this.speedBuffTimer -= dt;
+      speedMult *= 1.35;
+      if (Math.random() < 0.25 && window.effectsManager) {
+        window.effectsManager.addAuraBurst(this.x + (Math.random() - 0.5) * 16, this.y, '#38bdf8', 4);
+      }
+    }
+
+    this.speed = this.baseSpeed * speedMult;
 
     // Process Cursed Bleed DoT (คำสาปโลหิต) - Mitigated by VIT bleed resistance
     if (this.bleedTimer > 0) {
@@ -1209,6 +1600,29 @@ class Player {
             this.targetPickup = null;
             this.isMoving = false;
           }
+        }
+      }
+    } else if (this.targetNpc) {
+      const ndx = this.targetNpc.x - this.x;
+      const ndy = this.targetNpc.y - this.y;
+      const distToNpc = Math.hypot(ndx, ndy);
+
+      if (distToNpc <= 75) {
+        // Arrived in talk range -> Open shop interaction!
+        this.isMoving = false;
+        this.animFrame = 0;
+        this.animTimer = 0;
+        this.updateDirectionFromVector(ndx, ndy);
+        if (window.npcManager) {
+          window.npcManager.interact(this.targetNpc, this);
+        }
+        this.targetNpc = null;
+      } else {
+        // Walk towards NPC
+        const moved = this.performMove(ndx / distToNpc, ndy / distToNpc, dt, map);
+        if (!moved) {
+          this.targetNpc = null;
+          this.isMoving = false;
         }
       }
     } else if (this.targetPos) {
@@ -1354,6 +1768,9 @@ class Player {
     if (sprite) {
       ctx.save();
       ctx.imageSmoothingEnabled = false; // Crisp pixel art without blur or distortion
+      if (this.shouldMaskBaseLowerLegs(this.dir)) {
+        this.applyLowerLegMaskClip(ctx, sx, sy + jumpY, this.renderScale || 1.45, this.dir);
+      }
       ctx.drawImage(sprite, sx - anchorX, sy - anchorY + jumpY, drawW, drawH);
       ctx.restore();
     } else {
@@ -1367,8 +1784,14 @@ class Player {
     // 3. Royal Thai Warrior Pants / Greaves Layer (สนับเพลายกพรายทองกนก)
     this.renderEquippedPants(ctx, sx, sy, jumpY, now);
 
-    // 4. Royal Thai Golden Sabatons (ฉลองพระบาททองคำปลายงอนชดช้อย)
+    // 4. Celestial Archangel Lower-Body Leg Armor & Winged Golden Sabatons (ชุดเกราะขาและฉลองพระบาททองคำปลายงอนติดปีกสวรรค์)
     this.renderEquippedBoots(ctx, sx, sy, jumpY, now);
+
+    // 4.5. Celestial Archangel Golden Cuirass & Winged Pauldrons (เกราะอกทับทรวงและอินธนูปีกสวรรค์ 4 ทิศทาง)
+    this.renderEquippedArmor(ctx, sx, sy, jumpY, now);
+
+    // 4.8. Celestial Archangel Winged Golden Bracers / Gauntlets (สนับกรปลอกแขนทองคำปีกสวรรค์ 4 ทิศทาง)
+    this.renderEquippedBracer(ctx, sx, sy, jumpY, now);
 
     // 5. Divine Royal Crest / Golden Chada Halo (Rendered above head)
     this.renderEquippedHelmet(ctx, sx, sy, jumpY, now);
@@ -1382,9 +1805,9 @@ class Player {
       ctx.textAlign = 'center';
       ctx.lineWidth = 3;
       ctx.strokeStyle = '#0f172a';
-      ctx.strokeText(comboText, sx, sy - 84 + jumpY);
+      ctx.strokeText(comboText, sx, sy - 92 + jumpY);
       ctx.fillStyle = comboColor;
-      ctx.fillText(comboText, sx, sy - 84 + jumpY);
+      ctx.fillText(comboText, sx, sy - 92 + jumpY);
       ctx.restore();
     }
 
@@ -1394,9 +1817,9 @@ class Player {
     ctx.textAlign = 'center';
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#0f172a';
-    ctx.strokeText(`ยักษ์ไทย Lv.${this.level}`, sx, sy - 68);
+    ctx.strokeText(`ยักษ์ไทย Lv.${this.level}`, sx, sy - 76 + jumpY);
     ctx.fillStyle = '#fde047';
-    ctx.fillText(`ยักษ์ไทย Lv.${this.level}`, sx, sy - 68);
+    ctx.fillText(`ยักษ์ไทย Lv.${this.level}`, sx, sy - 76 + jumpY);
     ctx.restore();
 
     // Active Destination Ground Waypoint Marker
@@ -1446,76 +1869,201 @@ class Player {
     }
   }
 
-  // --- Live Visual Representation: Dual Luminous Angelic / Mythological Wings ---
+  // --- Live Visual Representation: Dual Luminous Garuda Flame / Celestial Wings ---
   renderEquippedWings(ctx, sx, sy, jumpY, now) {
     if (!this.equipped || !this.equipped.wings) return;
     const wingItem = this.equipped.wings;
-    const style = wingItem.wingStyle || 'emerald';
+    const style = wingItem.wingStyle || 'fire';
     const currentScale = this.renderScale || 1.45;
     const sRatio = currentScale / 1.45;
+    const isGaruda = (style === 'fire' || wingItem.key === 'wg_garuda_infernal' || (wingItem.name && wingItem.name.includes('ครุฑ')));
 
     ctx.save();
-    const wingBaseX = sx;
-    const wingBaseY = sy - (28 * sRatio) + jumpY;
 
-    // Flap cycle speed: 4.8 rad/s when idle, 8.2 rad/s when running
-    const flapSpeed = this.isMoving ? 8.2 : 4.8;
-    const flapSway = Math.sin(now * flapSpeed) * 0.14;
-    const flapScaleX = 0.85 + Math.sin(now * flapSpeed) * 0.08;
-    const flapScaleY = 0.85 - Math.sin(now * flapSpeed) * 0.05;
+    // 1. Directional Perspective & 3D Depth
+    const dir = this.dir || 'south';
+    const isFacingWest = (dir === 'west' || dir === 'northwest' || dir === 'southwest');
+    const isSide = (dir === 'east' || dir === 'west' || dir === 'northeast' || dir === 'northwest' || dir === 'southeast' || dir === 'southwest');
 
-    // Attach wings to upper back / shoulder blades behind character torso
-    const wingAttachY = sy - ((this.isMoving ? 38 : 34) * sRatio) + jumpY;
-    ctx.translate(sx, wingAttachY);
+    // Mount wings on the upper back / scapula behind the chest
+    const attachOffsetY = (this.isMoving ? 30 : 29) * sRatio;
+    let wingAttachX = sx;
+    let wingAttachY = sy - attachOffsetY + jumpY;
 
-    // 1. Render Authentic Animated 16-Bit Pixel Art Celestial Wings
-    let pixelDrawn = false;
-    const flapFps = this.isMoving ? 8.5 : 5.0;
-    const totalFrames = 5;
-    const frameIdx = Math.floor((now * flapFps) % totalFrames);
-
-    const sheet = this.wingPixelSheet;
-    const singleFrame = this.wingPixelFrames && this.wingPixelFrames[frameIdx];
-
-    const frameW = 84;
-    const frameH = 56;
-    const scale = currentScale * 1.15;
-    const drawW = frameW * scale;
-    const drawH = frameH * scale;
-
-    // Anchor precisely at jewel center (42, 40) to mount on upper back
-    const anchorDrawX = 42 * scale;
-    const anchorDrawY = 40 * scale;
-    const drawX = -anchorDrawX;
-    const drawY = -anchorDrawY;
-
-    ctx.save();
-    ctx.imageSmoothingEnabled = false; // Authentic retro pixel art with sharp edges
-
-    if (sheet && sheet.complete && sheet.naturalWidth > 0) {
-      const srcX = frameIdx * frameW;
-      ctx.drawImage(sheet, srcX, 0, frameW, frameH, drawX, drawY, drawW, drawH);
-      pixelDrawn = true;
-    } else if (singleFrame && singleFrame.complete && singleFrame.naturalWidth > 0) {
-      ctx.drawImage(singleFrame, drawX, drawY, drawW, drawH);
-      pixelDrawn = true;
+    if (isSide) {
+      // Offset anchor toward the back of the walking torso
+      wingAttachX += (isFacingWest ? 6 : -6) * sRatio;
     }
-    ctx.restore();
 
-    if (pixelDrawn) {
-      // Golden celestial pixel stardust motes floating around wing tips
+    ctx.translate(wingAttachX, wingAttachY);
+
+    if (isSide) {
+      // Side-view foreshortening: compress width to 62% and apply subtle isometric tilt
+      ctx.scale(isFacingWest ? -0.62 : 0.62, 1.0);
+      ctx.rotate(isFacingWest ? -0.06 : 0.06);
+    }
+
+    // 2. Natural Smooth Wing Flap Sway (Sine wave oscillation)
+    const flapSpeed = this.isMoving ? 7.2 : 4.5;
+    const flapSway = Math.sin(now * flapSpeed) * 0.04;
+    const flapScaleY = 1.0 + Math.sin(now * flapSpeed) * 0.035;
+    const flapScaleX = 1.0 - Math.sin(now * flapSpeed) * 0.02;
+    ctx.scale(flapScaleX, flapScaleY);
+    ctx.rotate(flapSway);
+
+    // 3. Render Authentic 16-Bit Pixel Art Garuda Infernal Flame Wings
+    let pixelDrawn = false;
+    if (isGaruda) {
+      const totalFrames = 4;
+      const flapFps = this.isMoving ? 7.5 : 4.8;
+      const frameIdx = Math.floor((now * flapFps) % totalFrames);
+
+      const sheet = this.wingGarudaSheet;
+      const singleFrame = this.wingGarudaFrames && this.wingGarudaFrames[frameIdx];
+
+      const frameW = 96;
+      const frameH = 64;
+      const scale = currentScale * 0.96;
+      const drawW = frameW * scale;
+      const drawH = frameH * scale;
+
+      // Anchor precisely at the golden lotus brooch center (48, 42)
+      const anchorDrawX = 48 * scale;
+      const anchorDrawY = 42 * scale;
+      const drawX = -anchorDrawX;
+      const drawY = -anchorDrawY;
+
       ctx.save();
-      const pTime = now * 3.8;
-      for (let i = 0; i < 5; i++) {
-        const px = Math.sin(pTime + i * 1.35) * (36 * scale);
-        const py = -Math.cos(pTime * 0.8 + i * 1.1) * (22 * scale) - (12 * scale);
-        const pAlpha = 0.45 + Math.sin(pTime * 2.5 + i) * 0.45;
-        ctx.fillStyle = i % 2 === 0 ? `rgba(253, 224, 71, ${pAlpha})` : `rgba(255, 255, 255, ${pAlpha})`;
-        ctx.fillRect(Math.round(px), Math.round(py), 2, 2);
+      ctx.imageSmoothingEnabled = false; // Authentic crisp 16-bit pixel art
+
+      if (sheet && sheet.complete && sheet.naturalWidth > 0) {
+        const srcX = frameIdx * frameW;
+        ctx.drawImage(sheet, srcX, 0, frameW, frameH, drawX, drawY, drawW, drawH);
+        pixelDrawn = true;
+      } else if (singleFrame && singleFrame.complete && singleFrame.naturalWidth > 0) {
+        ctx.drawImage(singleFrame, drawX, drawY, drawW, drawH);
+        pixelDrawn = true;
       }
       ctx.restore();
+
+      if (pixelDrawn) {
+        // Blazing holy flame ember particles floating upwards from flame wingtips
+        ctx.save();
+        const pTime = now * 4.2;
+        for (let i = 0; i < 6; i++) {
+          const px = Math.sin(pTime + i * 1.25) * (36 * scale);
+          const py = -((pTime * 20 + i * 16) % (38 * scale)) - (8 * scale);
+          const pAlpha = 0.35 + Math.sin(pTime * 2.8 + i) * 0.35;
+          ctx.fillStyle = i % 2 === 0 ? `rgba(249, 115, 22, ${pAlpha})` : `rgba(250, 204, 21, ${pAlpha})`;
+          ctx.fillRect(Math.round(px), Math.round(py), 2, 2);
+        }
+        ctx.restore();
+        ctx.restore();
+        return;
+      }
+    } else {
+      // Seraphim 6-Winged Pure White & Holy Gold Archangel Wings (5-frame loop, 160x105 per frame)
+      const flapFps = this.isMoving ? 8.0 : 4.8;
+      const totalFrames = 5;
+      const frameIdx = Math.floor((now * flapFps) % totalFrames);
+
+      const sheet = this.wingPixelSheet;
+      const singleFrame = this.wingPixelFrames && this.wingPixelFrames[frameIdx];
+
+      const frameW = 160;
+      const frameH = 105;
+      const scale = currentScale * 0.72;
+      const drawW = frameW * scale;
+      const drawH = frameH * scale;
+
+      // Anchor precisely at the center golden sapphire brooch (80, 65)
+      const anchorDrawX = 80 * scale;
+      const anchorDrawY = 65 * scale;
+      const drawX = -anchorDrawX;
+      const drawY = -anchorDrawY;
+
+      // 1. Divine Seraphim Halo & Celestial Aura Glow behind the 6 wings
+      ctx.save();
+      const haloPulse = 0.85 + Math.sin(now * 3.2) * 0.15;
+      const auraGrad = ctx.createRadialGradient(0, -10 * scale, 6, 0, -10 * scale, 68 * scale);
+      auraGrad.addColorStop(0, `rgba(255, 255, 255, ${0.38 * haloPulse})`);
+      auraGrad.addColorStop(0.45, `rgba(125, 211, 252, ${0.24 * haloPulse})`);
+      auraGrad.addColorStop(0.75, `rgba(253, 224, 71, ${0.14 * haloPulse})`);
+      auraGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = auraGrad;
+      ctx.beginPath();
+      ctx.arc(0, -10 * scale, 68 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Golden Seraphim Halo Ring behind upper shoulders
+      ctx.strokeStyle = `rgba(253, 224, 71, ${0.42 * haloPulse})`;
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.ellipse(0, -28 * scale, 22 * scale, 7 * scale, 0, 0, Math.PI * 2);
+      ctx.stroke();
       ctx.restore();
-      return;
+
+      // 2. Draw 6-Winged Seraphim Pixel Art Sprite
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+
+      if (sheet && sheet.complete && sheet.naturalWidth > 0) {
+        const actualFW = Math.round(sheet.naturalWidth / totalFrames) || frameW;
+        const actualFH = sheet.naturalHeight || frameH;
+        const srcX = frameIdx * actualFW;
+        ctx.drawImage(sheet, srcX, 0, actualFW, actualFH, drawX, drawY, drawW, drawH);
+        pixelDrawn = true;
+      } else if (singleFrame && singleFrame.complete && singleFrame.naturalWidth > 0) {
+        ctx.drawImage(singleFrame, drawX, drawY, drawW, drawH);
+        pixelDrawn = true;
+      }
+      ctx.restore();
+
+      if (pixelDrawn) {
+        // 3. Falling Angelic Feathers & Starlight Sparkles (ขนนกแสงสีขาว-ทองร่วงโปรยปราย)
+        ctx.save();
+        const featherCount = this.isMoving ? 7 : 5;
+        for (let i = 0; i < featherCount; i++) {
+          const cycle = (now * (this.isMoving ? 0.85 : 0.55) + i * 0.37) % 1.0;
+          const side = (i % 2 === 0) ? 1 : -1;
+          const baseSpan = (18 + (i % 3) * 18) * scale * side;
+          const swayX = Math.sin(now * 3.4 + i * 1.7) * (8 * scale);
+          const fx = baseSpan + swayX;
+          const fy = (-24 * scale) + cycle * (58 * scale);
+          const alpha = Math.sin(cycle * Math.PI) * 0.90;
+
+          ctx.save();
+          ctx.translate(fx, fy);
+          ctx.rotate(Math.sin(now * 2.8 + i) * 0.45 + (side * 0.25));
+          // Glowing golden-white angel feather silhouette
+          ctx.fillStyle = (i % 3 === 0)
+            ? `rgba(253, 224, 71, ${alpha})`
+            : `rgba(255, 255, 255, ${alpha})`;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.4 * scale, 1.3 * scale, 0, 0, Math.PI * 2);
+          ctx.fill();
+          // Feather quill highlight
+          ctx.fillStyle = `rgba(186, 230, 253, ${alpha * 0.85})`;
+          ctx.fillRect(-1.5 * scale, -0.4 * scale, 3.0 * scale, 0.8 * scale);
+          ctx.restore();
+        }
+
+        // Twinkling celestial starlight glints near wingtips
+        for (let s = 0; s < 4; s++) {
+          const st = now * 4.0 + s * 1.57;
+          const sAlpha = Math.max(0, Math.sin(st) * 0.85);
+          if (sAlpha > 0.1) {
+            const sxPos = (s % 2 === 0 ? 1 : -1) * (32 + (s * 11)) * scale;
+            const syPos = (-26 + (s % 2) * 18) * scale + Math.cos(st) * 4;
+            ctx.fillStyle = `rgba(255, 255, 255, ${sAlpha})`;
+            ctx.fillRect(Math.round(sxPos) - 1, Math.round(syPos) - 3, 2, 6);
+            ctx.fillRect(Math.round(sxPos) - 3, Math.round(syPos) - 1, 6, 2);
+          }
+        }
+        ctx.restore();
+        ctx.restore();
+        return;
+      }
     }
 
     // Color theme configuration per wingStyle (Procedural Fallback)
@@ -1634,55 +2182,175 @@ class Player {
     ctx.restore();
   }
 
-  // --- Live Visual Representation: Helmet / Headwear / Royal Crest / Halo ---
-  renderEquippedHelmet(ctx, sx, sy, jumpY, now) {
+  // --- Live Visual Representation: Helmet / Headwear / 4-Directional Celestial Archangel Golden Chada Crown ---
+  renderEquippedHelmet(ctx, sx, sy, jumpY, now, forceDir = null) {
     if (!this.equipped || !this.equipped.helmet) return;
     const helm = this.equipped.helmet;
-    const helmKey = helm.key || helm.id || '';
+    const helmKey = helm.templateKey || helm.key || helm.id || '';
     const currentScale = this.renderScale || 1.45;
     const sRatio = currentScale / 1.45;
 
     ctx.save();
-    const hx = sx;
-    const hy = sy - (44 * sRatio) + jumpY;
 
-    if (helmKey.includes('chada') || helmKey.includes('deva')) {
-      // Golden Chada Pinnacle / Divine Lotus Halo
-      const bobY = Math.sin(now * 3.5) * 1.5 * sRatio;
-      const haloR = (14 + Math.sin(now * 4) * 1.5) * sRatio;
+    if (helmKey.includes('chada') || helmKey.includes('deva') || helm.helmetStyle === 'celestial_chada') {
+      // 1. Determine 4-Directional Orientation (South / East / North / West)
+      const rawDir = forceDir || this.dir || 'south';
+      let dir4 = 'south';
+      if (rawDir === 'north') {
+        dir4 = 'north';
+      } else if (rawDir === 'east' || rawDir === 'south-east' || rawDir === 'north-east' || rawDir === 'southeast' || rawDir === 'northeast') {
+        dir4 = 'east';
+      } else if (rawDir === 'west' || rawDir === 'south-west' || rawDir === 'north-west' || rawDir === 'southwest' || rawDir === 'northwest') {
+        dir4 = 'west';
+      }
 
-      // Halo ring
-      ctx.strokeStyle = 'rgba(253, 224, 71, 0.75)';
-      ctx.lineWidth = 1.8 * sRatio;
-      ctx.setLineDash([4 * sRatio, 2 * sRatio]);
+      const dirIndexMap = { south: 0, east: 1, north: 2, west: 3 };
+      const frameIdx = dirIndexMap[dir4] || 0;
+
+      // 2. Precision Head Anchor & Motion Synchronization (Breathing / Walking / Attacking)
+      const dirOffsets = {
+        south: [-0.5, 0.0],
+        east:  [0.5, 0.5],
+        north: [-0.5, 1.5],
+        west:  [-1.0, 0.5]
+      };
+      let [ox, oy] = dirOffsets[dir4] || [0, 0];
+
+      // Subtle diagonal perspective adjustment
+      if (rawDir.includes('north') && (dir4 === 'east' || dir4 === 'west')) {
+        oy += 0.4;
+      }
+
+      // Synchronize vertical bounce with idle breathing, walking stride frames, and attack swings
+      let motionOffsetX = 0;
+      let motionOffsetY = 0;
+      let headTilt = 0;
+
+      if (this.isAttacking && !forceDir) {
+        const progress = Math.max(0, Math.min(1, 1 - (this.attackTime / (this.attackDuration || 0.35))));
+        const swingArc = Math.sin(progress * Math.PI);
+        motionOffsetY += swingArc * 1.2 * currentScale;
+        if (dir4 === 'east') {
+          motionOffsetX += swingArc * 1.4 * currentScale;
+          headTilt = swingArc * 0.06;
+        } else if (dir4 === 'west') {
+          motionOffsetX -= swingArc * 1.4 * currentScale;
+          headTilt = -swingArc * 0.06;
+        }
+      } else if (this.isMoving && !forceDir) {
+        // Walking frames (68x68 anchored at 57) have base head 1px higher and bounce 1px on stride frames 2,3,6,7
+        const strideUp = (this.animFrame === 2 || this.animFrame === 3 || this.animFrame === 6 || this.animFrame === 7) ? -1.0 : 0.0;
+        motionOffsetY += (-1.0 + strideUp) * currentScale;
+        if (dir4 === 'east') headTilt = 0.03;
+        else if (dir4 === 'west') headTilt = -0.03;
+      } else {
+        // Gentle idle breathing oscillation
+        motionOffsetY += Math.sin(now * 3.2) * 0.45 * sRatio;
+      }
+
+      const hx = sx + (ox * currentScale) + motionOffsetX;
+      const hy = sy - ((41.0 - oy) * currentScale) + jumpY + motionOffsetY;
+
+      const hScale = currentScale * 0.46;
+      const cellW = 96;
+      const cellH = 96;
+      const drawW = cellW * hScale;
+      const drawH = cellH * hScale;
+      const anchorX = 48 * hScale;
+      const anchorY = 74 * hScale;
+
+      ctx.translate(hx, hy);
+      if (headTilt !== 0) {
+        ctx.rotate(headTilt);
+      }
+
+      // 3. Sacred Celestial Halo & Starlight Aura behind the Golden Chada Spire
+      const pulse = 0.85 + Math.sin(now * 3.8) * 0.15;
+      const spireCenterY = -28 * hScale;
+
+      // Soft radial divine glow (Sky-Blue & Holy Gold)
+      const auraGrad = ctx.createRadialGradient(0, spireCenterY, 2, 0, spireCenterY, 34 * hScale);
+      auraGrad.addColorStop(0, `rgba(254, 240, 138, ${0.38 * pulse})`);
+      auraGrad.addColorStop(0.5, `rgba(56, 189, 248, ${0.22 * pulse})`);
+      auraGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+      ctx.fillStyle = auraGrad;
       ctx.beginPath();
-      ctx.ellipse(hx, hy + bobY - (4 * sRatio), haloR, haloR * 0.45, 0, 0, Math.PI * 2);
+      ctx.arc(0, spireCenterY, 34 * hScale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Golden Starlight Halo Ring encircling the Chada spire
+      const haloR = (21 + Math.sin(now * 4.2) * 1.2) * hScale;
+      ctx.save();
+      ctx.strokeStyle = `rgba(253, 224, 71, ${0.72 * pulse})`;
+      ctx.lineWidth = 1.4 * sRatio;
+      ctx.setLineDash([3.5 * sRatio, 2.5 * sRatio]);
+      ctx.beginPath();
+      ctx.ellipse(0, -34 * hScale, haloR, haloR * 0.36, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.setLineDash([]);
+      ctx.restore();
 
-      // Spire Crest (Golden Chada / Tri-flame)
-      ctx.fillStyle = '#fde047';
+      // 4. Draw 4-Directional 16-Bit Pixel Art Celestial Archangel Golden Chada Crown
+      const singleImg = this.helmetChadaFrames && this.helmetChadaFrames[dir4];
+      const sheetImg = this.helmetChadaSheet;
+      let drawn = false;
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      if (singleImg && singleImg.complete && singleImg.naturalWidth > 0) {
+        ctx.drawImage(singleImg, -anchorX, -anchorY, drawW, drawH);
+        drawn = true;
+      } else if (sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0) {
+        ctx.drawImage(sheetImg, frameIdx * cellW, 0, cellW, cellH, -anchorX, -anchorY, drawW, drawH);
+        drawn = true;
+      }
+      ctx.restore();
+
+      if (!drawn) {
+        // Fallback golden spire while image loads
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.moveTo(0, -24 * sRatio);
+        ctx.lineTo(6 * sRatio, -2 * sRatio);
+        ctx.lineTo(-6 * sRatio, -2 * sRatio);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 5. Twinkling 4-Point Diamond Starlight Glint on the Chada Pinnacle Tip
+      const tipX = dir4 === 'east' ? -7 * hScale : (dir4 === 'west' ? 7 * hScale : 0);
+      const tipY = -55 * hScale;
+      const starPulse = (Math.sin(now * 6.5) + 1) * 0.5;
+      const starLen = (3.5 + starPulse * 3.0) * sRatio;
+
+      ctx.save();
+      ctx.translate(tipX, tipY);
+      ctx.fillStyle = `rgba(255, 255, 255, ${0.7 + starPulse * 0.3})`;
       ctx.beginPath();
-      ctx.moveTo(hx, hy + bobY - (14 * sRatio)); // Tip
-      ctx.lineTo(hx + (5 * sRatio), hy + bobY - (2 * sRatio));
-      ctx.lineTo(hx - (5 * sRatio), hy + bobY - (2 * sRatio));
+      ctx.moveTo(0, -starLen);
+      ctx.lineTo(starLen * 0.28, -starLen * 0.28);
+      ctx.lineTo(starLen, 0);
+      ctx.lineTo(starLen * 0.28, starLen * 0.28);
+      ctx.lineTo(0, starLen);
+      ctx.lineTo(-starLen * 0.28, starLen * 0.28);
+      ctx.lineTo(-starLen, 0);
+      ctx.lineTo(-starLen * 0.28, -starLen * 0.28);
       ctx.closePath();
       ctx.fill();
 
-      // Ruby / Jewel Gem in center
-      ctx.fillStyle = '#ef4444';
-      ctx.beginPath();
-      ctx.arc(hx, hy + bobY - (4 * sRatio), 2.2 * sRatio, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Star sparkle at tip
-      const sparkle = (Math.sin(now * 6) + 1) * 0.5;
-      ctx.fillStyle = `rgba(255, 255, 255, ${0.6 + sparkle * 0.4})`;
-      ctx.beginPath();
-      ctx.arc(hx, hy + bobY - (14 * sRatio), 2.2 * sRatio, 0, Math.PI * 2);
-      ctx.fill();
+      // Tiny floating celestial stardust motes around the crown wings
+      for (let i = 0; i < 3; i++) {
+        const mPhase = now * 2.6 + i * 2.1;
+        const mx = Math.sin(mPhase) * (24 * hScale);
+        const my = (-18 - ((mPhase * 8) % 28)) * hScale;
+        const mAlpha = Math.max(0, Math.sin((mPhase % 2.5) / 2.5 * Math.PI) * 0.85);
+        ctx.fillStyle = i % 2 === 0 ? `rgba(224, 242, 254, ${mAlpha})` : `rgba(254, 240, 138, ${mAlpha})`;
+        ctx.fillRect(Math.round(mx), Math.round(my), Math.ceil(1.6 * sRatio), Math.ceil(1.6 * sRatio));
+      }
+      ctx.restore();
     } else if (helmKey.includes('naga')) {
-      // Emerald Naga Crest
+      const hx = sx;
+      const hy = sy - (44 * sRatio) + jumpY;
       const bobY = Math.sin(now * 3) * 1.2 * sRatio;
       ctx.fillStyle = '#10b981';
       ctx.beginPath();
@@ -1692,14 +2360,16 @@ class Player {
       ctx.lineWidth = 1.5 * sRatio;
       ctx.stroke();
     } else if (helmKey.includes('iron')) {
-      // Iron Horn Crest
+      const hx = sx;
+      const hy = sy - (44 * sRatio) + jumpY;
       ctx.strokeStyle = '#94a3b8';
       ctx.lineWidth = 2 * sRatio;
       ctx.beginPath();
       ctx.arc(hx, hy - (2 * sRatio), 7 * sRatio, Math.PI * 0.8, Math.PI * 2.2);
       ctx.stroke();
     } else {
-      // Sacred Cloth Band
+      const hx = sx;
+      const hy = sy - (44 * sRatio) + jumpY;
       ctx.fillStyle = 'rgba(248, 113, 113, 0.85)';
       ctx.beginPath();
       ctx.ellipse(hx, hy + (2 * sRatio), 8 * sRatio, 3 * sRatio, 0, 0, Math.PI * 2);
@@ -1713,14 +2383,14 @@ class Player {
   renderEquippedBootsTrail(ctx, sx, sy, now) {
     if (!this.isMoving || !this.equipped || !this.equipped.boots) return;
     const boots = this.equipped.boots;
-    const bKey = boots.key || boots.id || '';
+    const bKey = boots.templateKey || boots.key || boots.id || '';
 
     ctx.save();
     const trailPulse = Math.sin(now * 10) * 0.5 + 0.5;
     const trailX = sx - Math.cos(this.getFacingAngle()) * 12;
     const trailY = sy + 2 - Math.sin(this.getFacingAngle()) * 6;
 
-    if (bKey.includes('wind') || bKey.includes('celestial') || bKey.includes('garuda')) {
+    if (bKey.includes('wind') || bKey.includes('celestial') || bKey.includes('garuda') || boots.bootsStyle === 'celestial_gold') {
       ctx.fillStyle = bKey.includes('garuda') ? 'rgba(249, 115, 22, 0.45)' : 'rgba(56, 189, 248, 0.45)';
       ctx.beginPath();
       ctx.arc(trailX, trailY, 3 + trailPulse * 2, 0, Math.PI * 2);
@@ -1729,77 +2399,103 @@ class Player {
     ctx.restore();
   }
 
-  // --- Live Visual Representation: Pants / Greaves / สนับเพลายกพรายทองกนก ---
-  renderEquippedPants(ctx, sx, sy, jumpY, now) {
+  // --- Helper: Check if 4-Directional Celestial Lower-Body Leg Armor & Sabatons is active and loaded ---
+  shouldMaskBaseLowerLegs(rawDir = 'south') {
+    if (!this.equipped || !this.equipped.boots) return false;
+    const boots = this.equipped.boots;
+    const bKey = boots.templateKey || boots.key || '';
+    const isCelestialGold = bKey.includes('celestial') || bKey.includes('deva') || bKey.includes('gold') || boots.bootsStyle === 'celestial_gold';
+    if (!isCelestialGold) return false;
+
+    let dir4 = 'south';
+    if (rawDir === 'north') {
+      dir4 = 'north';
+    } else if (rawDir === 'east' || rawDir === 'south-east' || rawDir === 'north-east' || rawDir === 'southeast' || rawDir === 'northeast') {
+      dir4 = 'east';
+    } else if (rawDir === 'west' || rawDir === 'south-west' || rawDir === 'north-west' || rawDir === 'southwest' || rawDir === 'northwest') {
+      dir4 = 'west';
+    }
+
+    const singleImg = this.bootsCelestialFrames && this.bootsCelestialFrames[dir4];
+    const sheetImg = this.bootsCelestialSheet;
+    return Boolean(
+      (singleImg && singleImg.complete && singleImg.naturalWidth > 0) ||
+      (sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0)
+    );
+  }
+
+  // --- Helper: Clip out base sprite's lower legs & brown feet while preserving head, torso, arms, hands, and weapon ---
+  applyLowerLegMaskClip(ctx, sx, sy, scale, rawDir = 'south') {
+    const isProfile = (
+      rawDir === 'east' || rawDir === 'west' ||
+      rawDir === 'south-east' || rawDir === 'north-east' ||
+      rawDir === 'south-west' || rawDir === 'north-west'
+    );
+    const thighHalfW = (isProfile ? 7.5 : 12.2) * scale;
+    const footHalfW = 15.0 * scale;
+
+    ctx.beginPath();
+    // 1. Upper body, head, shoulders, chest, and upper arms (everything above sy - 13.5 * scale)
+    ctx.rect(sx - 90 * scale, sy - 110 * scale, 180 * scale, 96.5 * scale);
+    // 2. Left & Right outer hand/weapon zones beside the thighs (sy - 13.5*scale down to sy - 7.5*scale)
+    ctx.rect(sx - 90 * scale, sy - 13.5 * scale, (90 * scale) - thighHalfW, 6.0 * scale);
+    ctx.rect(sx + thighHalfW, sy - 13.5 * scale, (90 * scale) - thighHalfW, 6.0 * scale);
+    // 3. Outer weapon swing zones below sy - 7.5*scale (outside the feet)
+    ctx.rect(sx - 90 * scale, sy - 7.5 * scale, (90 * scale) - footHalfW, 40 * scale);
+    ctx.rect(sx + footHalfW, sy - 7.5 * scale, (90 * scale) - footHalfW, 40 * scale);
+    ctx.clip();
+  }
+
+  // --- Live Visual Representation: Pants / Greaves / สนับเพลายกพรายทองกนก (4-Directional Pixel Art) ---
+  renderEquippedPants(ctx, sx, sy, jumpY, now, forceDir = null) {
     if (!this.equipped || !this.equipped.pants) return;
+    // When Celestial Winged Sabatons are also equipped, renderEquippedBoots renders the complete unified Pha-Nung + Greaves + Sabatons seamlessly
+    if (this.shouldMaskBaseLowerLegs(forceDir || this.dir || 'south')) return;
+
     const pants = this.equipped.pants;
     const pKey = pants.templateKey || pants.key || '';
     const currentScale = this.renderScale || 1.45;
     const sRatio = currentScale / 1.45;
-
-    ctx.save();
-    const hipY = sy - (18 * sRatio) + jumpY;
-    const walkBob = this.isMoving ? Math.sin(now * 8) * 1.5 * sRatio : 0;
     const isDevaGold = pKey.includes('indra') || pKey.includes('deva') || pKey.includes('gold');
 
-    // 1. Silk Dhoti / Pha-Nung Base (ผ้านุ่งไหมยกทอง)
-    ctx.fillStyle = isDevaGold ? '#7f1d1d' : '#334155'; // Royal crimson or dark indigo
-    ctx.beginPath();
-    ctx.ellipse(sx, hipY + (4 * sRatio), 11 * sRatio, 7 * sRatio, 0, 0, Math.PI * 2);
-    ctx.fill();
+    const rawDir = forceDir || this.dir || 'south';
+    let dir4 = 'south';
+    if (rawDir === 'north') {
+      dir4 = 'north';
+    } else if (rawDir === 'east' || rawDir === 'south-east' || rawDir === 'north-east' || rawDir === 'southeast' || rawDir === 'northeast') {
+      dir4 = 'east';
+    } else if (rawDir === 'west' || rawDir === 'south-west' || rawDir === 'north-west' || rawDir === 'southwest' || rawDir === 'northwest') {
+      dir4 = 'west';
+    }
 
-    // 2. Pleated Front Draped Sash (ชายไหว / ชายแครง ลายกนก)
-    const sashSwing = this.isMoving ? Math.sin(now * 8) * 2.5 * sRatio : Math.sin(now * 3) * 0.8 * sRatio;
-    ctx.fillStyle = isDevaGold ? '#991b1b' : '#475569';
-    ctx.beginPath();
-    ctx.moveTo(sx - (4 * sRatio), hipY + (2 * sRatio));
-    ctx.lineTo(sx + (4 * sRatio), hipY + (2 * sRatio));
-    ctx.lineTo(sx + (3 * sRatio) + sashSwing, hipY + (13 * sRatio) + walkBob);
-    ctx.lineTo(sx - (3 * sRatio) + sashSwing, hipY + (13 * sRatio) + walkBob);
-    ctx.closePath();
-    ctx.fill();
+    const singleImg = this.bootsCelestialFrames && this.bootsCelestialFrames[dir4];
+    const sheetImg = this.bootsCelestialSheet;
+    if (isDevaGold && ((singleImg && singleImg.complete && singleImg.naturalWidth > 0) || (sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0))) {
+      // Draw only the Upper Royal Crimson-Gold Pha-Nung & Center Kanok Sash (y: 0..68)
+      const dirIndexMap = { south: 0, east: 1, north: 2, west: 3 };
+      const frameIdx = dirIndexMap[dir4] || 0;
+      const dirOffsets = { south: [-0.5, 0.0], east: [0.5, 0.0], north: [-0.5, 0.0], west: [-0.5, 0.0] };
+      const [ox, oy] = dirOffsets[dir4] || [0, 0];
+      const lScale = currentScale * 0.50;
+      const bx = sx + ox * currentScale;
+      const by = sy + oy * currentScale + jumpY;
+      const anchorX = 48 * lScale;
+      const anchorY = 84 * lScale;
 
-    // Golden Kanok Embroidered Hem (ดิ้นทองลายกนก)
-    ctx.strokeStyle = isDevaGold ? '#fde047' : '#94a3b8';
-    ctx.lineWidth = 1.6 * sRatio;
-    ctx.stroke();
-
-    // 3. Ornate Golden Belt (ปั้นเหน่งเข็มขัดทองคำลงยา)
-    ctx.strokeStyle = '#eab308';
-    ctx.lineWidth = 2.2 * sRatio;
-    ctx.beginPath();
-    ctx.arc(sx, hipY + (1 * sRatio), 9 * sRatio, 0.25, Math.PI - 0.25);
-    ctx.stroke();
-
-    // Glowing Ruby Buckle Gem (หัวเข็มขัดทับทิมเทวราช)
-    ctx.fillStyle = '#ef4444';
-    ctx.beginPath();
-    ctx.arc(sx, hipY + (1 * sRatio), 2.4 * sRatio, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(sx - (0.6 * sRatio), hipY + (0.4 * sRatio), 0.8 * sRatio, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 4. Armored Knee-Plate Greaves (สนับเข่าทองคำสลักเสลา)
-    const leftLegX = sx - (6 * sRatio) + (this.isMoving ? -walkBob * 1.2 : 0);
-    const rightLegX = sx + (6 * sRatio) + (this.isMoving ? walkBob * 1.2 : 0);
-    const kneeY = hipY + (10 * sRatio);
-
-    ctx.fillStyle = isDevaGold ? '#facc15' : '#cbd5e1';
-    ctx.beginPath();
-    ctx.ellipse(leftLegX, kneeY, 2.8 * sRatio, 4 * sRatio, -0.15, 0, Math.PI * 2);
-    ctx.ellipse(rightLegX, kneeY, 2.8 * sRatio, 4 * sRatio, 0.15, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = isDevaGold ? '#ca8a04' : '#64748b';
-    ctx.lineWidth = 1.0 * sRatio;
-    ctx.stroke();
-
-    ctx.restore();
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(bx, by);
+      if (singleImg && singleImg.complete && singleImg.naturalWidth > 0) {
+        ctx.drawImage(singleImg, 0, 0, 96, 68, -anchorX, -anchorY, 96 * lScale, 68 * lScale);
+      } else {
+        ctx.drawImage(sheetImg, frameIdx * 96, 0, 96, 68, -anchorX, -anchorY, 96 * lScale, 68 * lScale);
+      }
+      ctx.restore();
+    }
   }
 
-  // --- Live Visual Representation: Boots / Sabatons / ฉลองพระบาททองคำปลายงอนชดช้อย ---
-  renderEquippedBoots(ctx, sx, sy, jumpY, now) {
+  // --- Live Visual Representation: Complete 4-Directional Celestial Archangel Leg Armor & Winged Golden Sabatons ---
+  renderEquippedBoots(ctx, sx, sy, jumpY, now, forceDir = null) {
     if (!this.equipped || !this.equipped.boots) return;
     const boots = this.equipped.boots;
     const bKey = boots.templateKey || boots.key || '';
@@ -1807,65 +2503,152 @@ class Player {
     const sRatio = currentScale / 1.45;
 
     ctx.save();
-    const isDevaGold = bKey.includes('celestial') || bKey.includes('deva') || bKey.includes('garuda') || bKey.includes('wind');
-    const walkPhase = this.isMoving ? Math.sin(now * 8) : 0;
-    const leftFootLift = walkPhase > 0 ? -walkPhase * 3.5 * sRatio : 0;
-    const rightFootLift = walkPhase < 0 ? walkPhase * 3.5 * sRatio : 0;
+    const isCelestialGold = bKey.includes('celestial') || bKey.includes('deva') || bKey.includes('gold') || boots.bootsStyle === 'celestial_gold';
 
-    const leftX = sx - (7 * sRatio);
-    const leftY = sy - (3 * sRatio) + jumpY + leftFootLift;
-    const rightX = sx + (7 * sRatio);
-    const rightY = sy - (3 * sRatio) + jumpY + rightFootLift;
+    if (isCelestialGold) {
+      // 1. Determine 4-Directional Orientation (South / East / North / West)
+      const rawDir = forceDir || this.dir || 'south';
+      let dir4 = 'south';
+      if (rawDir === 'north') {
+        dir4 = 'north';
+      } else if (rawDir === 'east' || rawDir === 'south-east' || rawDir === 'north-east' || rawDir === 'southeast' || rawDir === 'northeast') {
+        dir4 = 'east';
+      } else if (rawDir === 'west' || rawDir === 'south-west' || rawDir === 'north-west' || rawDir === 'southwest' || rawDir === 'northwest') {
+        dir4 = 'west';
+      }
 
-    // Draw pair of boots with traditional Thai curled upward tips
-    const drawSingleBoot = (bx, by, isLeft) => {
-      // Golden Boot Body
-      ctx.fillStyle = isDevaGold ? '#facc15' : '#78716c';
-      ctx.beginPath();
-      ctx.ellipse(bx, by, 3.8 * sRatio, 2.5 * sRatio, 0, 0, Math.PI * 2);
-      ctx.fill();
+      const dirIndexMap = { south: 0, east: 1, north: 2, west: 3 };
+      const frameIdx = dirIndexMap[dir4] || 0;
 
-      // Characteristic Traditional Thai Upward Curled Toe (ปลายงอนกนกชดช้อย)
-      if (isDevaGold) {
-        ctx.strokeStyle = '#fde047';
-        ctx.lineWidth = 2.0 * sRatio;
-        ctx.beginPath();
-        if (isLeft) {
-          ctx.moveTo(bx - (3 * sRatio), by);
-          ctx.quadraticCurveTo(bx - (7 * sRatio), by + (1 * sRatio), bx - (8.5 * sRatio), by - (3.5 * sRatio)); // Upturned Kanok tip
-        } else {
-          ctx.moveTo(bx + (3 * sRatio), by);
-          ctx.quadraticCurveTo(bx + (7 * sRatio), by + (1 * sRatio), bx + (8.5 * sRatio), by - (3.5 * sRatio));
+      // 2. Calibrated Lower-Body & Foot Anchor Offsets per Direction
+      const dirOffsets = {
+        south: [-0.5, 0.0],
+        east:  [0.5, 0.0],
+        north: [-0.5, 0.0],
+        west:  [-0.5, 0.0]
+      };
+      const [ox, oy] = dirOffsets[dir4] || [0, 0];
+
+      const bx = sx + (ox * currentScale);
+      const by = sy + (oy * currentScale) + jumpY;
+
+      const lScale = currentScale * 0.50;
+      const cellW = 96;
+      const cellH = 96;
+      const drawW = cellW * lScale;
+      const drawH = cellH * lScale;
+      const anchorX = 48 * lScale;
+      const anchorY = 84 * lScale;
+
+      const singleImg = this.bootsCelestialFrames && this.bootsCelestialFrames[dir4];
+      const sheetImg = this.bootsCelestialSheet;
+      const hasSingle = Boolean(singleImg && singleImg.complete && singleImg.naturalWidth > 0);
+      const hasSheet = Boolean(sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0);
+
+      const drawSubRect = (srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH) => {
+        if (hasSingle) {
+          ctx.drawImage(singleImg, srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
+        } else if (hasSheet) {
+          ctx.drawImage(sheetImg, frameIdx * cellW + srcX, srcY, srcW, srcH, dstX, dstY, dstW, dstH);
         }
-        ctx.stroke();
+      };
 
-        // Ruby Jewel Stud at Ankle Collar
-        ctx.fillStyle = '#ef4444';
-        ctx.beginPath();
-        ctx.arc(bx, by - (2 * sRatio), 1.3 * sRatio, 0, Math.PI * 2);
-        ctx.fill();
+      const walkPhase = (this.isMoving && !forceDir) ? Math.sin(now * 10.5) : 0;
 
-        // Golden Ankle Anklet Ring (กำไลข้อเท้าทองคำ)
-        ctx.strokeStyle = '#eab308';
-        ctx.lineWidth = 1.2 * sRatio;
-        ctx.beginPath();
-        ctx.ellipse(bx, by - (2.5 * sRatio), 3.2 * sRatio, 1.2 * sRatio, 0, 0, Math.PI * 2);
-        ctx.stroke();
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(bx, by);
+
+      if (this.isMoving && !forceDir && (dir4 === 'south' || dir4 === 'north')) {
+        // Articulated Front/Back Stride: Upper Pha-Nung + Independent Left/Right Greave-Sabaton + Swaying Center Kanok Sash
+        const hipBobY = -Math.abs(walkPhase) * 0.9 * sRatio;
+        const leftLift = walkPhase > 0 ? -walkPhase * 3.4 * sRatio : walkPhase * 1.0 * sRatio;
+        const rightLift = walkPhase < 0 ? walkPhase * 3.4 * sRatio : -walkPhase * 1.0 * sRatio;
+        const sashSwingX = walkPhase * 1.5 * sRatio;
+
+        // 1. Upper Hip Royal Pha-Nung (y: 0..60)
+        drawSubRect(0, 0, 96, 60, -anchorX, -anchorY + hipBobY, 96 * lScale, 60 * lScale);
+        // 2. Left Leg Knee Guard + Shin Greave + Winged Sabaton (x: 0..42, y: 58..96)
+        drawSubRect(0, 58, 42, 38, -anchorX, -anchorY + 58 * lScale + leftLift, 42 * lScale, 38 * lScale);
+        // 3. Right Leg Knee Guard + Shin Greave + Winged Sabaton (x: 54..96, y: 58..96)
+        drawSubRect(54, 58, 42, 38, -anchorX + 54 * lScale, -anchorY + 58 * lScale + rightLift, 42 * lScale, 38 * lScale);
+        // 4. Center Royal Kanok Sash / Rear Drape (x: 41..55, y: 55..74) swaying over inner thighs
+        drawSubRect(41, 55, 14, 19, -anchorX + 41 * lScale + sashSwingX, -anchorY + 55 * lScale + hipBobY, 14 * lScale, 19 * lScale);
+      } else if (this.isMoving && !forceDir && (dir4 === 'east' || dir4 === 'west')) {
+        // Articulated 2-Legged Side Profile Scissor Stride (Foreground Winged Leg & Background Leg stride past each other!)
+        const strideX = walkPhase * 2.6 * sRatio;
+        const frontLiftY = walkPhase > 0 ? -walkPhase * 2.4 * sRatio : 0;
+        const backLiftY = walkPhase < 0 ? walkPhase * 2.4 * sRatio : 0;
+        const hipBobY = -Math.abs(walkPhase) * 0.9 * sRatio;
+
+        // 1. Upper Hip Pha-Nung & Front Hanging Sash (y: 0..67)
+        drawSubRect(0, 0, 96, 67, -anchorX + strideX * 0.25, -anchorY + hipBobY, 96 * lScale, 67 * lScale);
+
+        if (dir4 === 'east') {
+          // 2. Background Left Leg & Sabaton (x: 50..96, y: 66..96)
+          drawSubRect(50, 66, 46, 30, -anchorX + 50 * lScale - strideX, -anchorY + 66 * lScale + backLiftY, 46 * lScale, 30 * lScale);
+          // 3. Foreground Right Winged Leg & Sabaton (x: 0..50, y: 66..96)
+          drawSubRect(0, 66, 50, 30, -anchorX + strideX, -anchorY + 66 * lScale + frontLiftY, 50 * lScale, 30 * lScale);
+        } else {
+          // 2. Background Right Leg & Sabaton (x: 0..46, y: 66..96)
+          drawSubRect(0, 66, 46, 30, -anchorX + strideX, -anchorY + 66 * lScale + backLiftY, 46 * lScale, 30 * lScale);
+          // 3. Foreground Left Winged Leg & Sabaton (x: 46..96, y: 66..96)
+          drawSubRect(46, 66, 50, 30, -anchorX + 46 * lScale - strideX, -anchorY + 66 * lScale + frontLiftY, 50 * lScale, 30 * lScale);
+        }
       } else {
+        // Idle stance or Attack lunge
+        let attackLungeX = 0;
+        if (this.isAttacking && !forceDir) {
+          const progress = Math.max(0, Math.min(1, 1 - (this.attackTime / (this.attackDuration || 0.35))));
+          const swingArc = Math.sin(progress * Math.PI);
+          if (dir4 === 'east') attackLungeX = swingArc * 1.2 * sRatio;
+          else if (dir4 === 'west') attackLungeX = -swingArc * 1.2 * sRatio;
+        }
+        drawSubRect(0, 0, cellW, cellH, -anchorX + attackLungeX, -anchorY, drawW, drawH);
+      }
+
+      // Subtle Cyan Sapphire Gem Glow on Ankle & Sash Gems
+      if ((hasSingle || hasSheet) && dir4 !== 'north') {
+        const gemPulse = 0.6 + Math.sin(now * 4.8) * 0.4;
+        ctx.fillStyle = `rgba(56, 189, 248, ${0.22 * gemPulse})`;
+        if (dir4 === 'south') {
+          ctx.beginPath();
+          ctx.arc(0, -18 * lScale, 3.5 * lScale, 0, Math.PI * 2);
+          ctx.arc(-14 * lScale, -10 * lScale, 3.0 * lScale, 0, Math.PI * 2);
+          ctx.arc(14 * lScale, -10 * lScale, 3.0 * lScale, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    } else {
+      const walkPhase = this.isMoving ? Math.sin(now * 8) : 0;
+      const leftFootLift = walkPhase > 0 ? -walkPhase * 3.5 * sRatio : 0;
+      const rightFootLift = walkPhase < 0 ? walkPhase * 3.5 * sRatio : 0;
+
+      const leftX = sx - (7 * sRatio);
+      const leftY = sy - (3 * sRatio) + jumpY + leftFootLift;
+      const rightX = sx + (7 * sRatio);
+      const rightY = sy - (3 * sRatio) + jumpY + rightFootLift;
+
+      const drawSingleBoot = (bx, by) => {
+        ctx.fillStyle = '#78716c';
         ctx.strokeStyle = '#44403c';
         ctx.lineWidth = 1.2 * sRatio;
+        ctx.beginPath();
+        ctx.ellipse(bx, by, 3.8 * sRatio, 2.5 * sRatio, 0, 0, Math.PI * 2);
+        ctx.fill();
         ctx.stroke();
-      }
-    };
+      };
 
-    drawSingleBoot(leftX, leftY, true);
-    drawSingleBoot(rightX, rightY, false);
+      drawSingleBoot(leftX, leftY);
+      drawSingleBoot(rightX, rightY);
+    }
 
     ctx.restore();
   }
 
-  // --- Live Visual Representation: Armor / Cuirass / Pauldrons ---
-  renderEquippedArmor(ctx, sx, sy, jumpY, now) {
+  // --- Live Visual Representation: Armor / 4-Directional Celestial Archangel Golden Cuirass & Winged Pauldrons ---
+  renderEquippedArmor(ctx, sx, sy, jumpY, now, forceDir = null) {
     if (!this.equipped || !this.equipped.armor) return;
     const armor = this.equipped.armor;
     const aKey = armor.templateKey || armor.key || '';
@@ -1873,37 +2656,230 @@ class Player {
     const sRatio = currentScale / 1.45;
 
     ctx.save();
-    const chestY = sy - (26 * sRatio) + jumpY;
-    const isGold = aKey.includes('gold') || aKey.includes('suvarn') || aKey.includes('asura') || aKey.includes('gem') || aKey.includes('indra');
-    const isNaga = aKey.includes('naga');
+    const isCelestialGold = aKey.includes('gold') || aKey.includes('suvarn') || aKey.includes('asura') || aKey.includes('gem') || aKey.includes('indra') || armor.armorStyle === 'celestial_gold';
 
-    // Torso Breastplate Relief
-    ctx.fillStyle = isGold ? 'rgba(234, 179, 8, 0.88)' : isNaga ? 'rgba(16, 185, 129, 0.88)' : 'rgba(100, 116, 139, 0.88)';
-    ctx.strokeStyle = isGold ? '#fde047' : isNaga ? '#6ee7b7' : '#cbd5e1';
-    ctx.lineWidth = 1.2 * sRatio;
-    ctx.beginPath();
-    ctx.ellipse(sx, chestY, 8 * sRatio, 6 * sRatio, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+    if (isCelestialGold) {
+      // 1. Determine 4-Directional Orientation (South / East / North / West)
+      const rawDir = forceDir || this.dir || 'south';
+      let dir4 = 'south';
+      if (rawDir === 'north') {
+        dir4 = 'north';
+      } else if (rawDir === 'east' || rawDir === 'south-east' || rawDir === 'north-east' || rawDir === 'southeast' || rawDir === 'northeast') {
+        dir4 = 'east';
+      } else if (rawDir === 'west' || rawDir === 'south-west' || rawDir === 'north-west' || rawDir === 'southwest' || rawDir === 'northwest') {
+        dir4 = 'west';
+      }
 
-    // Central Core Gemstone
-    ctx.fillStyle = isGold ? '#ef4444' : isNaga ? '#06b6d4' : '#f59e0b';
-    ctx.beginPath();
-    ctx.arc(sx, chestY - (1 * sRatio), 2.2 * sRatio, 0, Math.PI * 2);
-    ctx.fill();
+      const dirIndexMap = { south: 0, east: 1, north: 2, west: 3 };
+      const frameIdx = dirIndexMap[dir4] || 0;
 
-    // Shoulder Pauldrons (สนับไหล่กนกอสูร)
-    const leftPldX = sx - (11 * sRatio);
-    const rightPldX = sx + (11 * sRatio);
-    const pldY = chestY - (3 * sRatio);
+      // 2. Torso & Shoulder Anchor Offsets per Direction
+      const dirOffsets = {
+        south: [-0.5, -0.5],
+        east:  [-1.0, -0.5],
+        north: [-0.5, -1.5],
+        west:  [0.5, -0.5]
+      };
+      const [ox, oy] = dirOffsets[dir4] || [0, 0];
 
-    ctx.fillStyle = isGold ? '#ca8a04' : '#475569';
-    ctx.strokeStyle = isGold ? '#fde047' : '#94a3b8';
-    ctx.beginPath();
-    ctx.ellipse(leftPldX, pldY, 3.5 * sRatio, 4.5 * sRatio, -0.25, 0, Math.PI * 2);
-    ctx.ellipse(rightPldX, pldY, 3.5 * sRatio, 4.5 * sRatio, 0.25, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
+      // Synchronize chest/shoulder motion with breathing, walking stride frames, and attack swings
+      let motionOffsetX = 0;
+      let motionOffsetY = 0;
+      let torsoTilt = 0;
+
+      if (this.isAttacking && !forceDir) {
+        const progress = Math.max(0, Math.min(1, 1 - (this.attackTime / (this.attackDuration || 0.35))));
+        const swingArc = Math.sin(progress * Math.PI);
+        motionOffsetY += swingArc * 0.9 * currentScale;
+        if (dir4 === 'east') {
+          motionOffsetX += swingArc * 1.1 * currentScale;
+          torsoTilt = swingArc * 0.04;
+        } else if (dir4 === 'west') {
+          motionOffsetX -= swingArc * 1.1 * currentScale;
+          torsoTilt = -swingArc * 0.04;
+        }
+      } else if (this.isMoving && !forceDir) {
+        const strideUp = (this.animFrame === 2 || this.animFrame === 3 || this.animFrame === 6 || this.animFrame === 7) ? -1.0 : 0.0;
+        motionOffsetY += (-0.8 + strideUp) * currentScale;
+        if (dir4 === 'east') torsoTilt = 0.025;
+        else if (dir4 === 'west') torsoTilt = -0.025;
+      } else {
+        // Gentle idle chest breathing expansion
+        motionOffsetY += Math.sin(now * 3.2) * 0.35 * sRatio;
+      }
+
+      const ax = sx + (ox * currentScale) + motionOffsetX;
+      const ay = sy - ((33.5 - oy) * currentScale) + jumpY + motionOffsetY;
+
+      const aScale = currentScale * 0.44;
+      const cellW = 96;
+      const cellH = 96;
+      const drawW = cellW * aScale;
+      const drawH = cellH * aScale;
+      const anchorX = 48 * aScale;
+      const anchorY = 38 * aScale;
+
+      ctx.translate(ax, ay);
+      if (torsoTilt !== 0) {
+        ctx.rotate(torsoTilt);
+      }
+
+      // 3. Draw 4-Directional 16-Bit Pixel Art Celestial Archangel Golden Cuirass & Winged Pauldrons
+      const singleImg = this.armorCelestialFrames && this.armorCelestialFrames[dir4];
+      const sheetImg = this.armorCelestialSheet;
+      let drawn = false;
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      if (singleImg && singleImg.complete && singleImg.naturalWidth > 0) {
+        ctx.drawImage(singleImg, -anchorX, -anchorY, drawW, drawH);
+        drawn = true;
+      } else if (sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0) {
+        ctx.drawImage(sheetImg, frameIdx * cellW, 0, cellW, cellH, -anchorX, -anchorY, drawW, drawH);
+        drawn = true;
+      }
+      ctx.restore();
+
+      // 4. Subtle Cyan Sapphire Chest Gem Glow (on Front / East / West views)
+      if (drawn && dir4 !== 'north') {
+        const gemPulse = 0.65 + Math.sin(now * 4.5) * 0.35;
+        const gemX = dir4 === 'east' ? 16 * aScale : (dir4 === 'west' ? -16 * aScale : 0);
+        const gemY = 12 * aScale;
+        const gemGrad = ctx.createRadialGradient(gemX, gemY, 0.5, gemX, gemY, 8 * aScale);
+        gemGrad.addColorStop(0, `rgba(224, 242, 254, ${0.55 * gemPulse})`);
+        gemGrad.addColorStop(0.5, `rgba(56, 189, 248, ${0.28 * gemPulse})`);
+        gemGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+        ctx.fillStyle = gemGrad;
+        ctx.beginPath();
+        ctx.arc(gemX, gemY, 8 * aScale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      const chestY = sy - (26 * sRatio) + jumpY;
+      const isNaga = aKey.includes('naga');
+
+      ctx.fillStyle = isNaga ? 'rgba(16, 185, 129, 0.88)' : 'rgba(100, 116, 139, 0.88)';
+      ctx.strokeStyle = isNaga ? '#6ee7b7' : '#cbd5e1';
+      ctx.lineWidth = 1.2 * sRatio;
+      ctx.beginPath();
+      ctx.ellipse(sx, chestY, 8 * sRatio, 6 * sRatio, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = isNaga ? '#06b6d4' : '#f59e0b';
+      ctx.beginPath();
+      ctx.arc(sx, chestY - (1 * sRatio), 2.2 * sRatio, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  // --- Live Visual Representation: Bracer / Armguards / 4-Directional Celestial Archangel Winged Golden Bracers ---
+  renderEquippedBracer(ctx, sx, sy, jumpY, now, forceDir = null) {
+    if (!this.equipped || !this.equipped.bracer) return;
+    const bracer = this.equipped.bracer;
+    const brKey = bracer.templateKey || bracer.key || '';
+    const currentScale = this.renderScale || 1.45;
+    const sRatio = currentScale / 1.45;
+
+    ctx.save();
+    const isCelestialGold = brKey.includes('hanuman') || brKey.includes('celestial') || brKey.includes('gold') || bracer.bracerStyle === 'celestial_gold';
+
+    if (isCelestialGold) {
+      // 1. Determine 4-Directional Orientation (South / East / North / West)
+      const rawDir = forceDir || this.dir || 'south';
+      let dir4 = 'south';
+      if (rawDir === 'north') {
+        dir4 = 'north';
+      } else if (rawDir === 'east' || rawDir === 'south-east' || rawDir === 'north-east' || rawDir === 'southeast' || rawDir === 'northeast') {
+        dir4 = 'east';
+      } else if (rawDir === 'west' || rawDir === 'south-west' || rawDir === 'north-west' || rawDir === 'southwest' || rawDir === 'northwest') {
+        dir4 = 'west';
+      }
+
+      const dirIndexMap = { south: 0, east: 1, north: 2, west: 3 };
+      const frameIdx = dirIndexMap[dir4] || 0;
+
+      // 2. Forearm Anchor Offsets per Direction (calibrated to 48x48 Yaksha forearms)
+      const dirOffsets = {
+        south: [-0.5, 0.0],
+        east:  [-2.5, 0.0],
+        north: [-0.5, 0.0],
+        west:  [2.0, 0.0]
+      };
+      const [ox, oy] = dirOffsets[dir4] || [0, 0];
+
+      let motionOffsetX = 0;
+      let motionOffsetY = 0;
+
+      if (this.isAttacking && !forceDir) {
+        const progress = Math.max(0, Math.min(1, 1 - (this.attackTime / (this.attackDuration || 0.35))));
+        const swingArc = Math.sin(progress * Math.PI);
+        motionOffsetY -= swingArc * 2.0 * currentScale;
+        if (dir4 === 'east') motionOffsetX += swingArc * 2.2 * currentScale;
+        else if (dir4 === 'west') motionOffsetX -= swingArc * 2.2 * currentScale;
+      } else if (!this.isMoving || forceDir) {
+        // Gentle idle breathing follow
+        motionOffsetY += Math.sin(now * 3.2) * 0.4 * sRatio;
+      }
+
+      const brx = sx + (ox * currentScale) + motionOffsetX;
+      const bry = sy - ((14.5 - oy) * currentScale) + jumpY + motionOffsetY;
+
+      const bScale = currentScale * 0.48;
+      const cellW = 96;
+      const cellH = 96;
+      const drawW = cellW * bScale;
+      const drawH = cellH * bScale;
+      const anchorX = 48 * bScale;
+      const anchorY = 56 * bScale;
+
+      const singleImg = this.bracerCelestialFrames && this.bracerCelestialFrames[dir4];
+      const sheetImg = this.bracerCelestialSheet;
+
+      const walkSwing = (this.isMoving && !forceDir) ? Math.sin(now * 9.5) : 0;
+
+      ctx.save();
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(brx, bry);
+
+      if (this.isMoving && !forceDir && (dir4 === 'south' || dir4 === 'north')) {
+        // Independent Left & Right Arm Swing for Front/Back views
+        const leftArmY = -walkSwing * 2.0 * sRatio;
+        const rightArmY = walkSwing * 2.0 * sRatio;
+        const halfW = cellW / 2; // 48px
+        const halfDrawW = drawW / 2;
+
+        if (singleImg && singleImg.complete && singleImg.naturalWidth > 0) {
+          ctx.drawImage(singleImg, 0, 0, halfW, cellH, -anchorX, -anchorY + leftArmY, halfDrawW, drawH);
+          ctx.drawImage(singleImg, halfW, 0, halfW, cellH, 0, -anchorY + rightArmY, halfDrawW, drawH);
+        } else if (sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0) {
+          ctx.drawImage(sheetImg, frameIdx * cellW, 0, halfW, cellH, -anchorX, -anchorY + leftArmY, halfDrawW, drawH);
+          ctx.drawImage(sheetImg, frameIdx * cellW + halfW, 0, halfW, cellH, 0, -anchorY + rightArmY, halfDrawW, drawH);
+        }
+      } else {
+        const sideSwingX = (this.isMoving && !forceDir) ? walkSwing * 2.2 * sRatio : 0;
+        const sideSwingY = (this.isMoving && !forceDir) ? -Math.abs(walkSwing) * 1.2 * sRatio : 0;
+        if (singleImg && singleImg.complete && singleImg.naturalWidth > 0) {
+          ctx.drawImage(singleImg, -anchorX + sideSwingX, -anchorY + sideSwingY, drawW, drawH);
+        } else if (sheetImg && sheetImg.complete && sheetImg.naturalWidth > 0) {
+          ctx.drawImage(sheetImg, frameIdx * cellW, 0, cellW, cellH, -anchorX + sideSwingX, -anchorY + sideSwingY, drawW, drawH);
+        }
+      }
+      ctx.restore();
+    } else {
+      // Fallback forearm bands
+      const armY = sy - (18 * sRatio) + jumpY;
+      ctx.fillStyle = '#ca8a04';
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 1.2 * sRatio;
+      ctx.beginPath();
+      ctx.ellipse(sx - (12 * sRatio), armY, 2.5 * sRatio, 3.5 * sRatio, 0.2, 0, Math.PI * 2);
+      ctx.ellipse(sx + (12 * sRatio), armY, 2.5 * sRatio, 3.5 * sRatio, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
 
     ctx.restore();
   }
@@ -1987,6 +2963,9 @@ class Player {
     if (sprite && (sprite.complete === undefined || sprite.complete) && (sprite.naturalWidth === undefined || sprite.naturalWidth > 0)) {
       ctx.save();
       ctx.imageSmoothingEnabled = false;
+      if (this.shouldMaskBaseLowerLegs('south')) {
+        this.applyLowerLegMaskClip(ctx, sx, sy, scale, 'south');
+      }
       ctx.drawImage(sprite, sx - anchorX, sy - anchorY, drawW, drawH);
       ctx.restore();
     } else {
@@ -1996,19 +2975,22 @@ class Player {
       ctx.fill();
     }
 
-    // 4. Equipped Armor / Pauldrons Layer
-    this.renderEquippedArmor(ctx, sx, sy, 0, now);
+    // 4. Equipped Pants / Pha-Nung Layer (Paperdoll always faces South)
+    this.renderEquippedPants(ctx, sx, sy, 0, now, 'south');
 
-    // 5. Equipped Pants / Pha-Nung Layer
-    this.renderEquippedPants(ctx, sx, sy, 0, now);
+    // 5. Equipped Boots / Curled Winged Sabatons Layer (Paperdoll always faces South)
+    this.renderEquippedBoots(ctx, sx, sy, 0, now, 'south');
 
-    // 6. Equipped Boots / Curled Sabatons Layer
-    this.renderEquippedBoots(ctx, sx, sy, 0, now);
+    // 6. Equipped Armor / Celestial Cuirass & Winged Pauldrons Layer (Paperdoll always faces South)
+    this.renderEquippedArmor(ctx, sx, sy, 0, now, 'south');
 
-    // 7. Equipped Helmet / Golden Chada Layer
-    this.renderEquippedHelmet(ctx, sx, sy, 0, now);
+    // 7. Equipped Bracer / Celestial Winged Forearm Bracers Layer (Paperdoll always faces South)
+    this.renderEquippedBracer(ctx, sx, sy, 0, now, 'south');
 
-    // 8. Equipped Weapon Layer
+    // 8. Equipped Helmet / Golden Chada Layer (Paperdoll always faces South)
+    this.renderEquippedHelmet(ctx, sx, sy, 0, now, 'south');
+
+    // 9. Equipped Weapon Layer
     this.renderEquippedWeapon(ctx, sx, sy, 0, now);
 
     ctx.restore();
@@ -2088,11 +3070,41 @@ class Player {
       };
     }
 
-    // Auto-migrate legacy emoji icons to high-res graphic PNG assets
+    // Auto-migrate legacy emoji icons and update Seraphim 6-Winged Angelic Set (Wings + Chada Crown + Cuirass Armor + Bracers + Boots)
     const fixItemIcon = (item) => {
       if (!item) return;
       if (item.templateKey && window.ITEM_TEMPLATES && window.ITEM_TEMPLATES[item.templateKey]) {
-        item.icon = window.ITEM_TEMPLATES[item.templateKey].icon;
+        const tmpl = window.ITEM_TEMPLATES[item.templateKey];
+        item.icon = tmpl.icon;
+        if (tmpl.slot === 'card' || tmpl.itemType === 'monster_card') {
+          item.fullArt = tmpl.fullArt || item.fullArt;
+          item.prefixTitle = tmpl.prefixTitle || item.prefixTitle;
+          item.specialKey = tmpl.specialKey || item.specialKey;
+          item.specialDesc = tmpl.specialDesc || item.specialDesc;
+          item.targetSlots = tmpl.targetSlots || item.targetSlots;
+        }
+        if (
+          item.templateKey === 'wg_angelic_celestial' ||
+          item.templateKey === 'hm_crown_deva' ||
+          item.templateKey === 'ar_diamond_gem' ||
+          item.templateKey === 'br_hanuman_bracers' ||
+          item.templateKey === 'bt_celestial_stride'
+        ) {
+          item.baseName = tmpl.name;
+          item.name = tmpl.name;
+          item.spritesheet = tmpl.spritesheet;
+          item.helmetStyle = tmpl.helmetStyle || item.helmetStyle;
+          item.armorStyle = tmpl.armorStyle || item.armorStyle;
+          item.bracerStyle = tmpl.bracerStyle || item.bracerStyle;
+          item.bootsStyle = tmpl.bootsStyle || item.bootsStyle;
+          item.lore = tmpl.lore;
+        }
+        if (window.ItemSystem && window.ItemSystem.isEquipSlot(item.slot)) {
+          if (!item.maxSockets || item.maxSockets < 2) item.maxSockets = 2;
+          if (!Array.isArray(item.sockets)) item.sockets = [];
+          if (!item.baseName) item.baseName = tmpl.name;
+          window.ItemSystem.updateSocketedItemName(item);
+        }
       } else if (item.icon && !item.icon.includes('/')) {
         if (window.ITEM_TEMPLATES) {
           const match = Object.values(window.ITEM_TEMPLATES).find(t => t.name === item.name || t.slot === item.slot);
@@ -2107,6 +3119,97 @@ class Player {
     if (this.equipped) {
       Object.values(this.equipped).forEach(fixItemIcon);
     }
+
+    // One-time auto-equip migration so existing players immediately wear the full Seraphim Celestial Set
+    try {
+      if (typeof localStorage !== 'undefined' && !localStorage.getItem('yaksha_seraphim_wings_v1_migrated')) {
+        localStorage.setItem('yaksha_seraphim_wings_v1_migrated', '1');
+        if (window.ItemSystem && (!this.equipped.wings || this.equipped.wings.templateKey !== 'wg_angelic_celestial')) {
+          let seraphimItem = this.inventory.find(it => it && it.templateKey === 'wg_angelic_celestial');
+          if (seraphimItem) {
+            this.inventory = this.inventory.filter(it => it !== seraphimItem);
+          } else {
+            seraphimItem = window.ItemSystem.createItem('wg_angelic_celestial');
+          }
+          if (seraphimItem) {
+            if (this.equipped.wings) {
+              this.inventory.push(this.equipped.wings);
+            }
+            this.equipped.wings = seraphimItem;
+          }
+        }
+      }
+
+      if (typeof localStorage !== 'undefined' && !localStorage.getItem('yaksha_celestial_chada_v1_migrated')) {
+        localStorage.setItem('yaksha_celestial_chada_v1_migrated', '1');
+        if (window.ItemSystem && (!this.equipped.helmet || this.equipped.helmet.templateKey !== 'hm_crown_deva')) {
+          let chadaItem = this.inventory.find(it => it && it.templateKey === 'hm_crown_deva');
+          if (chadaItem) {
+            this.inventory = this.inventory.filter(it => it !== chadaItem);
+          } else {
+            chadaItem = window.ItemSystem.createItem('hm_crown_deva');
+          }
+          if (chadaItem) {
+            if (this.equipped.helmet) {
+              this.inventory.push(this.equipped.helmet);
+            }
+            this.equipped.helmet = chadaItem;
+          }
+        }
+      }
+
+      if (typeof localStorage !== 'undefined' && !localStorage.getItem('yaksha_celestial_armor_v1_migrated')) {
+        localStorage.setItem('yaksha_celestial_armor_v1_migrated', '1');
+        if (window.ItemSystem && (!this.equipped.armor || this.equipped.armor.templateKey !== 'ar_diamond_gem')) {
+          let armorItem = this.inventory.find(it => it && it.templateKey === 'ar_diamond_gem');
+          if (armorItem) {
+            this.inventory = this.inventory.filter(it => it !== armorItem);
+          } else {
+            armorItem = window.ItemSystem.createItem('ar_diamond_gem');
+          }
+          if (armorItem) {
+            if (this.equipped.armor) {
+              this.inventory.push(this.equipped.armor);
+            }
+            this.equipped.armor = armorItem;
+          }
+        }
+      }
+
+      if (typeof localStorage !== 'undefined' && !localStorage.getItem('yaksha_celestial_bracer_boots_v1_migrated')) {
+        localStorage.setItem('yaksha_celestial_bracer_boots_v1_migrated', '1');
+        if (window.ItemSystem) {
+          if (!this.equipped.bracer || this.equipped.bracer.templateKey !== 'br_hanuman_bracers') {
+            let bracerItem = this.inventory.find(it => it && it.templateKey === 'br_hanuman_bracers');
+            if (bracerItem) {
+              this.inventory = this.inventory.filter(it => it !== bracerItem);
+            } else {
+              bracerItem = window.ItemSystem.createItem('br_hanuman_bracers');
+            }
+            if (bracerItem) {
+              if (this.equipped.bracer) {
+                this.inventory.push(this.equipped.bracer);
+              }
+              this.equipped.bracer = bracerItem;
+            }
+          }
+          if (!this.equipped.boots || this.equipped.boots.templateKey !== 'bt_celestial_stride') {
+            let bootsItem = this.inventory.find(it => it && it.templateKey === 'bt_celestial_stride');
+            if (bootsItem) {
+              this.inventory = this.inventory.filter(it => it !== bootsItem);
+            } else {
+              bootsItem = window.ItemSystem.createItem('bt_celestial_stride');
+            }
+            if (bootsItem) {
+              if (this.equipped.boots) {
+                this.inventory.push(this.equipped.boots);
+              }
+              this.equipped.boots = bootsItem;
+            }
+          }
+        }
+      }
+    } catch (e) {}
 
     // Recalculate all formulas with loaded attributes and equipment
     this.computeStats();

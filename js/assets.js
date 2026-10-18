@@ -60,12 +60,14 @@ class AssetManager {
       'tile_grass', 'tile_dirt', 'tile_sand', 'tile_water_deep', 'tile_water_shallow',
       'tile_stepping_stones', 'tile_bridge_h', 'tile_bridge_v',
       'prop_tree_bodhi', 'prop_tree_jungle', 'prop_tree_pine', 'prop_tree_golden',
+      'prop_tree_orange_1', 'prop_tree_orange_2', 'prop_tree_orange_3', 'prop_tree_orange_4',
       'prop_stupa', 'prop_wat_phra_kaew', 'prop_rock_large', 'prop_rock_small', 'prop_rock_cluster',
       'prop_bush_berry', 'prop_bush_fern', 'prop_bush_flower',
-      'prop_bridge_h', 'prop_bridge_v'
+      'prop_bridge_h', 'prop_bridge_v',
+      'prop_waterfall', 'prop_waterfall_sheet', 'prop_waterfall_icon'
     ];
     for (const key of mapAssetKeys) {
-      list.push({ key, src: `Assets/map_assets/${key}.png?v=realistic_v6` });
+      list.push({ key, src: `Assets/map_assets/${key}.png?v=realistic_v9` });
     }
 
     // 5. Dynamic Active Monsters from Database ONLY

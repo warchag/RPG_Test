@@ -585,6 +585,9 @@ class Game {
         this.player.y = data.spawnPoint.y;
       }
     }
+    if (data.npcs && window.npcManager) {
+      window.npcManager.loadNPCData(data.npcs);
+    }
     if (data.enemies && this.enemyManager) {
       this.map.savedEnemies = JSON.parse(JSON.stringify(data.enemies));
       this.enemyManager.loadEnemyData(data.enemies);
@@ -677,6 +680,15 @@ class Game {
           }
         } catch (me) {
           console.warn('[Game] Could not load master map from SQLite:', me);
+        }
+      }
+
+      // 1.5 Synchronize Friendly NPCs and Shop configs from SQLite
+      if (window.npcManager && window.npcManager.syncFromDatabase) {
+        try {
+          await window.npcManager.syncFromDatabase();
+        } catch (npce) {
+          console.warn('[Game] Could not sync NPCs from SQLite:', npce);
         }
       }
 
@@ -1049,9 +1061,13 @@ class Game {
       return;
     }
 
-    // If Giant World Map or Character Stats Modal is open, pause player actions and controls
+    // If Giant World Map, Character Stats Modal, or Companion Pet Modal is open, pause player actions and controls
     const isCharModalOpen = window.characterStatsController && window.characterStatsController.isOpen;
-    if (this.isWorldMapOpen || isCharModalOpen) {
+    const isPetModalOpen = window.companionPet && window.companionPet.isModalOpen;
+    if (this.isWorldMapOpen || isCharModalOpen || isPetModalOpen) {
+      if (isPetModalOpen && window.companionPet) {
+        window.companionPet.updatePreviewOnly(dt, this.player);
+      }
       this.input.mouse.clickEvent = null;
       if (this.player) {
         this.player.targetPos = null;
@@ -1081,21 +1097,32 @@ class Game {
       this.player.useHpPotion();
     }
     if (this.input.consumeAction('useMp')) {
-      this.player.useMpPotion();
+      // If player is standing right next to an NPC, pressing 'E' talks to the NPC!
+      if (window.npcManager && window.npcManager.nearestNpc) {
+        window.npcManager.interact(window.npcManager.nearestNpc, this.player);
+      } else {
+        this.player.useMpPotion();
+      }
     }
-    // 1.5 Process Click-to-Move / Target Enemy
+    // 1.5 Process Click-to-Move / Target Friendly NPC / Target Enemy
     if (this.input.mouse.clickEvent) {
       const click = this.input.mouse.clickEvent;
       this.input.mouse.clickEvent = null;
       const worldX = click.x + this.camera.x;
       const worldY = click.y + this.camera.y;
 
+      let clickedNpc = null;
       let clickedEnemy = null;
       let clickedPickup = null;
       let minDist = 999;
 
-      // Check Pickups hit first (Ragnarok Online style item looting)
-      if (this.map && Array.isArray(this.map.pickups)) {
+      // Check Friendly NPCs click first!
+      if (window.npcManager) {
+        clickedNpc = window.npcManager.checkClick(worldX, worldY, this.player);
+      }
+
+      // Check Pickups hit (Ragnarok Online style item looting)
+      if (!clickedNpc && this.map && Array.isArray(this.map.pickups)) {
         for (const p of this.map.pickups) {
           const d = Math.hypot(worldX - p.x, worldY - p.y);
           if (d <= 32 && d < minDist) {
@@ -1106,7 +1133,7 @@ class Game {
       }
 
       // Check Boss hit
-      if (!clickedPickup && this.enemyManager.boss && !this.enemyManager.boss.isDead) {
+      if (!clickedNpc && !clickedPickup && this.enemyManager.boss && !this.enemyManager.boss.isDead) {
         const b = this.enemyManager.boss;
         const d = Math.hypot(worldX - b.x, worldY - b.y);
         if (d <= b.radius + 36) {
@@ -1116,7 +1143,7 @@ class Game {
       }
 
       // Check regular enemies hit
-      if (!clickedPickup) {
+      if (!clickedNpc && !clickedPickup) {
         for (const e of this.enemyManager.enemies) {
           if (e.isDead) continue;
           const d = Math.hypot(worldX - e.x, worldY - e.y);
@@ -1127,7 +1154,27 @@ class Game {
         }
       }
 
-      if (clickedPickup) {
+      // Check Zone Warp Portal Gate click
+      if (window.gameConfig && window.gameConfig.portalGate) {
+        const pg = window.gameConfig.portalGate;
+        if (Math.hypot(worldX - pg.x, worldY - (pg.y - 12)) <= (pg.radius || 58)) {
+          window.gameConfig.toggleModal('zones');
+          return;
+        }
+      }
+
+      if (clickedNpc) {
+        const distToPlayer = Math.hypot(this.player.x - clickedNpc.x, this.player.y - clickedNpc.y);
+        if (distToPlayer <= (window.npcManager.interactionRange || 85)) {
+          // In range: open shop / dialogue immediately!
+          window.npcManager.interact(clickedNpc, this.player);
+          this.player.clearTargets();
+        } else {
+          // Walk over to talk to the NPC
+          this.player.setTargetNpc(clickedNpc);
+          window.effectsManager.addMoveMarker(clickedNpc.x, clickedNpc.y);
+        }
+      } else if (clickedPickup) {
         const distToPlayer = Math.hypot(this.player.x - clickedPickup.x, this.player.y - clickedPickup.y);
         if (distToPlayer <= 52) {
           // In range: collect immediately!
@@ -1145,21 +1192,27 @@ class Game {
         this.player.setMoveTarget(worldX, worldY);
         window.effectsManager.addMoveMarker(worldX, worldY);
       }
-    } else if (this.input.mouse.isDown && !this.player.targetEnemy && !this.player.targetPickup) {
+    } else if (this.input.mouse.isDown && !this.player.targetEnemy && !this.player.targetPickup && !this.player.targetNpc) {
       // Continuous dragging to walk to mouse location
       const worldX = this.input.mouse.x + this.camera.x;
       const worldY = this.input.mouse.y + this.camera.y;
       this.player.targetPos = { x: worldX, y: worldY };
     }
 
-    // 1.8 Update Dynamic Cursor (Normal Arrow vs Loot Gauntlet vs Monster Attack Sword)
+    // 1.8 Update Dynamic Cursor (Normal Arrow vs Loot Gauntlet vs Monster Attack Sword vs NPC Talk Hand)
     const mWorldX = this.input.mouse.x + this.camera.x;
     const mWorldY = this.input.mouse.y + this.camera.y;
+    let isOverNpc = false;
     let isOverPickup = false;
     let isOverEnemy = false;
 
+    // Check hover over Friendly NPC
+    if (window.npcManager) {
+      isOverNpc = !!window.npcManager.checkClick(mWorldX, mWorldY, this.player);
+    }
+
     // Check hover over ground pickups
-    if (this.map && Array.isArray(this.map.pickups)) {
+    if (!isOverNpc && this.map && Array.isArray(this.map.pickups)) {
       for (const p of this.map.pickups) {
         const d = Math.hypot(mWorldX - p.x, mWorldY - p.y);
         p._isHovered = (d <= 30);
@@ -1169,7 +1222,7 @@ class Game {
       }
     }
 
-    if (!isOverPickup) {
+    if (!isOverNpc && !isOverPickup) {
       if (this.enemyManager.boss && !this.enemyManager.boss.isDead) {
         if (Math.hypot(mWorldX - this.enemyManager.boss.x, mWorldY - this.enemyManager.boss.y) <= this.enemyManager.boss.radius + 32) {
           isOverEnemy = true;
@@ -1185,8 +1238,9 @@ class Game {
       }
     }
 
-    this.canvas.classList.toggle('hover-pickup', isOverPickup);
-    this.canvas.classList.toggle('hover-enemy', !isOverPickup && isOverEnemy);
+    this.canvas.classList.toggle('hover-npc', isOverNpc);
+    this.canvas.classList.toggle('hover-pickup', !isOverNpc && isOverPickup);
+    this.canvas.classList.toggle('hover-enemy', !isOverNpc && !isOverPickup && isOverEnemy);
 
     // 2. Player Movement & State
     const moveVec = this.input.getMovementVector();
@@ -1197,6 +1251,16 @@ class Game {
 
     // 4. Update Map & Pickups
     this.map.update(dt, this.player);
+
+    // 4.5 Update Friendly NPCs (Risi Sage & Market Peddler)
+    if (window.npcManager) {
+      window.npcManager.update(dt, this.player);
+    }
+
+    // 4.8 Update Himavanta Celestial Companion Pet (Singha Cub Auto-Loot & Auto-Attack)
+    if (window.companionPet) {
+      window.companionPet.update(dt, this.player, this.map, this.enemyManager.enemies, this.enemyManager.boss);
+    }
 
     // 5. Update Enemies & AI
     this.enemyManager.update(dt, this.player, this.map);
@@ -1423,6 +1487,11 @@ class Game {
       this.weather.renderWaterRipples(this.ctx, this.camera);
     }
 
+    // 2.8 Render Zone Warp Portal Gate (Multi-Zone Progression)
+    if (window.gameConfig && typeof window.gameConfig.drawZonePortal === 'function') {
+      window.gameConfig.drawZonePortal(this.ctx, this.camera);
+    }
+
     // 3. Render Depth-Sorted Entities (Characters, Enemies, Trees & Props with Translucency)
     this.renderDepthSortedEntities();
 
@@ -1507,6 +1576,19 @@ class Game {
       }
     }
 
+    // Friendly NPCs (Risi Sage & Market Peddler)
+    if (window.npcManager && window.npcManager.npcs) {
+      const now = performance.now() * 0.001;
+      for (const npc of window.npcManager.npcs) {
+        if (this.camera.isVisible(npc.x, npc.y, 100)) {
+          list.push({
+            y: npc.y,
+            render: (ctx, cam) => window.npcManager.renderNPC(ctx, npc, cam, now)
+          });
+        }
+      }
+    }
+
     // Hero Yaksha (Player Spawn Point in Editor vs Player Hero in Game)
     if (this.player && !this.player.isDead) {
       if (this.isAdminMode) {
@@ -1539,6 +1621,12 @@ class Game {
         });
       } else {
         list.push({ y: this.player.y, render: (ctx, cam) => this.player.render(ctx, cam) });
+        if (window.companionPet && window.companionPet.mode !== 'REST') {
+          list.push({
+            y: window.companionPet.y,
+            render: (ctx, cam) => window.companionPet.render(ctx, cam)
+          });
+        }
       }
     }
 
